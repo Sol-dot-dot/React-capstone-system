@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
-const { sendVerificationEmail } = require('../utils/emailService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
 require('dotenv').config({ path: './config.env' });
 
 const router = express.Router();
@@ -410,6 +410,138 @@ router.post('/user/login', [
         });
     } catch (error) {
         console.error('User login error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Request Password Reset
+router.post('/user/request-password-reset', [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('email').matches(/@my\.smciligan\.edu\.ph$/).withMessage('Email must be from @my.smciligan.edu.ph domain')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: errors.array() 
+            });
+        }
+
+        const { email } = req.body;
+
+        // Check if user exists
+        const [users] = await pool.execute(
+            'SELECT * FROM users WHERE email = ? AND is_verified = TRUE',
+            [email]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'User not found or email not verified' });
+        }
+
+        // Generate reset code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const resetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Update user with reset code
+        await pool.execute(
+            'UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?',
+            [resetCode, resetExpires, email]
+        );
+
+        // Send reset email
+        const emailSent = await sendPasswordResetEmail(email, resetCode);
+
+        if (!emailSent) {
+            return res.status(500).json({ message: 'Failed to send password reset email' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Password reset code sent to your email'
+        });
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Verify Password Reset Code
+router.post('/user/verify-reset-code', [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('resetCode').isLength({ min: 6, max: 6 }).withMessage('Reset code must be 6 digits')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: errors.array() 
+            });
+        }
+
+        const { email, resetCode } = req.body;
+
+        const [users] = await pool.execute(
+            'SELECT * FROM users WHERE email = ? AND reset_code = ? AND reset_expires > NOW()',
+            [email, resetCode]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired reset code' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Reset code verified successfully'
+        });
+    } catch (error) {
+        console.error('Reset code verification error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Reset Password
+router.post('/user/reset-password', [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('resetCode').isLength({ min: 6, max: 6 }).withMessage('Reset code must be 6 digits'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: errors.array() 
+            });
+        }
+
+        const { email, resetCode, newPassword } = req.body;
+
+        // Verify reset code
+        const [users] = await pool.execute(
+            'SELECT * FROM users WHERE email = ? AND reset_code = ? AND reset_expires > NOW()',
+            [email, resetCode]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: 'Invalid or expired reset code' });
+        }
+
+        // Hash new password and update user
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.execute(
+            'UPDATE users SET password = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?',
+            [hashedPassword, email]
+        );
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully'
+        });
+    } catch (error) {
+        console.error('Password reset error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

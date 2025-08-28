@@ -12,12 +12,15 @@ import {
 import axios from 'axios';
 
 const App = () => {
-  const [currentStep, setCurrentStep] = useState('login'); // login, idNumber, email, verify, password, landing
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, verify, forgotPassword, resetPassword
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -37,39 +40,145 @@ const App = () => {
 
       if (response.data.success) {
         setUserData(response.data.user);
-        setCurrentStep('landing');
-        // Clear form
+        setCurrentScreen('dashboard');
         setIdNumber('');
         setPassword('');
-      } else {
-        Alert.alert('Error', response.data.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        Alert.alert('Error', error.response.data.message);
-      } else {
-        Alert.alert('Error', 'Network error. Please try again.');
-      }
+      Alert.alert(
+        'Login Failed',
+        error.response?.data?.message || 'An error occurred during login'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleIdNumberSubmit = () => {
+  const handleRequestReset = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      console.log('Making password reset request for email:', email);
+      console.log('API URL:', 'http://10.0.2.2:5000/api/auth/user/request-password-reset');
+      
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/request-password-reset', {
+        email,
+      });
+      
+      console.log('Password reset response:', response.data);
+
+      if (response.data.success) {
+        Alert.alert(
+          'Reset Code Sent',
+          'A password reset code has been sent to your email address.',
+          [
+            {
+              text: 'OK',
+              onPress: () => setCurrentScreen('resetPassword'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      
+      let errorMessage = 'An error occurred while requesting password reset';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert(
+        'Error',
+        errorMessage
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetCode || !newPassword || !confirmNewPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/reset-password', {
+        email,
+        resetCode,
+        newPassword,
+      });
+
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Your password has been reset successfully.',
+          [
+            {
+              text: 'OK',
+              onPress: () => setCurrentScreen('login'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred while resetting password'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleIdNumberSubmit = async () => {
     if (!idNumber) {
       Alert.alert('Error', 'Please enter your ID Number');
       return;
     }
 
-    // Validate ID number format (XXX-XXXX)
     const idPattern = /^[A-Z]\d{2}-\d{4}$/;
     if (!idPattern.test(idNumber)) {
       Alert.alert('Error', 'ID Number must be in format XXX-XXXX (e.g., C22-0044)');
       return;
     }
 
-    setCurrentStep('email');
+    setLoading(true);
+    try {
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-id', {
+        idNumber,
+      });
+
+      if (response.data.success) {
+        setCurrentScreen('verify');
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred while checking ID number'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailSubmit = async () => {
@@ -78,7 +187,6 @@ const App = () => {
       return;
     }
 
-    // Validate email domain
     if (!email.endsWith('@my.smciligan.edu.ph')) {
       Alert.alert('Error', 'Email must be from @my.smciligan.edu.ph domain');
       return;
@@ -92,13 +200,14 @@ const App = () => {
       });
 
       if (response.data.success) {
-        setCurrentStep('verify');
-      } else {
-        Alert.alert('Error', response.data.message || 'Email check failed');
+        setUserId(response.data.userId);
+        setCurrentScreen('verify');
       }
     } catch (error) {
-      console.error('Email check error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred while checking email'
+      );
     } finally {
       setLoading(false);
     }
@@ -124,14 +233,13 @@ const App = () => {
       });
 
       if (response.data.success) {
-        setUserId(response.data.userId);
-        setCurrentStep('password');
-      } else {
-        Alert.alert('Error', response.data.message || 'Verification failed');
+        setCurrentScreen('password');
       }
     } catch (error) {
-      console.error('Verification error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred while verifying code'
+      );
     } finally {
       setLoading(false);
     }
@@ -161,79 +269,98 @@ const App = () => {
       });
 
       if (response.data.success) {
-        Alert.alert('Success', 'Registration completed successfully! You can now login.');
-        // Reset to login
-        setCurrentStep('login');
-        setIdNumber('');
-        setEmail('');
-        setVerificationCode('');
-        setPassword('');
-        setConfirmPassword('');
-        setUserId(null);
-      } else {
-        Alert.alert('Error', response.data.message || 'Registration failed');
+        Alert.alert(
+          'Success',
+          'Registration completed successfully! You can now login.',
+          [
+            {
+              text: 'OK',
+              onPress: () => setCurrentScreen('login'),
+            },
+          ]
+        );
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'An error occurred while completing registration'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const startRegistration = () => {
-    setCurrentStep('idNumber');
-    setIdNumber('');
-    setEmail('');
-    setVerificationCode('');
-    setPassword('');
-    setConfirmPassword('');
-    setUserId(null);
-  };
-
-  const goBack = () => {
-    if (currentStep === 'email') {
-      setCurrentStep('idNumber');
-      setEmail('');
-    } else if (currentStep === 'verify') {
-      setCurrentStep('email');
-      setVerificationCode('');
-    } else if (currentStep === 'password') {
-      setCurrentStep('verify');
-      setPassword('');
-      setConfirmPassword('');
-    }
-  };
-
   const handleLogout = () => {
-    setCurrentStep('login');
+    setCurrentScreen('welcome');
     setUserData(null);
     setIdNumber('');
     setEmail('');
-    setVerificationCode('');
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
+    setResetCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
     setUserId(null);
   };
 
+  const renderWelcomeScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Capstone Mobile App</Text>
+      <Text style={styles.subtitle}>Welcome to the Capstone System</Text>
+      
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => setCurrentScreen('login')}
+      >
+        <Text style={styles.buttonText}>Login</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondaryButton]}
+        onPress={() => setCurrentScreen('register')}
+      >
+        <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+          Register
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderLoginScreen = () => (
     <View style={styles.form}>
-      <TextInput
-        style={styles.input}
-        placeholder="ID Number (e.g., C22-0044)"
-        value={idNumber}
-        onChangeText={setIdNumber}
-        autoCapitalize="characters"
-      />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      
+      <Text style={styles.title}>Welcome Back!</Text>
+      <Text style={styles.subtitle}>Please login to your account</Text>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>ID Number</Text>
+        <TextInput
+          style={styles.input}
+          value={idNumber}
+          onChangeText={setIdNumber}
+          placeholder="Enter your ID Number (e.g., C22-0044)"
+          autoCapitalize="characters"
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter your password"
+          secureTextEntry
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.forgotPassword}
+        onPress={() => setCurrentScreen('forgotPassword')}
+      >
+        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={[styles.button, loading && styles.buttonDisabled]}
         onPress={handleLogin}
@@ -244,16 +371,268 @@ const App = () => {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.toggleButton} onPress={startRegistration}>
-        <Text style={styles.toggleText}>
-          Don't have an account? Register
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Don't have an account? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('register')}>
+          <Text style={styles.linkText}>Register</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
-  const renderLandingScreen = () => (
-    <View style={styles.landingContainer}>
+  const renderRegisterScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.subtitle}>Step 1: Enter your ID Number</Text>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>ID Number</Text>
+        <TextInput
+          style={styles.input}
+          value={idNumber}
+          onChangeText={setIdNumber}
+          placeholder="Enter your ID Number (e.g., C22-0044)"
+          autoCapitalize="characters"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleIdNumberSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Checking...' : 'Next'}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderVerifyScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Create Account</Text>
+      
+      {!email ? (
+        <>
+          <Text style={styles.stepTitle}>Step 2: Enter Email</Text>
+          <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter your email (@my.smciligan.edu.ph)"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleEmailSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Sending Code...' : 'Send Verification Code'}
+            </Text>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <Text style={styles.stepTitle}>Step 3: Verify Email</Text>
+          <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
+          <Text style={styles.stepInfo}>Email: {email}</Text>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Verification Code</Text>
+            <TextInput
+              style={styles.input}
+              value={verificationCode}
+              onChangeText={setVerificationCode}
+              placeholder="Enter 6-digit code"
+              keyboardType="numeric"
+              maxLength={6}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleVerificationSubmit}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Verifying...' : 'Verify Code'}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderPasswordScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.stepTitle}>Step 4: Set Password</Text>
+      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
+      <Text style={styles.stepInfo}>Email: {email}</Text>
+      
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter password (min 6 characters)"
+          secureTextEntry
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <TextInput
+          style={styles.input}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          placeholder="Confirm password"
+          secureTextEntry
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handlePasswordSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Completing...' : 'Complete Registration'}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderForgotPasswordScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Forgot Password?</Text>
+      <Text style={styles.subtitle}>
+        Enter your email address and we'll send you a reset code
+      </Text>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Enter your email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleRequestReset}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Sending...' : 'Send Reset Code'}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Remember your password? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderResetPasswordScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Reset Password</Text>
+      <Text style={styles.subtitle}>
+        Enter the reset code sent to your email and your new password
+      </Text>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Reset Code</Text>
+        <TextInput
+          style={styles.input}
+          value={resetCode}
+          onChangeText={setResetCode}
+          placeholder="Enter 6-digit reset code"
+          keyboardType="numeric"
+          maxLength={6}
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>New Password</Text>
+        <TextInput
+          style={styles.input}
+          value={newPassword}
+          onChangeText={setNewPassword}
+          placeholder="Enter new password"
+          secureTextEntry
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Confirm Password</Text>
+        <TextInput
+          style={styles.input}
+          value={confirmNewPassword}
+          onChangeText={setConfirmNewPassword}
+          placeholder="Confirm new password"
+          secureTextEntry
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleResetPassword}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Resetting...' : 'Reset Password'}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Back to </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderDashboardScreen = () => (
+    <View style={styles.dashboardContainer}>
       <View style={styles.welcomeCard}>
         <Text style={styles.welcomeTitle}>Welcome!</Text>
         <Text style={styles.welcomeSubtitle}>You have successfully logged in</Text>
@@ -266,7 +645,7 @@ const App = () => {
           <Text style={styles.userInfoValue}>{userData?.email}</Text>
         </View>
 
-        <View style={styles.landingActions}>
+        <View style={styles.dashboardActions}>
           <TouchableOpacity style={styles.actionButton}>
             <Text style={styles.actionButtonText}>View Profile</Text>
           </TouchableOpacity>
@@ -287,139 +666,17 @@ const App = () => {
     </View>
   );
 
-  const renderIdNumberScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.stepTitle}>Step 1: Enter ID Number</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="ID Number (e.g., C22-0044)"
-        value={idNumber}
-        onChangeText={setIdNumber}
-        autoCapitalize="characters"
-      />
-      
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleIdNumberSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>Next</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.toggleButton} onPress={() => setCurrentStep('login')}>
-        <Text style={styles.toggleText}>Back to Login</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderEmailScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.stepTitle}>Step 2: Enter Email</Text>
-      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Email (@my.smciligan.edu.ph)"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleEmailSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Sending Code...' : 'Send Verification Code'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.toggleButton} onPress={goBack}>
-        <Text style={styles.toggleText}>Back</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderVerifyScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.stepTitle}>Step 3: Verify Email</Text>
-      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
-      <Text style={styles.stepInfo}>Email: {email}</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Enter 6-digit code"
-        value={verificationCode}
-        onChangeText={setVerificationCode}
-        keyboardType="numeric"
-        maxLength={6}
-      />
-      
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleVerificationSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Verifying...' : 'Verify Code'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.toggleButton} onPress={goBack}>
-        <Text style={styles.toggleText}>Back</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderPasswordScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.stepTitle}>Step 4: Set Password</Text>
-      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
-      <Text style={styles.stepInfo}>Email: {email}</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Password (min 6 characters)"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
-      
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handlePasswordSubmit}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Completing...' : 'Complete Registration'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.toggleButton} onPress={goBack}>
-        <Text style={styles.toggleText}>Back</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const getStepTitle = () => {
-    switch (currentStep) {
+  const getScreenTitle = () => {
+    switch (currentScreen) {
+      case 'welcome': return 'Welcome';
       case 'login': return 'Login';
-      case 'landing': return 'Dashboard';
-      case 'idNumber': return 'Register';
-      case 'email': return 'Register';
+      case 'register': return 'Register';
       case 'verify': return 'Register';
       case 'password': return 'Register';
-      default: return 'Login';
+      case 'forgotPassword': return 'Forgot Password';
+      case 'resetPassword': return 'Reset Password';
+      case 'dashboard': return 'Dashboard';
+      default: return 'Welcome';
     }
   };
 
@@ -427,24 +684,17 @@ const App = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Capstone Mobile App</Text>
-          <Text style={styles.subtitle}>{getStepTitle()}</Text>
+          <Text style={styles.mainTitle}>Capstone Mobile App</Text>
+          <Text style={styles.mainSubtitle}>{getScreenTitle()}</Text>
           
-          {currentStep === 'login' && renderLoginScreen()}
-          {currentStep === 'landing' && renderLandingScreen()}
-          {currentStep === 'idNumber' && renderIdNumberScreen()}
-          {currentStep === 'email' && renderEmailScreen()}
-          {currentStep === 'verify' && renderVerifyScreen()}
-          {currentStep === 'password' && renderPasswordScreen()}
-          
-          {currentStep !== 'landing' && (
-            <Text style={styles.info}>
-              {currentStep === 'login' 
-                ? 'Login with your ID Number and password.'
-                : 'Complete the registration process step by step.'
-              }
-            </Text>
-          )}
+          {currentScreen === 'welcome' && renderWelcomeScreen()}
+          {currentScreen === 'login' && renderLoginScreen()}
+          {currentScreen === 'register' && renderRegisterScreen()}
+          {currentScreen === 'verify' && renderVerifyScreen()}
+          {currentScreen === 'password' && renderPasswordScreen()}
+          {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
+          {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
+          {currentScreen === 'dashboard' && renderDashboardScreen()}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -465,8 +715,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  title: {
+  mainTitle: {
     fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#333',
+  },
+  mainSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+  },
+  form: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
@@ -478,20 +754,85 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     color: '#666',
   },
-  form: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#333',
   },
-  landingContainer: {
+  stepInfo: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+    color: '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#007bff',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: '#007bff',
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: '#007bff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 30,
+  },
+  footerText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  linkText: {
+    color: '#007bff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dashboardContainer: {
     flex: 1,
     justifyContent: 'center',
   },
@@ -538,7 +879,7 @@ const styles = StyleSheet.create({
     color: '#007bff',
     marginBottom: 15,
   },
-  landingActions: {
+  dashboardActions: {
     marginBottom: 25,
   },
   actionButton: {
@@ -563,58 +904,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 15,
-    color: '#333',
-  },
-  stepInfo: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 15,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  toggleButton: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  toggleText: {
-    color: '#007bff',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
-  info: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#666',
-    fontSize: 14,
   },
 });
 

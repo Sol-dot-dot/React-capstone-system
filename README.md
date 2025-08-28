@@ -20,6 +20,7 @@ A simple system to verify the connection and API between a web admin panel and m
 ### Mobile App
 - User registration with email verification
 - User login
+- Password reset functionality
 - Welcome screen after authentication
 - Real email integration for verification codes
 
@@ -137,6 +138,9 @@ A simple system to verify the connection and API between a web admin panel and m
 - `POST /api/auth/user/register` - User registration
 - `POST /api/auth/user/verify` - Email verification
 - `POST /api/auth/user/login` - User login
+- `POST /api/auth/user/request-password-reset` - Request password reset
+- `POST /api/auth/user/verify-reset-code` - Verify password reset code
+- `POST /api/auth/user/reset-password` - Reset password with code
 
 ### Admin (Protected)
 - `GET /api/admin/login-logs` - Get login logs
@@ -170,6 +174,7 @@ To enable email verification:
    - Register a new user with valid email
    - Check email for verification code
    - Verify email and login
+   - Test password reset functionality
    - View welcome screen
 
 4. **Verify Connection**:
@@ -230,11 +235,36 @@ To enable email verification:
 - The mobile app uses AsyncStorage for token persistence
 - CORS is enabled for cross-origin requests
 
+## Password Reset Feature ✅
+
+The mobile app now includes a complete password reset workflow that has been successfully implemented and tested:
+
+1. **Request Reset**: User enters their email address
+2. **Email Verification**: System sends a 6-digit reset code to the user's email
+3. **Code Verification**: User enters the reset code
+4. **Password Reset**: User sets a new password
+
+### Password Reset Flow:
+- Reset codes expire after 10 minutes
+- Only verified users can request password resets
+- Email must be from the @my.smciligan.edu.ph domain
+- New password must be at least 6 characters long
+- Complete mobile app integration with state-based navigation
+
+### Mobile App Features:
+- ✅ Welcome screen with login/register options
+- ✅ User registration with step-by-step process
+- ✅ User login with ID number and password
+- ✅ Password reset functionality
+- ✅ Dashboard screen after successful login
+- ✅ Responsive design with modern UI
+- ✅ Error handling and validation
+- ✅ Loading states and user feedback
+
 ## Next Steps
 
 This is a minimal demo system. For production, consider adding:
 
-- Password reset functionality
 - User profile management
 - More detailed admin features
 - Push notifications

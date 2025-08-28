@@ -20,6 +20,8 @@ CREATE TABLE users (
     is_verified BOOLEAN DEFAULT FALSE,
     verification_code VARCHAR(6),
     verification_expires TIMESTAMP,
+    reset_code VARCHAR(6),
+    reset_expires TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

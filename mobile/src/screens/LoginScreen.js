@@ -10,13 +10,13 @@ import {
 } from 'react-native';
 import axios from 'axios';
 
-const LoginScreen = ({ navigation, route }) => {
-  const [email, setEmail] = useState('');
+const LoginScreen = ({ navigation }) => {
+  const [idNumber, setIdNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!idNumber || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -24,12 +24,26 @@ const LoginScreen = ({ navigation, route }) => {
     setLoading(true);
     try {
       const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
-        email,
+        idNumber,
         password,
       });
 
-      if (response.data.token) {
-        route.params.onLogin(response.data.token, response.data.user);
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Login successful!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to a dashboard or main screen
+                // For now, we'll just show success and stay on login
+                setIdNumber('');
+                setPassword('');
+              },
+            },
+          ]
+        );
       }
     } catch (error) {
       Alert.alert(
@@ -48,14 +62,13 @@ const LoginScreen = ({ navigation, route }) => {
         <Text style={styles.subtitle}>Please login to your account</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>ID Number</Text>
           <TextInput
             style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
+            value={idNumber}
+            onChangeText={setIdNumber}
+            placeholder="Enter your ID Number (e.g., C22-0044)"
+            autoCapitalize="characters"
           />
         </View>
 
@@ -69,6 +82,13 @@ const LoginScreen = ({ navigation, route }) => {
             secureTextEntry
           />
         </View>
+
+        <TouchableOpacity
+          style={styles.forgotPassword}
+          onPress={() => navigation.navigate('ForgotPassword')}
+        >
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -155,6 +175,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: '#007bff',
+    fontSize: 14,
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',

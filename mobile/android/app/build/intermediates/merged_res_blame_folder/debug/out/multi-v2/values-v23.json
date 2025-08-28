@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.capstonemobile.app-mergeDebugResources-3:/values-v23/values-v23.xml",
+            "outputFile": "com.capstonemobile.app-mergeDebugResources-2:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\b14585e0ae3314e7a64bac79062dab1c\\transformed\\appcompat-1.4.1\\res\\values-v23\\values-v23.xml",
+                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\14015e196bbf85de63cb5d7d6316723c\\transformed\\appcompat-1.4.1\\res\\values-v23\\values-v23.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,20,34,35,36,39,43,44,45,46",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4",

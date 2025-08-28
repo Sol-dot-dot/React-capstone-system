@@ -50,4 +50,37 @@ const sendVerificationEmail = async (email, verificationCode) => {
     }
 };
 
-module.exports = { sendVerificationEmail };
+const sendPasswordResetEmail = async (email, resetCode) => {
+    console.log('Attempting to send password reset email to:', email);
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Password Reset Code - Capstone System',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #333; text-align: center;">Password Reset</h2>
+                <p>Hello!</p>
+                <p>You have requested to reset your password for the Capstone System. Your reset code is:</p>
+                <h1 style="color: #dc3545; font-size: 32px; text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 5px; margin: 20px 0;">${resetCode}</h1>
+                <p><strong>This code will expire in 10 minutes.</strong></p>
+                <p>If you didn't request this password reset, please ignore this email and your password will remain unchanged.</p>
+                <hr style="margin: 20px 0;">
+                <p style="color: #666; font-size: 12px;">This is an automated message from the Capstone System.</p>
+            </div>
+        `,
+        text: `Your password reset code is: ${resetCode}. This code will expire in 10 minutes.`
+    };
+
+    try {
+        const result = await transporter.sendMail(mailOptions);
+        console.log('Password reset email sent successfully:', result.messageId);
+        return true;
+    } catch (error) {
+        console.error('Password reset email sending error:', error.message);
+        console.error('Full error:', error);
+        return false;
+    }
+};
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };

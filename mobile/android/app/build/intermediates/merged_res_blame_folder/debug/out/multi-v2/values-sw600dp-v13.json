@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.capstonemobile.app-mergeDebugResources-3:/values-sw600dp-v13/values-sw600dp-v13.xml",
+            "outputFile": "com.capstonemobile.app-mergeDebugResources-2:/values-sw600dp-v13/values-sw600dp-v13.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\b14585e0ae3314e7a64bac79062dab1c\\transformed\\appcompat-1.4.1\\res\\values-sw600dp-v13\\values-sw600dp-v13.xml",
+                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\14015e196bbf85de63cb5d7d6316723c\\transformed\\appcompat-1.4.1\\res\\values-sw600dp-v13\\values-sw600dp-v13.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

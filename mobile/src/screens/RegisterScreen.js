@@ -10,81 +10,36 @@ import {
 } from 'react-native';
 import axios from 'axios';
 
-const RegisterScreen = ({ navigation, route }) => {
-  const [formData, setFormData] = useState({
-    idNumber: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+const RegisterScreen = ({ navigation }) => {
+  const [idNumber, setIdNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const validateForm = () => {
-    const { idNumber, email, password, confirmPassword } = formData;
-
-    if (!idNumber || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return false;
+  const handleIdNumberSubmit = async () => {
+    if (!idNumber) {
+      Alert.alert('Error', 'Please enter your ID Number');
+      return;
     }
 
-    // Validate ID Number format (XXX-XXXX)
-    const idNumberRegex = /^[A-Z]\d{2}-\d{4}$/;
-    if (!idNumberRegex.test(idNumber)) {
+    // Validate ID number format (XXX-XXXX)
+    const idPattern = /^[A-Z]\d{2}-\d{4}$/;
+    if (!idPattern.test(idNumber)) {
       Alert.alert('Error', 'ID Number must be in format XXX-XXXX (e.g., C22-0044)');
-      return false;
+      return;
     }
-
-    // Validate email domain
-    if (!email.endsWith('@my.smciligan.edu.ph')) {
-      Alert.alert('Error', 'Email must be from @my.smciligan.edu.ph domain');
-      return false;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleRegister = async () => {
-    if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/register', {
-        idNumber: formData.idNumber,
-        email: formData.email,
-        password: formData.password,
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-id', {
+        idNumber,
       });
 
-      Alert.alert(
-        'Registration Successful',
-        'Please check your email for verification code',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Verify', { userId: response.data.userId }),
-          },
-        ]
-      );
+      if (response.data.success) {
+        navigation.navigate('Verify', { idNumber });
+      }
     } catch (error) {
       Alert.alert(
-        'Registration Failed',
-        error.response?.data?.message || 'An error occurred during registration'
+        'Error',
+        error.response?.data?.message || 'An error occurred while checking ID number'
       );
     } finally {
       setLoading(false);
@@ -95,60 +50,26 @@ const RegisterScreen = ({ navigation, route }) => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.form}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Please fill in your details</Text>
+        <Text style={styles.subtitle}>Step 1: Enter your ID Number</Text>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>ID Number</Text>
           <TextInput
             style={styles.input}
-            value={formData.idNumber}
-            onChangeText={(value) => handleInputChange('idNumber', value.toUpperCase())}
-            placeholder="e.g., C22-0044"
+            value={idNumber}
+            onChangeText={setIdNumber}
+            placeholder="Enter your ID Number (e.g., C22-0044)"
             autoCapitalize="characters"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.email}
-            onChangeText={(value) => handleInputChange('email', value)}
-            placeholder="your.email@my.smciligan.edu.ph"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.password}
-            onChangeText={(value) => handleInputChange('password', value)}
-            placeholder="Enter your password"
-            secureTextEntry
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.confirmPassword}
-            onChangeText={(value) => handleInputChange('confirmPassword', value)}
-            placeholder="Confirm your password"
-            secureTextEntry
           />
         </View>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
+          onPress={handleIdNumberSubmit}
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? 'Creating Account...' : 'Register'}
+            {loading ? 'Checking...' : 'Next'}
           </Text>
         </TouchableOpacity>
 
@@ -214,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#28a745',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
