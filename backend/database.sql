@@ -1,0 +1,40 @@
+-- Create database
+CREATE DATABASE IF NOT EXISTS capstone_system;
+USE capstone_system;
+
+-- Admin table
+CREATE TABLE admins (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Users table
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    id_number VARCHAR(10) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    verification_code VARCHAR(6),
+    verification_expires TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Login logs table
+CREATE TABLE login_logs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    user_type ENUM('admin', 'user') NOT NULL,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Insert default admin account
+INSERT INTO admins (username, password, email) VALUES 
+('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@capstone.com');
+-- Password is 'password' (hashed with bcrypt)

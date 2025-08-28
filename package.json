@@ -1,0 +1,16 @@
+{
+  "name": "react-capstone-system",
+  "version": "1.0.0",
+  "description": "Web and Mobile System with API Backend",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:web": "cd web && npm start",
+    "dev:mobile": "cd mobile && npm start",
+    "build:web": "cd web && npm run build",
+    "build:mobile": "cd mobile && npm run build"
+  },
+  "keywords": ["react", "react-native", "nodejs", "express", "mysql"],
+  "author": "",
+  "license": "MIT"
+}

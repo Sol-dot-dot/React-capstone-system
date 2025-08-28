@@ -1,0 +1,243 @@
+# Capstone System - Web & Mobile Demo
+
+A simple system to verify the connection and API between a web admin panel and mobile application.
+
+## System Architecture
+
+- **Backend**: Node.js + Express API
+- **Database**: MySQL (managed with phpMyAdmin)
+- **Web Admin**: React.js
+- **Mobile App**: React Native
+
+## Features
+
+### Web Admin Panel
+- Admin login (fixed account)
+- View user statistics
+- Monitor login logs from mobile users
+- Clean, responsive dashboard
+
+### Mobile App
+- User registration with email verification
+- User login
+- Welcome screen after authentication
+- Real email integration for verification codes
+
+## Prerequisites
+
+- Node.js (v16 or higher)
+- MySQL Server
+- phpMyAdmin (for database management)
+- Android Studio (for mobile development)
+- React Native CLI
+
+## Setup Instructions
+
+### 1. Database Setup
+
+1. Open phpMyAdmin
+2. Create a new database named `capstone_system`
+3. Import the database schema from `backend/database.sql`
+
+### 2. Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables:
+   - Copy `config.env` and update with your settings:
+   ```env
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=capstone_system
+   DB_PORT=3306
+
+   JWT_SECRET=your_jwt_secret_key_here
+   JWT_EXPIRE=24h
+
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASS=your_app_password
+
+   PORT=5000
+   ```
+
+4. Start the backend server:
+   ```bash
+   npm run dev
+   ```
+
+   The API will be available at `http://localhost:5000`
+
+### 3. Web Admin Panel Setup
+
+1. Navigate to the web directory:
+   ```bash
+   cd web
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+
+   The web app will be available at `http://localhost:3000`
+
+### 4. Mobile App Setup
+
+1. Navigate to the mobile directory:
+   ```bash
+   cd mobile
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. For Android development:
+   ```bash
+   npx react-native run-android
+   ```
+
+   Make sure you have:
+   - Android Studio installed
+   - Android emulator running
+   - ANDROID_HOME environment variable set
+
+## Default Credentials
+
+### Admin Panel
+- **Username**: admin
+- **Password**: password
+
+### Test User Registration
+- **ID Number Format**: XXX-XXXX (e.g., C22-0044)
+- **Email Domain**: @my.smciligan.edu.ph
+- **Password**: Minimum 6 characters
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/admin/login` - Admin login
+- `POST /api/auth/user/register` - User registration
+- `POST /api/auth/user/verify` - Email verification
+- `POST /api/auth/user/login` - User login
+
+### Admin (Protected)
+- `GET /api/admin/login-logs` - Get login logs
+- `GET /api/admin/user-stats` - Get user statistics
+
+### Health Check
+- `GET /api/health` - Server health check
+
+## Email Configuration
+
+To enable email verification:
+
+1. Use a Gmail account
+2. Enable 2-factor authentication
+3. Generate an App Password
+4. Update the email settings in `backend/config.env`
+
+## Testing the System
+
+1. **Start all services**:
+   - Backend API (port 5000)
+   - Web admin panel (port 3000)
+   - Mobile app (Android emulator)
+
+2. **Test Admin Panel**:
+   - Visit `http://localhost:3000`
+   - Login with admin/password
+   - View dashboard and statistics
+
+3. **Test Mobile App**:
+   - Register a new user with valid email
+   - Check email for verification code
+   - Verify email and login
+   - View welcome screen
+
+4. **Verify Connection**:
+   - Login from mobile app
+   - Check admin panel for new login logs
+   - Verify statistics update
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Error**:
+   - Verify MySQL is running
+   - Check database credentials in `config.env`
+   - Ensure database `capstone_system` exists
+
+2. **Email Not Sending**:
+   - Check Gmail app password
+   - Verify email settings in `config.env`
+   - Check firewall/network settings
+
+3. **Mobile App Connection Error**:
+   - Ensure backend is running on port 5000
+   - Check Android emulator network settings
+   - Verify API URL in mobile app (should be `http://10.0.2.2:5000`)
+
+4. **React Native Build Issues**:
+   - Clear Metro cache: `npx react-native start --reset-cache`
+   - Clean Android build: `cd android && ./gradlew clean`
+   - Rebuild: `npx react-native run-android`
+
+## Project Structure
+
+```
+├── backend/                 # Node.js API server
+│   ├── config/             # Database configuration
+│   ├── middleware/         # Authentication middleware
+│   ├── routes/             # API routes
+│   ├── utils/              # Email service
+│   ├── server.js           # Main server file
+│   └── database.sql        # Database schema
+├── web/                    # React.js admin panel
+│   ├── public/             # Static files
+│   ├── src/                # React components
+│   └── package.json        # Web dependencies
+├── mobile/                 # React Native app
+│   ├── src/                # Mobile components
+│   ├── screens/            # Mobile screens
+│   └── package.json        # Mobile dependencies
+└── README.md               # This file
+```
+
+## Development Notes
+
+- The system uses JWT tokens for authentication
+- Email verification codes expire after 10 minutes
+- Login logs are automatically created for both admin and user logins
+- The mobile app uses AsyncStorage for token persistence
+- CORS is enabled for cross-origin requests
+
+## Next Steps
+
+This is a minimal demo system. For production, consider adding:
+
+- Password reset functionality
+- User profile management
+- More detailed admin features
+- Push notifications
+- Enhanced security measures
+- Error logging and monitoring
+- Unit and integration tests
