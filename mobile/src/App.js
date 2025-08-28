@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, verify, forgotPassword, resetPassword
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, verify, forgotPassword, resetPassword, profile, changePassword
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,6 +24,8 @@ const App = () => {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
 
   const handleLogin = async () => {
     if (!idNumber || !password) {
@@ -290,6 +292,132 @@ const App = () => {
     }
   };
 
+  const handleGetProfile = async () => {
+    if (!userData?.idNumber) {
+      Alert.alert('Error', 'User data not available');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.get(`http://10.0.2.2:5000/api/user/profile/${userData.idNumber}`);
+      
+      if (response.data.success) {
+        setProfileEmail(response.data.user.email);
+        setCurrentScreen('profile');
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to load profile'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!userData?.idNumber) {
+      Alert.alert('Error', 'User data not available');
+      return;
+    }
+
+    if (!profileEmail) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+
+    if (!profileEmail.endsWith('@my.smciligan.edu.ph')) {
+      Alert.alert('Error', 'Email must be from @my.smciligan.edu.ph domain');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.put(`http://10.0.2.2:5000/api/user/profile/${userData.idNumber}`, {
+        email: profileEmail,
+      });
+
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Profile updated successfully',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setUserData({ ...userData, email: profileEmail });
+                setCurrentScreen('dashboard');
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to update profile'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!userData?.idNumber) {
+      Alert.alert('Error', 'User data not available');
+      return;
+    }
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.put(`http://10.0.2.2:5000/api/user/change-password/${userData.idNumber}`, {
+        currentPassword,
+        newPassword,
+      });
+
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Password changed successfully',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmNewPassword('');
+                setCurrentScreen('dashboard');
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to change password'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     setCurrentScreen('welcome');
     setUserData(null);
@@ -302,6 +430,8 @@ const App = () => {
     setNewPassword('');
     setConfirmNewPassword('');
     setUserId(null);
+    setCurrentPassword('');
+    setProfileEmail('');
   };
 
   const renderWelcomeScreen = () => (
@@ -631,54 +761,156 @@ const App = () => {
     </View>
   );
 
-  const renderDashboardScreen = () => (
-    <View style={styles.dashboardContainer}>
-      <View style={styles.welcomeCard}>
-        <Text style={styles.welcomeTitle}>Welcome!</Text>
-        <Text style={styles.welcomeSubtitle}>You have successfully logged in</Text>
-        
-        <View style={styles.userInfo}>
-          <Text style={styles.userInfoLabel}>ID Number:</Text>
-          <Text style={styles.userInfoValue}>{userData?.idNumber}</Text>
-          
-          <Text style={styles.userInfoLabel}>Email:</Text>
-          <Text style={styles.userInfoValue}>{userData?.email}</Text>
-        </View>
+     const renderDashboardScreen = () => (
+     <View style={styles.dashboardContainer}>
+       <View style={styles.welcomeCard}>
+         <Text style={styles.welcomeTitle}>Welcome!</Text>
+         <Text style={styles.welcomeSubtitle}>You have successfully logged in</Text>
+         
+         <View style={styles.userInfo}>
+           <Text style={styles.userInfoLabel}>ID Number:</Text>
+           <Text style={styles.userInfoValue}>{userData?.idNumber}</Text>
+           
+           <Text style={styles.userInfoLabel}>Email:</Text>
+           <Text style={styles.userInfoValue}>{userData?.email}</Text>
+         </View>
 
-        <View style={styles.dashboardActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>View Profile</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Settings</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Help</Text>
-          </TouchableOpacity>
-        </View>
+         <View style={styles.dashboardActions}>
+           <TouchableOpacity style={styles.actionButton} onPress={handleGetProfile}>
+             <Text style={styles.actionButtonText}>View Profile</Text>
+           </TouchableOpacity>
+           
+           <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('changePassword')}>
+             <Text style={styles.actionButtonText}>Change Password</Text>
+           </TouchableOpacity>
+           
+           <TouchableOpacity style={styles.actionButton}>
+             <Text style={styles.actionButtonText}>Help</Text>
+           </TouchableOpacity>
+         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+           <Text style={styles.logoutButtonText}>Logout</Text>
+         </TouchableOpacity>
+       </View>
+     </View>
+   );
 
-  const getScreenTitle = () => {
-    switch (currentScreen) {
-      case 'welcome': return 'Welcome';
-      case 'login': return 'Login';
-      case 'register': return 'Register';
-      case 'verify': return 'Register';
-      case 'password': return 'Register';
-      case 'forgotPassword': return 'Forgot Password';
-      case 'resetPassword': return 'Reset Password';
-      case 'dashboard': return 'Dashboard';
-      default: return 'Welcome';
-    }
-  };
+   const renderProfileScreen = () => (
+     <View style={styles.form}>
+       <Text style={styles.title}>Profile Settings</Text>
+       <Text style={styles.subtitle}>Update your profile information</Text>
+
+       <View style={styles.inputContainer}>
+         <Text style={styles.label}>ID Number</Text>
+         <TextInput
+           style={[styles.input, styles.disabledInput]}
+           value={userData?.idNumber}
+           editable={false}
+         />
+       </View>
+
+       <View style={styles.inputContainer}>
+         <Text style={styles.label}>Email</Text>
+         <TextInput
+           style={styles.input}
+           value={profileEmail}
+           onChangeText={setProfileEmail}
+           placeholder="Enter your email (@my.smciligan.edu.ph)"
+           keyboardType="email-address"
+           autoCapitalize="none"
+         />
+       </View>
+
+       <TouchableOpacity
+         style={[styles.button, loading && styles.buttonDisabled]}
+         onPress={handleUpdateProfile}
+         disabled={loading}
+       >
+         <Text style={styles.buttonText}>
+           {loading ? 'Updating...' : 'Update Profile'}
+         </Text>
+       </TouchableOpacity>
+
+       <View style={styles.footer}>
+         <TouchableOpacity onPress={() => setCurrentScreen('dashboard')}>
+           <Text style={styles.linkText}>Back to Dashboard</Text>
+         </TouchableOpacity>
+       </View>
+     </View>
+   );
+
+   const renderChangePasswordScreen = () => (
+     <View style={styles.form}>
+       <Text style={styles.title}>Change Password</Text>
+       <Text style={styles.subtitle}>Update your account password</Text>
+
+       <View style={styles.inputContainer}>
+         <Text style={styles.label}>Current Password</Text>
+         <TextInput
+           style={styles.input}
+           value={currentPassword}
+           onChangeText={setCurrentPassword}
+           placeholder="Enter current password"
+           secureTextEntry
+         />
+       </View>
+
+       <View style={styles.inputContainer}>
+         <Text style={styles.label}>New Password</Text>
+         <TextInput
+           style={styles.input}
+           value={newPassword}
+           onChangeText={setNewPassword}
+           placeholder="Enter new password (min 6 characters)"
+           secureTextEntry
+         />
+       </View>
+
+       <View style={styles.inputContainer}>
+         <Text style={styles.label}>Confirm New Password</Text>
+         <TextInput
+           style={styles.input}
+           value={confirmNewPassword}
+           onChangeText={setConfirmNewPassword}
+           placeholder="Confirm new password"
+           secureTextEntry
+         />
+       </View>
+
+       <TouchableOpacity
+         style={[styles.button, loading && styles.buttonDisabled]}
+         onPress={handleChangePassword}
+         disabled={loading}
+       >
+         <Text style={styles.buttonText}>
+           {loading ? 'Changing...' : 'Change Password'}
+         </Text>
+       </TouchableOpacity>
+
+       <View style={styles.footer}>
+         <TouchableOpacity onPress={() => setCurrentScreen('dashboard')}>
+           <Text style={styles.linkText}>Back to Dashboard</Text>
+         </TouchableOpacity>
+       </View>
+     </View>
+   );
+
+     const getScreenTitle = () => {
+     switch (currentScreen) {
+       case 'welcome': return 'Welcome';
+       case 'login': return 'Login';
+       case 'register': return 'Register';
+       case 'verify': return 'Register';
+       case 'password': return 'Register';
+       case 'forgotPassword': return 'Forgot Password';
+       case 'resetPassword': return 'Reset Password';
+       case 'dashboard': return 'Dashboard';
+       case 'profile': return 'Profile';
+       case 'changePassword': return 'Change Password';
+       default: return 'Welcome';
+     }
+   };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -692,9 +924,11 @@ const App = () => {
           {currentScreen === 'register' && renderRegisterScreen()}
           {currentScreen === 'verify' && renderVerifyScreen()}
           {currentScreen === 'password' && renderPasswordScreen()}
-          {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
-          {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
-          {currentScreen === 'dashboard' && renderDashboardScreen()}
+                     {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
+           {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
+           {currentScreen === 'dashboard' && renderDashboardScreen()}
+           {currentScreen === 'profile' && renderProfileScreen()}
+           {currentScreen === 'changePassword' && renderChangePasswordScreen()}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -777,14 +1011,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#333',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
+     input: {
+     borderWidth: 1,
+     borderColor: '#ddd',
+     borderRadius: 8,
+     padding: 15,
+     fontSize: 16,
+     backgroundColor: '#f9f9f9',
+   },
+   disabledInput: {
+     backgroundColor: '#f0f0f0',
+     color: '#666',
+   },
   button: {
     backgroundColor: '#007bff',
     padding: 15,

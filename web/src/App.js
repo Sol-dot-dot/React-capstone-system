@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import EnhancedDashboard from './components/EnhancedDashboard';
+import UserManagement from './components/UserManagement';
+import ActivityLogs from './components/ActivityLogs';
 import './App.css';
 
 function App() {
@@ -39,11 +42,24 @@ function App() {
           <nav className="navbar">
             <div className="container">
               <h1>Capstone System - Admin Panel</h1>
-              <div>
-                <span>Welcome, {user?.username}</span>
-                <button onClick={handleLogout} style={{ marginLeft: '15px' }}>
-                  Logout
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  <Link to="/enhanced-dashboard" style={{ color: 'white', textDecoration: 'none' }}>
+                    Admin Dashboard
+                  </Link>
+                  <Link to="/users" style={{ color: 'white', textDecoration: 'none' }}>
+                    User Management
+                  </Link>
+                  <Link to="/activity-logs" style={{ color: 'white', textDecoration: 'none' }}>
+                    Activity Logs
+                  </Link>
+                </div>
+                <div>
+                  <span>Welcome, {user?.username}</span>
+                  <button onClick={handleLogout} style={{ marginLeft: '15px' }}>
+                    Logout
+                  </button>
+                </div>
               </div>
             </div>
           </nav>
@@ -55,7 +71,7 @@ function App() {
               path="/login" 
               element={
                 isAuthenticated ? 
-                <Navigate to="/dashboard" /> : 
+                <Navigate to="/enhanced-dashboard" /> : 
                 <Login onLogin={handleLogin} />
               } 
             />
@@ -63,13 +79,37 @@ function App() {
               path="/dashboard" 
               element={
                 isAuthenticated ? 
-                <Dashboard user={user} /> : 
+                <Navigate to="/enhanced-dashboard" /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/enhanced-dashboard" 
+              element={
+                isAuthenticated ? 
+                <EnhancedDashboard user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/users" 
+              element={
+                isAuthenticated ? 
+                <UserManagement user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/activity-logs" 
+              element={
+                isAuthenticated ? 
+                <ActivityLogs user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
             <Route 
               path="/" 
-              element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} 
+              element={<Navigate to={isAuthenticated ? "/enhanced-dashboard" : "/login"} />} 
             />
           </Routes>
         </div>

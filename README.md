@@ -142,9 +142,21 @@ A simple system to verify the connection and API between a web admin panel and m
 - `POST /api/auth/user/verify-reset-code` - Verify password reset code
 - `POST /api/auth/user/reset-password` - Reset password with code
 
+### User Profile Management
+- `GET /api/user/profile/:idNumber` - Get user profile
+- `PUT /api/user/profile/:idNumber` - Update user profile
+- `PUT /api/user/change-password/:idNumber` - Change user password
+- `DELETE /api/user/profile/:idNumber` - Delete user account
+
 ### Admin (Protected)
 - `GET /api/admin/login-logs` - Get login logs
 - `GET /api/admin/user-stats` - Get user statistics
+- `GET /api/admin/users` - Get all users
+- `GET /api/admin/users/:idNumber` - Get user details with login history
+- `PUT /api/admin/users/:idNumber/verify` - Update user verification status
+- `DELETE /api/admin/users/:idNumber` - Delete user account
+- `GET /api/admin/activity-logs` - Get system activity logs
+- `GET /api/admin/dashboard-stats` - Get comprehensive dashboard statistics
 
 ### Health Check
 - `GET /api/health` - Server health check
@@ -257,6 +269,8 @@ The mobile app now includes a complete password reset workflow that has been suc
 - ✅ User login with ID number and password
 - ✅ Password reset functionality
 - ✅ Dashboard screen after successful login
+- ✅ User profile management
+- ✅ Change password functionality
 - ✅ Responsive design with modern UI
 - ✅ Error handling and validation
 - ✅ Loading states and user feedback
@@ -265,9 +279,10 @@ The mobile app now includes a complete password reset workflow that has been suc
 
 This is a minimal demo system. For production, consider adding:
 
-- User profile management
-- More detailed admin features
 - Push notifications
 - Enhanced security measures
 - Error logging and monitoring
 - Unit and integration tests
+- Advanced analytics and reporting
+- Multi-factor authentication
+- Role-based access control
