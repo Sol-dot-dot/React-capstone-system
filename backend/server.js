@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api', require('./routes/profile'));
+app.use('/api/books', require('./routes/books'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

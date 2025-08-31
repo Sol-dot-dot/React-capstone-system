@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, verify, forgotPassword, resetPassword, profile, changePassword
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -171,7 +171,7 @@ const App = () => {
       });
 
       if (response.data.success) {
-        setCurrentScreen('verify');
+        setCurrentScreen('email');
       }
     } catch (error) {
       Alert.alert(
@@ -204,6 +204,7 @@ const App = () => {
       if (response.data.success) {
         setUserId(response.data.userId);
         setCurrentScreen('verify');
+        Alert.alert('Success', 'Verification code sent to your email!');
       }
     } catch (error) {
       Alert.alert(
@@ -545,66 +546,85 @@ const App = () => {
     </View>
   );
 
+  const renderEmailScreen = () => (
+    <View style={styles.form}>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.stepTitle}>Step 2: Enter Email</Text>
+      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
+      
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Enter your email (@my.smciligan.edu.ph)"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleEmailSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Sending Code...' : 'Send Verification Code'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => setCurrentScreen('register')}
+      >
+        <Text style={styles.backButtonText}>Back to ID Number</Text>
+      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Already have an account? </Text>
+        <TouchableOpacity onPress={() => setCurrentScreen('login')}>
+          <Text style={styles.linkText}>Login</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderVerifyScreen = () => (
     <View style={styles.form}>
       <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.stepTitle}>Step 3: Verify Email</Text>
+      <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
+      <Text style={styles.stepInfo}>Email: {email}</Text>
       
-      {!email ? (
-        <>
-          <Text style={styles.stepTitle}>Step 2: Enter Email</Text>
-          <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your email (@my.smciligan.edu.ph)"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Verification Code</Text>
+        <TextInput
+          style={styles.input}
+          value={verificationCode}
+          onChangeText={setVerificationCode}
+          placeholder="Enter 6-digit code"
+          keyboardType="numeric"
+          maxLength={6}
+        />
+      </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleEmailSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Sending Code...' : 'Send Verification Code'}
-            </Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <Text style={styles.stepTitle}>Step 3: Verify Email</Text>
-          <Text style={styles.stepInfo}>ID Number: {idNumber}</Text>
-          <Text style={styles.stepInfo}>Email: {email}</Text>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Verification Code</Text>
-            <TextInput
-              style={styles.input}
-              value={verificationCode}
-              onChangeText={setVerificationCode}
-              placeholder="Enter 6-digit code"
-              keyboardType="numeric"
-              maxLength={6}
-            />
-          </View>
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleVerificationSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Verifying...' : 'Verify Code'}
+        </Text>
+      </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleVerificationSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Verifying...' : 'Verify Code'}
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => setCurrentScreen('email')}
+      >
+        <Text style={styles.backButtonText}>Back to Email</Text>
+      </TouchableOpacity>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Already have an account? </Text>
@@ -652,6 +672,13 @@ const App = () => {
         <Text style={styles.buttonText}>
           {loading ? 'Completing...' : 'Complete Registration'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => setCurrentScreen('verify')}
+      >
+        <Text style={styles.backButtonText}>Back to Verification</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
@@ -901,6 +928,7 @@ const App = () => {
        case 'welcome': return 'Welcome';
        case 'login': return 'Login';
        case 'register': return 'Register';
+       case 'email': return 'Register';
        case 'verify': return 'Register';
        case 'password': return 'Register';
        case 'forgotPassword': return 'Forgot Password';
@@ -922,6 +950,7 @@ const App = () => {
           {currentScreen === 'welcome' && renderWelcomeScreen()}
           {currentScreen === 'login' && renderLoginScreen()}
           {currentScreen === 'register' && renderRegisterScreen()}
+          {currentScreen === 'email' && renderEmailScreen()}
           {currentScreen === 'verify' && renderVerifyScreen()}
           {currentScreen === 'password' && renderPasswordScreen()}
                      {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
@@ -1042,6 +1071,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6c757d',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
   secondaryButtonText: {

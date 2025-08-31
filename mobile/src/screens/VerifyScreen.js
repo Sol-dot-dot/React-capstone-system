@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,14 @@ const VerifyScreen = ({ navigation, route }) => {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Debug logging
+  console.log('VerifyScreen initialized with:', { idNumber, currentStep });
+
+  // Log step changes
+  useEffect(() => {
+    console.log('Step changed to:', currentStep);
+  }, [currentStep]);
+
   const handleEmailSubmit = async () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email');
@@ -34,16 +42,24 @@ const VerifyScreen = ({ navigation, route }) => {
 
     setLoading(true);
     try {
+      console.log('Sending email check request:', { idNumber, email });
+      
       const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
         idNumber,
         email,
       });
 
+      console.log('Email check response:', response.data);
+
       if (response.data.success) {
         setUserId(response.data.userId);
         setCurrentStep('verify');
+        Alert.alert('Success', 'Verification code sent to your email!');
+      } else {
+        Alert.alert('Error', response.data.message || 'Failed to send verification code');
       }
     } catch (error) {
+      console.error('Email check error:', error);
       Alert.alert(
         'Error',
         error.response?.data?.message || 'An error occurred while checking email'
@@ -156,6 +172,13 @@ const VerifyScreen = ({ navigation, route }) => {
           {loading ? 'Sending Code...' : 'Send Verification Code'}
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backButtonText}>Back to ID Number</Text>
+      </TouchableOpacity>
     </>
   );
 
@@ -185,6 +208,13 @@ const VerifyScreen = ({ navigation, route }) => {
         <Text style={styles.buttonText}>
           {loading ? 'Verifying...' : 'Verify Code'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => setCurrentStep('email')}
+      >
+        <Text style={styles.backButtonText}>Back to Email</Text>
       </TouchableOpacity>
     </>
   );
@@ -225,6 +255,13 @@ const VerifyScreen = ({ navigation, route }) => {
         <Text style={styles.buttonText}>
           {loading ? 'Completing...' : 'Complete Registration'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.backButton]}
+        onPress={() => setCurrentStep('verify')}
+      >
+        <Text style={styles.backButtonText}>Back to Verification</Text>
       </TouchableOpacity>
     </>
   );
@@ -320,6 +357,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6c757d',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
   footer: {

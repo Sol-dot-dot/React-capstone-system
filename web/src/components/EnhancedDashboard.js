@@ -4,6 +4,7 @@ import axios from 'axios';
 const EnhancedDashboard = () => {
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [bookStats, setBookStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,6 +27,15 @@ const EnhancedDashboard = () => {
 
       setStats(statsResponse.data.stats);
       setLogs(logsResponse.data.logs);
+
+      // Try to fetch book statistics (optional - won't break dashboard if it fails)
+      try {
+        const bookStatsResponse = await axios.get('/api/books/stats/overview', config);
+        setBookStats(bookStatsResponse.data.data);
+      } catch (bookError) {
+        console.warn('Book statistics not available:', bookError.message);
+        setBookStats({ totalBooks: 0, statusStats: [], genreStats: [], monthlyAdded: 0 });
+      }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
       setError(err.response?.data?.message || 'Failed to fetch data. Please ensure the backend server is running.');
@@ -72,6 +82,13 @@ const EnhancedDashboard = () => {
           </div>
           <p>Today's Logins</p>
           <small style={{ color: '#666' }}>Login activity today</small>
+        </div>
+        <div className="stat-card">
+          <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#6f42c1' }}>
+            {bookStats?.totalBooks || 0}
+          </div>
+          <p>Total Books</p>
+          <small style={{ color: '#666' }}>Books in library</small>
         </div>
       </div>
 
@@ -159,6 +176,9 @@ const EnhancedDashboard = () => {
         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
           <button className="btn btn-success" onClick={() => window.location.href = '/users'}>
             👥 Manage Users
+          </button>
+          <button className="btn btn-warning" onClick={() => window.location.href = '/books'}>
+            📚 Manage Books
           </button>
           <button className="btn btn-info" onClick={() => window.location.href = '/activity-logs'}>
             📝 View Activity Logs

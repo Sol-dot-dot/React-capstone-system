@@ -25,6 +25,26 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Books table
+CREATE TABLE books (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    isbn VARCHAR(13),
+    publisher VARCHAR(255),
+    publication_year INT,
+    genre VARCHAR(100),
+    description TEXT,
+    barcode VARCHAR(50) UNIQUE NOT NULL,
+    number_code VARCHAR(20) UNIQUE NOT NULL,
+    status ENUM('available', 'borrowed', 'lost', 'maintenance') DEFAULT 'available',
+    location VARCHAR(100),
+    added_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (added_by) REFERENCES admins(id)
+);
+
 -- Login logs table
 CREATE TABLE login_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
