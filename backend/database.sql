@@ -45,6 +45,23 @@ CREATE TABLE books (
     FOREIGN KEY (added_by) REFERENCES admins(id)
 );
 
+-- Borrowing transactions table
+CREATE TABLE borrowing_transactions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id_number VARCHAR(10) NOT NULL,
+    book_id INT NOT NULL,
+    borrowed_by_admin INT NOT NULL,
+    borrowed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP NOT NULL,
+    returned_at TIMESTAMP NULL,
+    returned_by_admin INT NULL,
+    status ENUM('borrowed', 'returned', 'overdue') DEFAULT 'borrowed',
+    notes TEXT,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    FOREIGN KEY (borrowed_by_admin) REFERENCES admins(id),
+    FOREIGN KEY (returned_by_admin) REFERENCES admins(id)
+);
+
 -- Login logs table
 CREATE TABLE login_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,

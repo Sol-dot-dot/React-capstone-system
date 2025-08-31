@@ -6,6 +6,7 @@ import EnhancedDashboard from './components/EnhancedDashboard';
 import UserManagement from './components/UserManagement';
 import ActivityLogs from './components/ActivityLogs';
 import BookManagement from './components/BookManagement';
+import BorrowingManagement from './components/BorrowingManagement';
 import './App.css';
 
 function App() {
@@ -56,6 +57,9 @@ function App() {
                   </Link>
                   <Link to="/activity-logs" style={{ color: 'white', textDecoration: 'none' }}>
                     Activity Logs
+                  </Link>
+                  <Link to="/borrowings" style={{ color: 'white', textDecoration: 'none' }}>
+                    Borrowing Management
                   </Link>
                 </div>
                 <div>
@@ -116,6 +120,14 @@ function App() {
               element={
                 isAuthenticated ? 
                 <ActivityLogs user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/borrowings" 
+              element={
+                isAuthenticated ? 
+                <BorrowingManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
