@@ -360,5 +360,91 @@ router.post('/return', auth, async (req, res) => {
     }
 });
 
+// GET /api/borrowing/user/:idNumber - Get user's own borrowed books (for mobile app)
+router.get('/user/:idNumber', async (req, res) => {
+    try {
+        const { idNumber } = req.params;
+
+        // Check if student exists
+        const student = await checkStudentExists(idNumber);
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        // Get current borrowed books (only active/not returned)
+        const [borrowedBooks] = await pool.execute(
+            `SELECT 
+                bt.id,
+                bt.borrowed_at,
+                bt.due_date,
+                bt.status,
+                b.title,
+                b.author,
+                b.number_code,
+                b.barcode
+             FROM borrowing_transactions bt
+             JOIN books b ON bt.book_id = b.id
+             WHERE bt.student_id_number = ? 
+             AND bt.status IN ('borrowed', 'overdue')
+             ORDER BY bt.due_date ASC`,
+            [idNumber]
+        );
+
+        // Calculate due date status for each book
+        const booksWithStatus = borrowedBooks.map(book => {
+            const dueDate = new Date(book.due_date);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Reset time to compare only dates
+            today.setHours(0, 0, 0, 0);
+            tomorrow.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
+            
+            let dueStatus = 'normal';
+            let daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (dueDate < today) {
+                dueStatus = 'overdue';
+                daysUntilDue = Math.abs(daysUntilDue);
+            } else if (dueDate.getTime() === today.getTime()) {
+                dueStatus = 'today';
+                daysUntilDue = 0;
+            } else if (dueDate.getTime() === tomorrow.getTime()) {
+                dueStatus = 'tomorrow';
+                daysUntilDue = 1;
+            } else if (daysUntilDue <= 3) {
+                dueStatus = 'near';
+            }
+
+            return {
+                ...book,
+                dueStatus,
+                daysUntilDue
+            };
+        });
+
+        res.json({
+            success: true,
+            data: {
+                student,
+                borrowedBooks: booksWithStatus,
+                totalBorrowed: booksWithStatus.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching user borrowed books:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch borrowed books'
+        });
+    }
+});
+
 module.exports = router;
 

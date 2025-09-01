@@ -10,9 +10,11 @@ import {
   ScrollView,
 } from 'react-native';
 import axios from 'axios';
+import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
+import NotificationService from './services/NotificationService';
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,6 +47,11 @@ const App = () => {
         setCurrentScreen('dashboard');
         setIdNumber('');
         setPassword('');
+        
+        // Check for borrowed books notifications after login
+        setTimeout(() => {
+          checkBorrowedBooksNotifications();
+        }, 1000);
       }
     } catch (error) {
       Alert.alert(
@@ -416,6 +423,23 @@ const App = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkBorrowedBooksNotifications = async () => {
+    if (!userData?.idNumber) return;
+    
+    try {
+      const response = await axios.get(
+        `http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}`
+      );
+
+      if (response.data.success) {
+        const borrowedBooks = response.data.data.borrowedBooks;
+        await NotificationService.checkAndShowNotifications(borrowedBooks);
+      }
+    } catch (error) {
+      console.error('Error checking borrowed books notifications:', error);
     }
   };
 
@@ -803,6 +827,10 @@ const App = () => {
          </View>
 
          <View style={styles.dashboardActions}>
+           <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('borrowedBooks')}>
+             <Text style={styles.actionButtonText}>📚 My Borrowed Books</Text>
+           </TouchableOpacity>
+           
            <TouchableOpacity style={styles.actionButton} onPress={handleGetProfile}>
              <Text style={styles.actionButtonText}>View Profile</Text>
            </TouchableOpacity>
@@ -936,6 +964,7 @@ const App = () => {
        case 'dashboard': return 'Dashboard';
        case 'profile': return 'Profile';
        case 'changePassword': return 'Change Password';
+       case 'borrowedBooks': return 'My Borrowed Books';
        default: return 'Welcome';
      }
    };
@@ -953,11 +982,17 @@ const App = () => {
           {currentScreen === 'email' && renderEmailScreen()}
           {currentScreen === 'verify' && renderVerifyScreen()}
           {currentScreen === 'password' && renderPasswordScreen()}
-                     {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
-           {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
-           {currentScreen === 'dashboard' && renderDashboardScreen()}
-           {currentScreen === 'profile' && renderProfileScreen()}
-           {currentScreen === 'changePassword' && renderChangePasswordScreen()}
+          {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
+          {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
+          {currentScreen === 'dashboard' && renderDashboardScreen()}
+          {currentScreen === 'profile' && renderProfileScreen()}
+          {currentScreen === 'changePassword' && renderChangePasswordScreen()}
+          {currentScreen === 'borrowedBooks' && (
+            <BorrowedBooksScreen 
+              userData={userData} 
+              onBack={() => setCurrentScreen('dashboard')} 
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
