@@ -1,3 +1,44 @@
 # Ignore environment files
 backend/config.env
 *.env
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Ignore config files with secrets
+config.env
+config.local.env
+# But allow template files
+!*.template
+
+# Ignore logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore dependencies
+node_modules/
+*/node_modules/
+
+# Ignore build outputs
+build/
+dist/
+*/build/
+*/dist/
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore temporary files
+*.tmp
+*.temp

@@ -6,11 +6,13 @@ import UserManagement from './components/UserManagement';
 import ActivityLogs from './components/ActivityLogs';
 import BookManagement from './components/BookManagement';
 import BorrowingManagement from './components/BorrowingManagement';
+import ChatbotWidget from './components/ChatbotWidget';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -136,6 +138,23 @@ function App() {
             />
           </Routes>
         </div>
+
+        {/* Floating Chatbot Button */}
+        {isAuthenticated && (
+          <button 
+            className="floating-chat-button"
+            onClick={() => setIsChatbotVisible(true)}
+            title="Ask AI Assistant"
+          >
+            🤖
+          </button>
+        )}
+
+        {/* Chatbot Widget */}
+        <ChatbotWidget 
+          isVisible={isChatbotVisible} 
+          onClose={() => setIsChatbotVisible(false)} 
+        />
       </div>
     </Router>
   );

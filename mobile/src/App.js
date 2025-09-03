@@ -12,6 +12,7 @@ import {
 import axios from 'axios';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import NotificationService from './services/NotificationService';
+import ChatbotWidget from './components/ChatbotWidget';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks
@@ -28,6 +29,7 @@ const App = () => {
   const [userData, setUserData] = useState(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
+  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
 
   const handleLogin = async () => {
     if (!idNumber || !password) {
@@ -839,8 +841,8 @@ const App = () => {
              <Text style={styles.actionButtonText}>Change Password</Text>
            </TouchableOpacity>
            
-           <TouchableOpacity style={styles.actionButton}>
-             <Text style={styles.actionButtonText}>Help</Text>
+           <TouchableOpacity style={styles.actionButton} onPress={() => setIsChatbotVisible(true)}>
+             <Text style={styles.actionButtonText}>🤖 Ask AI Assistant</Text>
            </TouchableOpacity>
          </View>
 
@@ -995,6 +997,22 @@ const App = () => {
           )}
         </View>
       </ScrollView>
+
+      {/* Floating Chatbot Button */}
+      {userData && currentScreen === 'dashboard' && (
+        <TouchableOpacity 
+          style={styles.floatingChatButton}
+          onPress={() => setIsChatbotVisible(true)}
+        >
+          <Text style={styles.floatingChatButtonText}>🤖</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Chatbot Widget */}
+      <ChatbotWidget 
+        isVisible={isChatbotVisible} 
+        onClose={() => setIsChatbotVisible(false)} 
+      />
     </SafeAreaView>
   );
 };
@@ -1218,6 +1236,29 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  floatingChatButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007bff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  floatingChatButtonText: {
+    fontSize: 24,
+    color: 'white',
   },
 });
 
