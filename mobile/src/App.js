@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
+import PenaltyScreen from './screens/PenaltyScreen';
 import NotificationService from './services/NotificationService';
 import ChatbotWidget from './components/ChatbotWidget';
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks, penalties
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -461,6 +462,7 @@ const App = () => {
     setProfileEmail('');
   };
 
+
   const renderWelcomeScreen = () => (
     <View style={styles.form}>
       <Text style={styles.title}>Capstone Mobile App</Text>
@@ -527,6 +529,7 @@ const App = () => {
           {loading ? 'Logging in...' : 'Login'}
         </Text>
       </TouchableOpacity>
+
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
@@ -833,6 +836,10 @@ const App = () => {
              <Text style={styles.actionButtonText}>📚 My Borrowed Books</Text>
            </TouchableOpacity>
            
+           <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('penalties')}>
+             <Text style={styles.actionButtonText}>💰 Penalty Information</Text>
+           </TouchableOpacity>
+           
            <TouchableOpacity style={styles.actionButton} onPress={handleGetProfile}>
              <Text style={styles.actionButtonText}>View Profile</Text>
            </TouchableOpacity>
@@ -967,6 +974,7 @@ const App = () => {
        case 'profile': return 'Profile';
        case 'changePassword': return 'Change Password';
        case 'borrowedBooks': return 'My Borrowed Books';
+       case 'penalties': return 'Penalty Information';
        default: return 'Welcome';
      }
    };
@@ -991,6 +999,12 @@ const App = () => {
           {currentScreen === 'changePassword' && renderChangePasswordScreen()}
           {currentScreen === 'borrowedBooks' && (
             <BorrowedBooksScreen 
+              userData={userData} 
+              onBack={() => setCurrentScreen('dashboard')} 
+            />
+          )}
+          {currentScreen === 'penalties' && (
+            <PenaltyScreen 
               userData={userData} 
               onBack={() => setCurrentScreen('dashboard')} 
             />

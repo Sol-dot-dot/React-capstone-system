@@ -15,6 +15,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api', require('./routes/profile'));
 app.use('/api/books', require('./routes/books'));
 app.use('/api/borrowing', require('./routes/borrowing'));
+app.use('/api/penalty', require('./routes/penalty'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 
 // Health check endpoint

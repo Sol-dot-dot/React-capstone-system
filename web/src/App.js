@@ -6,6 +6,7 @@ import UserManagement from './components/UserManagement';
 import ActivityLogs from './components/ActivityLogs';
 import BookManagement from './components/BookManagement';
 import BorrowingManagement from './components/BorrowingManagement';
+import PenaltyManagement from './components/PenaltyManagement';
 import ChatbotWidget from './components/ChatbotWidget';
 import './App.css';
 
@@ -61,6 +62,9 @@ function App() {
                   </Link>
                   <Link to="/borrowings" style={{ color: 'white', textDecoration: 'none' }}>
                     Borrowing Management
+                  </Link>
+                  <Link to="/penalties" style={{ color: 'white', textDecoration: 'none' }}>
+                    Penalty Management
                   </Link>
                 </div>
                 <div>
@@ -129,6 +133,14 @@ function App() {
               element={
                 isAuthenticated ? 
                 <BorrowingManagement user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/penalties" 
+              element={
+                isAuthenticated ? 
+                <PenaltyManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />

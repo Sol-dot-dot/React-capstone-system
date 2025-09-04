@@ -8,6 +8,7 @@ const {
     checkStudentExists,
     getStudentBorrowedCount
 } = require('../utils/borrowingUtils');
+const { createOrUpdateFine, updateSemesterBooksCount } = require('../utils/penaltyUtils');
 const pool = require('../config/database');
 
 // GET /api/borrowing/stats - Get borrowing statistics
@@ -295,6 +296,7 @@ router.post('/return', auth, async (req, res) => {
             await connection.beginTransaction();
 
             const returnedBooks = [];
+            const finesProcessed = [];
 
             for (const transactionId of transactionIds) {
                 // Get transaction details
@@ -302,7 +304,7 @@ router.post('/return', auth, async (req, res) => {
                     `SELECT bt.*, b.title, b.number_code 
                      FROM borrowing_transactions bt
                      JOIN books b ON bt.book_id = b.id
-                     WHERE bt.id = ? AND bt.status = 'borrowed'`,
+                     WHERE bt.id = ? AND bt.status IN ('borrowed', 'overdue')`,
                     [transactionId]
                 );
 
@@ -311,6 +313,23 @@ router.post('/return', auth, async (req, res) => {
                 }
 
                 const transaction = transactionRows[0];
+
+                // Process fine if book is overdue
+                if (transaction.status === 'overdue') {
+                    try {
+                        const fineResult = await createOrUpdateFine(transactionId, adminId);
+                        if (fineResult.created) {
+                            finesProcessed.push({
+                                transactionId,
+                                fineAmount: fineResult.fineAmount,
+                                daysOverdue: fineResult.daysOverdue
+                            });
+                        }
+                    } catch (fineError) {
+                        console.error(`Error processing fine for transaction ${transactionId}:`, fineError);
+                        // Continue with return even if fine processing fails
+                    }
+                }
 
                 // Update transaction status
                 await connection.execute(
@@ -330,7 +349,8 @@ router.post('/return', auth, async (req, res) => {
                     transactionId,
                     bookTitle: transaction.title,
                     bookCode: transaction.number_code,
-                    returnedAt: new Date()
+                    returnedAt: new Date(),
+                    wasOverdue: transaction.status === 'overdue'
                 });
             }
 
@@ -340,7 +360,8 @@ router.post('/return', auth, async (req, res) => {
                 success: true,
                 message: `Successfully returned ${returnedBooks.length} book(s)`,
                 data: {
-                    returnedBooks
+                    returnedBooks,
+                    finesProcessed
                 }
             });
 

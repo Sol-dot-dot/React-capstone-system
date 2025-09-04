@@ -151,6 +151,7 @@ class VectorDBService {
     }
   }
 
+
   async getBookById(bookId) {
     try {
       const [books] = await db.execute(`

@@ -1,10 +1,26 @@
 const db = require('../config/database');
+const { 
+    getSystemSettings, 
+    checkAndUpdateStudentBorrowingStatus,
+    updateSemesterBooksCount,
+    createOrUpdateSemesterTracking
+} = require('./penaltyUtils');
 
-// Calculate due date (default 14 days from now)
-function calculateDueDate(borrowDate = new Date(), days = 14) {
-    const dueDate = new Date(borrowDate);
-    dueDate.setDate(dueDate.getDate() + days);
-    return dueDate;
+// Calculate due date (default from system settings)
+async function calculateDueDate(borrowDate = new Date()) {
+    try {
+        const settings = await getSystemSettings();
+        const days = parseInt(settings.borrowing_period_days || 7);
+        const dueDate = new Date(borrowDate);
+        dueDate.setDate(dueDate.getDate() + days);
+        return dueDate;
+    } catch (error) {
+        console.error('Error getting system settings for due date calculation:', error);
+        // Fallback to 7 days if settings can't be retrieved
+        const dueDate = new Date(borrowDate);
+        dueDate.setDate(dueDate.getDate() + 7);
+        return dueDate;
+    }
 }
 
 // Validate student ID number format
@@ -90,15 +106,26 @@ async function validateBorrowingRequest(studentIdNumber, bookCodes) {
         return { valid: false, errors };
     }
 
-    // Check number of books (max 3)
-    if (bookCodes.length > 3) {
-        errors.push('Maximum 3 books can be borrowed at once');
+    // Check if student can borrow (no unpaid fines or overdue books)
+    const borrowingStatus = await checkAndUpdateStudentBorrowingStatus(studentIdNumber);
+    if (!borrowingStatus.canBorrow) {
+        errors.push(`Student cannot borrow books: ${borrowingStatus.reasonBlocked}`);
+        return { valid: false, errors };
+    }
+
+    // Get system settings for borrowing limits
+    const settings = await getSystemSettings();
+    const maxBooks = parseInt(settings.max_books_per_borrowing || 3);
+
+    // Check number of books
+    if (bookCodes.length > maxBooks) {
+        errors.push(`Maximum ${maxBooks} books can be borrowed at once`);
         return { valid: false, errors };
     }
 
     // Check current borrowed count
     const currentBorrowed = await getStudentBorrowedCount(studentIdNumber);
-    if (currentBorrowed + bookCodes.length > 3) {
+    if (currentBorrowed + bookCodes.length > maxBooks) {
         errors.push(`Student already has ${currentBorrowed} books borrowed. Cannot borrow ${bookCodes.length} more books.`);
         return { valid: false, errors };
     }
@@ -136,8 +163,19 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
     try {
         await connection.beginTransaction();
 
-        const actualDueDate = dueDate || calculateDueDate();
+        const actualDueDate = dueDate || await calculateDueDate();
         const borrowedBooks = [];
+
+        // Ensure student has active semester tracking
+        const currentDate = new Date();
+        const semesterEndDate = new Date(currentDate);
+        semesterEndDate.setMonth(semesterEndDate.getMonth() + 5); // 5 months from now
+        
+        await createOrUpdateSemesterTracking(
+            studentIdNumber, 
+            currentDate.toISOString().split('T')[0], 
+            semesterEndDate.toISOString().split('T')[0]
+        );
 
         for (const bookCode of bookCodes) {
             // Get book details
@@ -172,6 +210,9 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
                 number_code: book.number_code
             });
         }
+
+        // Update semester books count (increment by number of books borrowed)
+        await updateSemesterBooksCount(studentIdNumber, bookCodes.length);
 
         await connection.commit();
         return {
