@@ -62,17 +62,13 @@ async function calculateFine(transactionId) {
 
         const transaction = rows[0];
         const dueDate = new Date(transaction.due_date);
-        const today = new Date();
-        
-        // Reset time to compare only dates
-        dueDate.setHours(0, 0, 0, 0);
-        today.setHours(0, 0, 0, 0);
+        const now = new Date();
 
-        if (dueDate >= today || transaction.status === 'returned') {
+        if (dueDate >= now || transaction.status === 'returned') {
             return { fineAmount: 0, daysOverdue: 0 };
         }
 
-        const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+        const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
         const settings = await getSystemSettings();
         const finePerDay = parseFloat(settings.fine_per_day || 5);
         const fineAmount = daysOverdue * finePerDay;
@@ -402,7 +398,7 @@ async function processAllOverdueFines() {
     try {
         const [overdueTransactions] = await db.execute(
             `SELECT id FROM borrowing_transactions 
-             WHERE status = 'borrowed' AND due_date < CURDATE()`
+             WHERE status = 'borrowed' AND due_date < NOW()`
         );
 
         const results = [];

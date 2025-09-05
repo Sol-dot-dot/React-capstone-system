@@ -13,8 +13,18 @@ import axios from 'axios';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
+import ModernProfileScreen from './screens/ModernProfileScreen';
+import ModernBorrowedBooksScreen from './screens/ModernBorrowedBooksScreen';
+import ModernDashboardScreen from './screens/ModernDashboardScreen';
+import ModernPenaltyScreen from './screens/ModernPenaltyScreen';
+import ModernLoginScreen from './screens/ModernLoginScreen';
+import ModernRegisterScreen from './screens/ModernRegisterScreen';
+import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
+import ModernForgotPasswordScreen from './screens/ModernForgotPasswordScreen';
+import ModernBottomNavigation from './components/ModernBottomNavigation';
 import NotificationService from './services/NotificationService';
 import ChatbotWidget from './components/ChatbotWidget';
+import { ModernTheme, ModernStyles } from './styles/ModernTheme';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks, penalties
@@ -32,6 +42,7 @@ const App = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // Initialize push notifications when app starts
   React.useEffect(() => {
@@ -54,6 +65,7 @@ const App = () => {
       if (response.data.success) {
         setUserData(response.data.user);
         setCurrentScreen('dashboard');
+        setActiveTab('dashboard');
         setIdNumber('');
         setPassword('');
         
@@ -469,29 +481,48 @@ const App = () => {
     setUserId(null);
     setCurrentPassword('');
     setProfileEmail('');
+    setActiveTab('dashboard');
+  };
+
+  const handleTabPress = (tabId) => {
+    if (tabId === 'chatbot') {
+      setIsChatbotVisible(true);
+    } else {
+      setActiveTab(tabId);
+      setCurrentScreen(tabId);
+    }
+  };
+
+  const handleNavigate = (screen) => {
+    setCurrentScreen(screen);
   };
 
 
   const renderWelcomeScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.title}>Capstone Mobile App</Text>
-      <Text style={styles.subtitle}>Welcome to the Capstone System</Text>
-      
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => setCurrentScreen('login')}
-      >
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.secondaryButton]}
-        onPress={() => setCurrentScreen('register')}
-      >
-        <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-          Register
-        </Text>
-      </TouchableOpacity>
+    <View style={styles.welcomeContainer}>
+      <View style={styles.welcomeContent}>
+        <View style={styles.welcomeLogo}>
+          <Text style={styles.welcomeLogoIcon}>📚</Text>
+        </View>
+        <Text style={styles.welcomeTitle}>Library Management</Text>
+        <Text style={styles.welcomeSubtitle}>Your digital library companion</Text>
+        
+        <View style={styles.welcomeButtons}>
+          <TouchableOpacity 
+            style={[ModernStyles.primaryButton, styles.welcomeButton]} 
+            onPress={() => setCurrentScreen('login')}
+          >
+            <Text style={ModernStyles.buttonText}>Sign In</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[ModernStyles.secondaryButton, styles.welcomeButton]} 
+            onPress={() => setCurrentScreen('register')}
+          >
+            <Text style={[ModernStyles.buttonText, { color: ModernTheme.colors.primary }]}>Create Account</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 
@@ -992,6 +1023,92 @@ const App = () => {
      }
    };
 
+  // Show modern screens when user is logged in
+  if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
+    return (
+      <SafeAreaView style={ModernStyles.safeArea}>
+        {currentScreen === 'dashboard' && (
+          <ModernDashboardScreen 
+            userData={userData} 
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        )}
+        {currentScreen === 'borrowedBooks' && (
+          <ModernBorrowedBooksScreen 
+            userData={userData} 
+            onBack={() => setCurrentScreen('dashboard')} 
+          />
+        )}
+        {currentScreen === 'penalties' && (
+          <ModernPenaltyScreen 
+            userData={userData} 
+            onBack={() => setCurrentScreen('dashboard')} 
+          />
+        )}
+        {currentScreen === 'profile' && (
+          <ModernProfileScreen 
+            userData={userData} 
+            onBack={() => setCurrentScreen('dashboard')}
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        )}
+        
+        {/* Modern Bottom Navigation */}
+        <ModernBottomNavigation 
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+        />
+
+        {/* Chatbot Widget */}
+        <ChatbotWidget 
+          isVisible={isChatbotVisible} 
+          onClose={() => setIsChatbotVisible(false)} 
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Show modern auth screens fullscreen
+  if (['welcome', 'login', 'register', 'forgotPassword'].includes(currentScreen)) {
+    console.log('Rendering modern auth screen:', currentScreen);
+    return (
+      <SafeAreaView style={ModernStyles.safeArea}>
+        {currentScreen === 'welcome' && (
+          <ModernWelcomeScreen 
+            onNavigate={setCurrentScreen}
+          />
+        )}
+        {currentScreen === 'login' && (
+          <ModernLoginScreen 
+            onLogin={(user) => {
+              setUserData(user);
+              setCurrentScreen('dashboard');
+              setActiveTab('dashboard');
+            }}
+            onNavigate={setCurrentScreen}
+            onBack={() => setCurrentScreen('welcome')}
+          />
+        )}
+        {currentScreen === 'register' && (
+          <ModernRegisterScreen 
+            onRegister={() => {}}
+            onNavigate={setCurrentScreen}
+            onBack={() => setCurrentScreen('welcome')}
+          />
+        )}
+        {currentScreen === 'forgotPassword' && (
+          <ModernForgotPasswordScreen 
+            onBack={() => setCurrentScreen('login')}
+            onNavigate={setCurrentScreen}
+          />
+        )}
+      </SafeAreaView>
+    );
+  }
+
+  // Show traditional screens for other authentication and settings
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -999,29 +1116,13 @@ const App = () => {
           <Text style={styles.mainTitle}>Capstone Mobile App</Text>
           <Text style={styles.mainSubtitle}>{getScreenTitle()}</Text>
           
-          {currentScreen === 'welcome' && renderWelcomeScreen()}
-          {currentScreen === 'login' && renderLoginScreen()}
-          {currentScreen === 'register' && renderRegisterScreen()}
           {currentScreen === 'email' && renderEmailScreen()}
           {currentScreen === 'verify' && renderVerifyScreen()}
           {currentScreen === 'password' && renderPasswordScreen()}
-          {currentScreen === 'forgotPassword' && renderForgotPasswordScreen()}
           {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
           {currentScreen === 'dashboard' && renderDashboardScreen()}
           {currentScreen === 'profile' && renderProfileScreen()}
           {currentScreen === 'changePassword' && renderChangePasswordScreen()}
-          {currentScreen === 'borrowedBooks' && (
-            <BorrowedBooksScreen 
-              userData={userData} 
-              onBack={() => setCurrentScreen('dashboard')} 
-            />
-          )}
-          {currentScreen === 'penalties' && (
-            <PenaltyScreen 
-              userData={userData} 
-              onBack={() => setCurrentScreen('dashboard')} 
-            />
-          )}
           {currentScreen === 'notificationSettings' && (
             <NotificationSettingsScreen 
               userData={userData} 
@@ -1030,16 +1131,6 @@ const App = () => {
           )}
         </View>
       </ScrollView>
-
-      {/* Floating Chatbot Button */}
-      {userData && currentScreen === 'dashboard' && (
-        <TouchableOpacity 
-          style={styles.floatingChatButton}
-          onPress={() => setIsChatbotVisible(true)}
-        >
-          <Text style={styles.floatingChatButtonText}>🤖</Text>
-        </TouchableOpacity>
-      )}
 
       {/* Chatbot Widget */}
       <ChatbotWidget 
@@ -1054,6 +1145,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  welcomeContainer: {
+    flex: 1,
+    backgroundColor: ModernTheme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeContent: {
+    alignItems: 'center',
+    paddingHorizontal: ModernTheme.spacing.lg,
+  },
+  welcomeLogo: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: ModernTheme.colors.accent + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  welcomeLogoIcon: {
+    fontSize: 60,
+  },
+  welcomeTitle: {
+    ...ModernTheme.typography.h1,
+    textAlign: 'center',
+    marginBottom: ModernTheme.spacing.sm,
+  },
+  welcomeSubtitle: {
+    ...ModernTheme.typography.caption,
+    textAlign: 'center',
+    marginBottom: ModernTheme.spacing.xxl,
+  },
+  welcomeButtons: {
+    width: '100%',
+  },
+  welcomeButton: {
+    marginBottom: ModernTheme.spacing.md,
   },
   scrollContent: {
     flexGrow: 1,
