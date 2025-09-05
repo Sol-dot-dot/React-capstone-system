@@ -12,6 +12,7 @@ import {
 import axios from 'axios';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import NotificationService from './services/NotificationService';
 import ChatbotWidget from './components/ChatbotWidget';
 
@@ -31,6 +32,11 @@ const App = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+
+  // Initialize push notifications when app starts
+  React.useEffect(() => {
+    NotificationService.initializePushNotifications();
+  }, []);
 
   const handleLogin = async () => {
     if (!idNumber || !password) {
@@ -439,7 +445,10 @@ const App = () => {
 
       if (response.data.success) {
         const borrowedBooks = response.data.data.borrowedBooks;
-        await NotificationService.checkAndShowNotifications(borrowedBooks);
+        // Use enhanced smart notifications with push notifications and email
+        await NotificationService.checkAndShowSmartNotifications(borrowedBooks, userData);
+        // Schedule future notifications for newly borrowed books
+        NotificationService.scheduleFutureNotifications(borrowedBooks, userData);
       }
     } catch (error) {
       console.error('Error checking borrowed books notifications:', error);
@@ -851,6 +860,10 @@ const App = () => {
            <TouchableOpacity style={styles.actionButton} onPress={() => setIsChatbotVisible(true)}>
              <Text style={styles.actionButtonText}>🤖 Ask AI Assistant</Text>
            </TouchableOpacity>
+           
+           <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('notificationSettings')}>
+             <Text style={styles.actionButtonText}>🔔 Notification Settings</Text>
+           </TouchableOpacity>
          </View>
 
          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -1005,6 +1018,12 @@ const App = () => {
           )}
           {currentScreen === 'penalties' && (
             <PenaltyScreen 
+              userData={userData} 
+              onBack={() => setCurrentScreen('dashboard')} 
+            />
+          )}
+          {currentScreen === 'notificationSettings' && (
+            <NotificationSettingsScreen 
               userData={userData} 
               onBack={() => setCurrentScreen('dashboard')} 
             />

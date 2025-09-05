@@ -32,8 +32,8 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
       if (response.data.success) {
         setBorrowedBooks(response.data.data.borrowedBooks);
         checkDueDateNotifications(response.data.data.borrowedBooks);
-        // Also check for notifications using the service
-        await NotificationService.checkAndShowNotifications(response.data.data.borrowedBooks);
+        // Also check for smart notifications using the enhanced service
+        await NotificationService.checkAndShowSmartNotifications(response.data.data.borrowedBooks, userData);
       }
     } catch (error) {
       console.error('Error fetching borrowed books:', error);

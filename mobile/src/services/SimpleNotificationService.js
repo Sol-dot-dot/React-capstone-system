@@ -1,19 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 
-// Push notifications will be implemented in a future version
-// For now, we use a simple notification service without push notifications
-
-class NotificationService {
+class SimpleNotificationService {
   static STORAGE_KEY = 'borrowed_books_notifications';
   static NOTIFICATION_SETTINGS_KEY = 'notification_settings';
 
-  // Initialize notifications (simplified version without push notifications)
-  static initializePushNotifications() {
-    // Notification service initialized - using email notifications for reliability
-  }
-
-  // Smart notification system with push notifications and email
+  // Simple notification system without push notifications
   static async checkAndShowSmartNotifications(borrowedBooks, userData) {
     try {
       const settings = await this.getNotificationSettings();
@@ -80,11 +72,6 @@ class NotificationService {
       return;
     }
 
-    // Send push notification
-    if (settings.pushNotifications) {
-      this.sendPushNotification(type, books);
-    }
-
     // Send email notification
     if (settings.emailNotifications) {
       await this.sendEmailNotification(type, books, userData);
@@ -97,12 +84,6 @@ class NotificationService {
 
     // Mark as sent
     await AsyncStorage.setItem(notificationKey, new Date().toISOString());
-  }
-
-  // Send push notification (simplified - will be implemented in future version)
-  static sendPushNotification(type, books) {
-    // Push notifications will be implemented in a future version
-    // Currently using email notifications for reliability
   }
 
   // Send email notification via backend
@@ -124,7 +105,7 @@ class NotificationService {
       });
 
       if (response.ok) {
-        // Email notification sent successfully
+        console.log(`Email notification sent for ${type}`);
       } else {
         console.error('Failed to send email notification');
       }
@@ -174,79 +155,6 @@ class NotificationService {
     );
   }
 
-  // Legacy method for backward compatibility
-  static async checkAndShowNotifications(borrowedBooks) {
-    // This method is kept for backward compatibility
-    // It will be replaced by checkAndShowSmartNotifications
-    return this.checkAndShowSmartNotifications(borrowedBooks, {});
-  }
-
-  static showUrgentNotification(books) {
-    const overdueBooks = books.filter(book => book.dueStatus === 'overdue');
-    const todayBooks = books.filter(book => book.dueStatus === 'today');
-
-    let message = '';
-    if (overdueBooks.length > 0 && todayBooks.length > 0) {
-      message = `You have ${overdueBooks.length} overdue book(s) and ${todayBooks.length} book(s) due today!`;
-    } else if (overdueBooks.length > 0) {
-      message = `You have ${overdueBooks.length} overdue book(s)!`;
-    } else if (todayBooks.length > 0) {
-      message = `You have ${todayBooks.length} book(s) due today!`;
-    }
-
-    Alert.alert(
-      '📚 Book Due Date Alert',
-      message,
-      [
-        { text: 'View Books', style: 'default' },
-        { text: 'Later', style: 'cancel' }
-      ]
-    );
-  }
-
-  static showNearDueNotification(books) {
-    const tomorrowBooks = books.filter(book => book.dueStatus === 'tomorrow');
-    const nearBooks = books.filter(book => book.dueStatus === 'near');
-
-    let message = '';
-    if (tomorrowBooks.length > 0 && nearBooks.length > 0) {
-      message = `You have ${tomorrowBooks.length} book(s) due tomorrow and ${nearBooks.length} book(s) due soon.`;
-    } else if (tomorrowBooks.length > 0) {
-      message = `You have ${tomorrowBooks.length} book(s) due tomorrow.`;
-    } else if (nearBooks.length > 0) {
-      message = `You have ${nearBooks.length} book(s) due soon.`;
-    }
-
-    Alert.alert(
-      '📖 Book Due Date Reminder',
-      message,
-      [
-        { text: 'View Books', style: 'default' },
-        { text: 'Later', style: 'cancel' }
-      ]
-    );
-  }
-
-  // Clear notification history (useful for testing)
-  static async clearNotificationHistory() {
-    try {
-      await AsyncStorage.removeItem(this.STORAGE_KEY);
-    } catch (error) {
-      console.error('Error clearing notification history:', error);
-    }
-  }
-
-  // Get notification status
-  static async getNotificationStatus() {
-    try {
-      const lastNotificationDate = await AsyncStorage.getItem(this.STORAGE_KEY);
-      return lastNotificationDate;
-    } catch (error) {
-      console.error('Error getting notification status:', error);
-      return null;
-    }
-  }
-
   // Notification settings management
   static async getNotificationSettings() {
     try {
@@ -257,7 +165,7 @@ class NotificationService {
       // Default settings
       return {
         enabled: true,
-        pushNotifications: true,
+        pushNotifications: false, // Disabled for simple version
         emailNotifications: true,
         reminderTiming: {
           oneDayBefore: true,
@@ -269,7 +177,7 @@ class NotificationService {
       console.error('Error getting notification settings:', error);
       return {
         enabled: true,
-        pushNotifications: true,
+        pushNotifications: false,
         emailNotifications: true,
         reminderTiming: {
           oneDayBefore: true,
@@ -290,56 +198,30 @@ class NotificationService {
     }
   }
 
-  // Schedule future notifications
+  // Legacy method for backward compatibility
+  static async checkAndShowNotifications(borrowedBooks) {
+    return this.checkAndShowSmartNotifications(borrowedBooks, {});
+  }
+
+  // Initialize method (no-op for simple version)
+  static initializePushNotifications() {
+    console.log('Simple notification service initialized (no push notifications)');
+  }
+
+  // Schedule future notifications (no-op for simple version)
   static scheduleFutureNotifications(books, userData) {
-    books.forEach(book => {
-      const dueDate = new Date(book.dueDate);
-      const now = new Date();
-      
-      // Schedule notification for 1 day before due date
-      const oneDayBefore = new Date(dueDate);
-      oneDayBefore.setDate(oneDayBefore.getDate() - 1);
-      
-      if (oneDayBefore > now) {
-        this.scheduleNotification(
-          oneDayBefore,
-          '📚 Book Due Tomorrow',
-          `"${book.title}" is due tomorrow!`,
-          book
-        );
-      }
-
-      // Schedule notification for due date
-      if (dueDate > now) {
-        this.scheduleNotification(
-          dueDate,
-          '⚠️ Book Due Today',
-          `"${book.title}" is due today!`,
-          book
-        );
-      }
-    });
+    console.log('Scheduling not available in simple notification service');
   }
 
-  static scheduleNotification(date, title, message, book) {
-    // Scheduled notifications will be implemented in a future version
-    // Currently using email notifications for reliability
-  }
-
-  // Cancel all scheduled notifications
+  // Cancel all notifications (no-op for simple version)
   static cancelAllNotifications() {
-    // Cancel notifications will be implemented in a future version
+    console.log('Cancel notifications not available in simple notification service');
   }
 
-  // Get push notification token
+  // Get push token (no-op for simple version)
   static async getPushToken() {
-    try {
-      return await AsyncStorage.getItem('push_token');
-    } catch (error) {
-      console.error('Error getting push token:', error);
-      return null;
-    }
+    return null;
   }
 }
 
-export default NotificationService;
+export default SimpleNotificationService;
