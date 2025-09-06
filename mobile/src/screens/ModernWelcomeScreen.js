@@ -8,6 +8,28 @@ import {
 } from 'react-native';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
+// Fallback icon component in case vector icons don't load
+const FallbackIcon = ({ name, size, color }) => {
+  const iconMap = {
+    'book-open': '📚',
+  };
+  
+  return (
+    <Text style={{ fontSize: size, color }}>
+      {iconMap[name] || '📱'}
+    </Text>
+  );
+};
+
+// Try to import vector icons, fallback to emoji if not available
+let Icon;
+try {
+  Icon = require('react-native-vector-icons/Feather').default;
+} catch (error) {
+  console.warn('Vector icons not available, using fallback icons');
+  Icon = FallbackIcon;
+}
+
 const ModernWelcomeScreen = ({ onNavigate }) => {
   return (
     <SafeAreaView style={ModernStyles.safeArea}>
@@ -23,7 +45,7 @@ const ModernWelcomeScreen = ({ onNavigate }) => {
           {/* Logo Section */}
           <View style={styles.logoSection}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logoIcon}>📚</Text>
+              <Icon name="book-open" size={48} color={ModernTheme.colors.primary} />
             </View>
             <Text style={styles.mainTitle}>Library Management</Text>
             <Text style={styles.subtitle}>Your digital library companion</Text>

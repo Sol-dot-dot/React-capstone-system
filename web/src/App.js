@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import EnhancedDashboard from './components/EnhancedDashboard';
 import UserManagement from './components/UserManagement';
@@ -8,12 +8,16 @@ import BookManagement from './components/BookManagement';
 import BorrowingManagement from './components/BorrowingManagement';
 import PenaltyManagement from './components/PenaltyManagement';
 import ChatbotWidget from './components/ChatbotWidget';
+import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import designSystem from './styles/designSystem';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -39,46 +43,61 @@ function App() {
     setUser(null);
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  const appStyles = {
+    app: {
+      minHeight: '100vh',
+      backgroundColor: designSystem.colors.semantic.background,
+      fontFamily: designSystem.typography.fontFamily.sans.join(', '),
+    },
+    layout: {
+      display: 'flex',
+      minHeight: '100vh',
+    },
+    main: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      marginLeft: sidebarCollapsed ? designSystem.layout.sidebar.collapsedWidth : designSystem.layout.sidebar.width,
+      transition: 'margin-left 0.3s ease-in-out',
+    },
+    content: {
+      flex: 1,
+      padding: designSystem.spacing[6],
+      maxWidth: designSystem.layout.content.maxWidth,
+      margin: '0 auto',
+      width: '100%',
+    },
+    loginContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      backgroundColor: designSystem.colors.semantic.background,
+    },
+  };
+
   return (
     <Router>
-      <div className="App">
-        {isAuthenticated && (
-          <nav className="navbar">
-            <div className="container">
-              <h1>Capstone System - Admin Panel</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                  <Link to="/enhanced-dashboard" style={{ color: 'white', textDecoration: 'none' }}>
-                    Admin Dashboard
-                  </Link>
-                  <Link to="/users" style={{ color: 'white', textDecoration: 'none' }}>
-                    User Management
-                  </Link>
-                  <Link to="/books" style={{ color: 'white', textDecoration: 'none' }}>
-                    Book Management
-                  </Link>
-                  <Link to="/activity-logs" style={{ color: 'white', textDecoration: 'none' }}>
-                    Activity Logs
-                  </Link>
-                  <Link to="/borrowings" style={{ color: 'white', textDecoration: 'none' }}>
-                    Borrowing Management
-                  </Link>
-                  <Link to="/penalties" style={{ color: 'white', textDecoration: 'none' }}>
-                    Penalty Management
-                  </Link>
-                </div>
-                <div>
-                  <span>Welcome, {user?.username}</span>
-                  <button onClick={handleLogout} style={{ marginLeft: '15px' }}>
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-          </nav>
-        )}
-        
-        <div className="container">
+      <div style={appStyles.app}>
+        {isAuthenticated ? (
+          <div style={appStyles.layout}>
+            <Sidebar 
+              isCollapsed={sidebarCollapsed}
+              onToggle={toggleSidebar}
+              onLogout={handleLogout}
+              user={user}
+            />
+            <main style={appStyles.main}>
+              <TopBar 
+                onToggleSidebar={toggleSidebar}
+                user={user}
+                notifications={[]}
+              />
+              <div style={appStyles.content}>
           <Routes>
             <Route 
               path="/login" 
@@ -148,8 +167,24 @@ function App() {
               path="/" 
               element={<Navigate to={isAuthenticated ? "/enhanced-dashboard" : "/login"} />} 
             />
-          </Routes>
-        </div>
+                </Routes>
+              </div>
+            </main>
+          </div>
+        ) : (
+          <div style={appStyles.loginContainer}>
+            <Routes>
+              <Route 
+                path="/login" 
+                element={<Login onLogin={handleLogin} />} 
+              />
+              <Route 
+                path="*" 
+                element={<Navigate to="/login" replace />} 
+              />
+            </Routes>
+          </div>
+        )}
 
         {/* Floating Chatbot Button */}
         {isAuthenticated && (
@@ -157,8 +192,35 @@ function App() {
             className="floating-chat-button"
             onClick={() => setIsChatbotVisible(true)}
             title="Ask AI Assistant"
+            style={{
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: designSystem.colors.primary[600],
+              color: designSystem.colors.neutral.white,
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: designSystem.shadows.lg,
+              fontSize: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: designSystem.zIndex.fixed,
+              transition: 'all 0.2s ease-in-out',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'scale(1.1)';
+              e.target.style.backgroundColor = designSystem.colors.primary[700];
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.backgroundColor = designSystem.colors.primary[600];
+            }}
           >
-            🤖
+            💬
           </button>
         )}
 

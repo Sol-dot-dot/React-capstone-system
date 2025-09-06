@@ -1,5 +1,10 @@
+
+
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FiUsers, FiUserCheck, FiLogIn, FiBook, FiActivity, FiTrendingUp } from 'react-icons/fi';
+import designSystem from '../styles/designSystem';
 
 const EnhancedDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -56,73 +61,218 @@ const EnhancedDashboard = () => {
     return <div className="error">Error: {error}</div>;
   }
 
-  return (
-    <div>
-      <h1 style={{ marginBottom: '30px' }}>Admin Dashboard</h1>
+  const dashboardStyles = {
+    container: {
+      padding: designSystem.spacing[6],
+    },
+    header: {
+      marginBottom: designSystem.spacing[8],
+    },
+    title: {
+      fontSize: designSystem.typography.fontSize['3xl'],
+      fontWeight: designSystem.typography.fontWeight.bold,
+      color: designSystem.colors.semantic.text.primary,
+      margin: 0,
+    },
+    subtitle: {
+      fontSize: designSystem.typography.fontSize.lg,
+      color: designSystem.colors.semantic.text.secondary,
+      margin: `${designSystem.spacing[2]} 0 0 0`,
+    },
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+      gap: designSystem.spacing[6],
+      marginBottom: designSystem.spacing[8],
+    },
+    statCard: {
+      backgroundColor: designSystem.colors.semantic.surfaceElevated,
+      borderRadius: designSystem.borderRadius.xl,
+      padding: designSystem.spacing[6],
+      boxShadow: designSystem.shadows.md,
+      border: `1px solid ${designSystem.colors.semantic.border}`,
+      transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+      '&:hover': {
+        transform: 'translateY(-2px)',
+        boxShadow: designSystem.shadows.lg,
+      },
+    },
+    statHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: designSystem.spacing[4],
+    },
+    statIcon: {
+      width: '48px',
+      height: '48px',
+      borderRadius: designSystem.borderRadius.lg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '24px',
+      color: designSystem.colors.neutral.white,
+    },
+    statValue: {
+      fontSize: designSystem.typography.fontSize['3xl'],
+      fontWeight: designSystem.typography.fontWeight.bold,
+      color: designSystem.colors.semantic.text.primary,
+      margin: 0,
+    },
+    statLabel: {
+      fontSize: designSystem.typography.fontSize.sm,
+      fontWeight: designSystem.typography.fontWeight.medium,
+      color: designSystem.colors.semantic.text.secondary,
+      margin: `${designSystem.spacing[2]} 0 0 0`,
+    },
+    statDescription: {
+      fontSize: designSystem.typography.fontSize.xs,
+      color: designSystem.colors.semantic.text.tertiary,
+      margin: `${designSystem.spacing[1]} 0 0 0`,
+    },
+  };
 
-      {/* Basic Statistics */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#007bff' }}>
-            {stats?.totalUsers || 0}
-          </div>
-          <p>Total Users</p>
-          <small style={{ color: '#666' }}>All registered users</small>
-        </div>
-        <div className="stat-card">
-          <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#28a745' }}>
-            {stats?.verifiedUsers || 0}
-          </div>
-          <p>Verified Users</p>
-          <small style={{ color: '#666' }}>Email verified accounts</small>
-        </div>
-        <div className="stat-card">
-          <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#ffc107' }}>
-            {stats?.todayLogins || 0}
-          </div>
-          <p>Today's Logins</p>
-          <small style={{ color: '#666' }}>Login activity today</small>
-        </div>
-        <div className="stat-card">
-          <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#6f42c1' }}>
-            {bookStats?.totalBooks || 0}
-          </div>
-          <p>Total Books</p>
-          <small style={{ color: '#666' }}>Books in library</small>
-        </div>
+  const statCards = [
+    {
+      title: 'Total Users',
+      value: stats?.totalUsers || 0,
+      description: 'All registered users',
+      icon: FiUsers,
+      color: designSystem.colors.primary[600],
+    },
+    {
+      title: 'Verified Users',
+      value: stats?.verifiedUsers || 0,
+      description: 'Email verified accounts',
+      icon: FiUserCheck,
+      color: designSystem.colors.accent.success,
+    },
+    {
+      title: "Today's Logins",
+      value: stats?.todayLogins || 0,
+      description: 'Login activity today',
+      icon: FiLogIn,
+      color: designSystem.colors.accent.warning,
+    },
+    {
+      title: 'Total Books',
+      value: bookStats?.totalBooks || 0,
+      description: 'Books in library',
+      icon: FiBook,
+      color: designSystem.colors.primary[800],
+    },
+  ];
+
+  return (
+    <div style={dashboardStyles.container}>
+      <div style={dashboardStyles.header}>
+        <h1 style={dashboardStyles.title}>Admin Dashboard</h1>
+        <p style={dashboardStyles.subtitle}>Overview of your library management system</p>
+      </div>
+
+      {/* Statistics Cards */}
+      <div style={dashboardStyles.statsGrid}>
+        {statCards.map((card, index) => {
+          const Icon = card.icon;
+          return (
+            <div key={index} style={dashboardStyles.statCard}>
+              <div style={dashboardStyles.statHeader}>
+                <div style={{ ...dashboardStyles.statIcon, backgroundColor: card.color }}>
+                  <Icon />
+                </div>
+                <div style={dashboardStyles.statValue}>{card.value}</div>
+              </div>
+              <h3 style={dashboardStyles.statLabel}>{card.title}</h3>
+              <p style={dashboardStyles.statDescription}>{card.description}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* System Health */}
-      <div className="card" style={{ marginTop: '30px' }}>
-        <h2>System Health Overview</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-            <h4>User Verification Rate</h4>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
+      <div style={{
+        ...dashboardStyles.statCard,
+        marginBottom: designSystem.spacing[8],
+      }}>
+        <div style={dashboardStyles.statHeader}>
+          <div style={{ ...dashboardStyles.statIcon, backgroundColor: designSystem.colors.accent.success }}>
+            <FiActivity />
+          </div>
+          <h2 style={{ ...dashboardStyles.statLabel, fontSize: designSystem.typography.fontSize.xl, margin: 0 }}>
+            System Health Overview
+          </h2>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: designSystem.spacing[4],
+        }}>
+          <div style={{ 
+            padding: designSystem.spacing[4], 
+            backgroundColor: designSystem.colors.semantic.surface, 
+            borderRadius: designSystem.borderRadius.lg,
+            textAlign: 'center',
+          }}>
+            <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>User Verification Rate</h4>
+            <div style={{ 
+              fontSize: designSystem.typography.fontSize['2xl'], 
+              fontWeight: designSystem.typography.fontWeight.bold, 
+              color: designSystem.colors.accent.success,
+              marginBottom: designSystem.spacing[1],
+            }}>
               {stats?.totalUsers > 0 ? Math.round((stats.verifiedUsers / stats.totalUsers) * 100) : 0}%
             </div>
-            <small>{stats?.verifiedUsers || 0} of {stats?.totalUsers || 0} users verified</small>
+            <small style={{ ...dashboardStyles.statDescription }}>
+              {stats?.verifiedUsers || 0} of {stats?.totalUsers || 0} users verified
+            </small>
           </div>
-          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-            <h4>Daily Activity</h4>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#007bff' }}>
+          <div style={{ 
+            padding: designSystem.spacing[4], 
+            backgroundColor: designSystem.colors.semantic.surface, 
+            borderRadius: designSystem.borderRadius.lg,
+            textAlign: 'center',
+          }}>
+            <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>Daily Activity</h4>
+            <div style={{ 
+              fontSize: designSystem.typography.fontSize['2xl'], 
+              fontWeight: designSystem.typography.fontWeight.bold, 
+              color: designSystem.colors.primary[600],
+              marginBottom: designSystem.spacing[1],
+            }}>
               {stats?.todayLogins || 0}
             </div>
-            <small>Login attempts today</small>
+            <small style={{ ...dashboardStyles.statDescription }}>Login attempts today</small>
           </div>
-          <div style={{ padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-            <h4>System Status</h4>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#28a745' }}>
+          <div style={{ 
+            padding: designSystem.spacing[4], 
+            backgroundColor: designSystem.colors.semantic.surface, 
+            borderRadius: designSystem.borderRadius.lg,
+            textAlign: 'center',
+          }}>
+            <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>System Status</h4>
+            <div style={{ 
+              fontSize: designSystem.typography.fontSize['2xl'], 
+              fontWeight: designSystem.typography.fontWeight.bold, 
+              color: designSystem.colors.accent.success,
+              marginBottom: designSystem.spacing[1],
+            }}>
               ✅ Online
             </div>
-            <small>All systems operational</small>
+            <small style={{ ...dashboardStyles.statDescription }}>All systems operational</small>
           </div>
         </div>
       </div>
 
       {/* Recent Login Activity */}
-      <div className="card" style={{ marginTop: '30px' }}>
-        <h2>Recent Login Activity</h2>
+      <div style={dashboardStyles.statCard}>
+        <div style={dashboardStyles.statHeader}>
+          <div style={{ ...dashboardStyles.statIcon, backgroundColor: designSystem.colors.primary[600] }}>
+            <FiTrendingUp />
+          </div>
+          <h2 style={{ ...dashboardStyles.statLabel, fontSize: designSystem.typography.fontSize.xl, margin: 0 }}>
+            Recent Login Activity
+          </h2>
+        </div>
         {logs.length > 0 ? (
           <div style={{ overflowX: 'auto' }}>
             <table className="table">

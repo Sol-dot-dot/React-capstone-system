@@ -2,35 +2,43 @@ import { StyleSheet } from 'react-native';
 
 export const ModernTheme = {
   colors: {
-    // Dark theme colors
-    background: '#1a1a1a',
-    surface: '#2a2a2a',
-    surfaceLight: '#3a3a3a',
-    primary: '#ffffff',
-    secondary: '#b0b0b0',
-    accent: '#ff6b6b',
-    success: '#4ecdc4',
-    warning: '#ffe66d',
-    error: '#ff6b6b',
+    // Light theme colors - modern and clean
+    background: '#ffffff',
+    surface: '#f8fafc',
+    surfaceElevated: '#ffffff',
+    primary: '#0ea5e9',
+    secondary: '#64748b',
+    accent: '#3b82f6',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
     
     // Accent colors for cards
-    purple: '#a8a8ff',
-    green: '#a8ffa8',
-    orange: '#ffb366',
-    blue: '#66b3ff',
-    pink: '#ff99cc',
+    purple: '#8b5cf6',
+    green: '#10b981',
+    orange: '#f59e0b',
+    blue: '#3b82f6',
+    pink: '#ec4899',
     
     // Background gradient
-    backgroundGradient: ['#fff8e1', '#fff3c4'],
+    backgroundGradient: ['#f0f9ff', '#e0f2fe'],
     
     // Text colors
-    textPrimary: '#ffffff',
-    textSecondary: '#b0b0b0',
-    textMuted: '#808080',
+    textPrimary: '#0f172a',
+    textSecondary: '#475569',
+    textTertiary: '#64748b',
+    textMuted: '#94a3b8',
     
     // Border colors
-    border: '#404040',
-    borderLight: '#505050',
+    border: '#e2e8f0',
+    borderLight: '#f1f5f9',
+  },
+  borderRadius: {
+    sm: 12,
+    md: 16,
+    lg: 20,
+    xl: 28,
+    full: 999,   // ensures fully rounded buttons/avatars
   },
   
   spacing: {
@@ -54,29 +62,29 @@ export const ModernTheme = {
     h1: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: '#ffffff',
+      color: '#0f172a',
     },
     h2: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: '#ffffff',
+      color: '#0f172a',
     },
     h3: {
       fontSize: 20,
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#0f172a',
     },
     body: {
       fontSize: 16,
-      color: '#ffffff',
+      color: '#0f172a',
     },
     caption: {
       fontSize: 14,
-      color: '#b0b0b0',
+      color: '#475569',
     },
     small: {
       fontSize: 12,
-      color: '#808080',
+      color: '#64748b',
     },
   },
   
@@ -85,21 +93,21 @@ export const ModernTheme = {
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: 2,
       },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 4,
     },
     button: {
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 2,
+        height: 1,
       },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 4,
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
     },
   },
 };
@@ -306,15 +314,16 @@ export const ModernStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: ModernTheme.colors.surface,
-    borderRadius: ModernTheme.borderRadius.md,
-    padding: ModernTheme.spacing.md,
+    borderRadius: ModernTheme.borderRadius.lg,
+    padding: ModernTheme.spacing.lg,
     marginBottom: ModernTheme.spacing.sm,
+    ...ModernTheme.shadows.card,
   },
   
   listItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: ModernTheme.colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',

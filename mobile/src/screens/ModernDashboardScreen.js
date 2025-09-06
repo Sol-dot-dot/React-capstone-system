@@ -10,6 +10,31 @@ import {
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
+// Fallback icon component in case vector icons don't load
+const FallbackIcon = ({ name, size, color }) => {
+  const iconMap = {
+    'book': '📚',
+    'check-circle': '✅',
+    'dollar-sign': '💰',
+    'book-open': '📖',
+  };
+  
+  return (
+    <Text style={{ fontSize: size, color }}>
+      {iconMap[name] || '📱'}
+    </Text>
+  );
+};
+
+// Try to import vector icons, fallback to emoji if not available
+let Icon;
+try {
+  Icon = require('react-native-vector-icons/Feather').default;
+} catch (error) {
+  console.warn('Vector icons not available, using fallback icons');
+  Icon = FallbackIcon;
+}
+
 const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
   const [stats, setStats] = useState({
     totalBooks: 0,
@@ -33,13 +58,23 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
         `http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}`
       );
 
+      // Fetch penalty data for semester tracking
+      const penaltyResponse = await axios.get(
+        `http://10.0.2.2:5000/api/penalty/user/${userData.idNumber}`
+      );
+
       if (borrowedResponse.data.success) {
         const borrowedBooks = borrowedResponse.data.data.borrowedBooks || [];
         const overdueBooks = borrowedBooks.filter(book => book.dueStatus === 'overdue');
         
+        // Get total books borrowed from semester tracking
+        const totalBooksBorrowed = penaltyResponse.data.success 
+          ? (penaltyResponse.data.data.semesterTracking?.books_borrowed_count || 0)
+          : 0;
+        
         setStats({
-          totalBooks: borrowedBooks.length,
-          borrowedBooks: borrowedBooks.length,
+          totalBooks: totalBooksBorrowed, // Total books borrowed this semester
+          borrowedBooks: borrowedBooks.length, // Currently borrowed books
           overdueBooks: overdueBooks.length,
           fines: overdueBooks.length * 5, // 5 pesos per day
         });
@@ -51,7 +86,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
           type: 'borrowed',
           amount: 0,
           time: book.borrowDate || 'Recently',
-          icon: '📚',
+          icon: 'book',
         }));
         setRecentActivity(activity);
       }
@@ -64,12 +99,12 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
 
   const currencies = [
     {
-      code: 'BOOKS',
+      code: 'TOTAL',
       amount: stats.totalBooks.toFixed(0),
-      label: 'Total Books',
+      label: 'Total This Semester',
     },
     {
-      code: 'BORROWED',
+      code: 'CURRENT',
       amount: stats.borrowedBooks.toFixed(0),
       label: 'Currently Borrowed',
     },
@@ -83,13 +118,13 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
   const getActivityIcon = (type) => {
     switch (type) {
       case 'borrowed':
-        return '📚';
+        return 'book';
       case 'returned':
-        return '✅';
+        return 'check-circle';
       case 'fine':
-        return '💰';
+        return 'dollar-sign';
       default:
-        return '📖';
+        return 'book-open';
     }
   };
 
@@ -120,11 +155,11 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
       {/* Header */}
       <View style={ModernStyles.header}>
         <TouchableOpacity style={ModernStyles.headerButton}>
-          <Text style={ModernStyles.buttonText}>+</Text>
+          <Icon name="plus" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={ModernStyles.headerTitle}>Library Dashboard</Text>
         <TouchableOpacity style={ModernStyles.headerButton} onPress={onLogout}>
-          <Text style={ModernStyles.buttonText}>🚪</Text>
+          <Icon name="log-out" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -146,9 +181,9 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
           {/* Main Balance */}
           <View style={styles.balanceSection}>
             <Text style={[ModernStyles.statValue, styles.mainBalance]}>
-              {stats.totalBooks}.00
+              {stats.totalBooks}
             </Text>
-            <Text style={ModernTheme.typography.caption}>Books Borrowed</Text>
+            <Text style={ModernTheme.typography.caption}>Books This Semester</Text>
           </View>
 
           {/* Action Button */}
@@ -156,7 +191,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
             style={[ModernStyles.primaryButton, styles.actionButton]}
             onPress={() => onNavigate('borrowedBooks')}
           >
-            <Text style={styles.actionButtonIcon}>📚</Text>
+            <Icon name="book" size={24} color="#ffffff" />
             <Text style={ModernStyles.buttonText}>View Books</Text>
           </TouchableOpacity>
         </View>
@@ -179,7 +214,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
           <Text style={ModernTheme.typography.h3}>Recent Activity</Text>
           {recentActivity.length === 0 ? (
             <View style={styles.emptyActivity}>
-              <Text style={styles.emptyIcon}>📖</Text>
+              <Icon name="book-open" size={48} color={ModernTheme.colors.textMuted} />
               <Text style={ModernTheme.typography.body}>No recent activity</Text>
               <Text style={ModernTheme.typography.caption}>
                 Your library activity will appear here
@@ -189,7 +224,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
             recentActivity.map((activity, index) => (
               <View key={index} style={ModernStyles.listItem}>
                 <View style={[ModernStyles.listItemIcon, { backgroundColor: getActivityColor(activity.type) + '20' }]}>
-                  <Text style={styles.activityIcon}>{getActivityIcon(activity.type)}</Text>
+                  <Icon name={getActivityIcon(activity.type)} size={20} color={getActivityColor(activity.type)} />
                 </View>
                 <View style={ModernStyles.listItemContent}>
                   <Text style={ModernStyles.listItemTitle}>{activity.title}</Text>
@@ -216,7 +251,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
               style={[ModernStyles.card, styles.quickActionCard]}
               onPress={() => onNavigate('borrowedBooks')}
             >
-              <Text style={styles.quickActionIcon}>📚</Text>
+              <Icon name="book" size={20} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>My Books</Text>
             </TouchableOpacity>
             
@@ -224,7 +259,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
               style={[ModernStyles.card, styles.quickActionCard]}
               onPress={() => onNavigate('penalties')}
             >
-              <Text style={styles.quickActionIcon}>💰</Text>
+              <Icon name="dollar-sign" size={20} color={ModernTheme.colors.warning} />
               <Text style={ModernTheme.typography.caption}>Fines</Text>
             </TouchableOpacity>
             
@@ -232,7 +267,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
               style={[ModernStyles.card, styles.quickActionCard]}
               onPress={() => onNavigate('notificationSettings')}
             >
-              <Text style={styles.quickActionIcon}>🔔</Text>
+              <Icon name="bell" size={20} color={ModernTheme.colors.warning} />
               <Text style={ModernTheme.typography.caption}>Settings</Text>
             </TouchableOpacity>
             
@@ -240,7 +275,7 @@ const ModernDashboardScreen = ({ userData, onNavigate, onLogout }) => {
               style={[ModernStyles.card, styles.quickActionCard]}
               onPress={() => onNavigate('profile')}
             >
-              <Text style={styles.quickActionIcon}>👤</Text>
+              <Icon name="user" size={20} color={ModernTheme.colors.purple} />
               <Text style={ModernTheme.typography.caption}>Profile</Text>
             </TouchableOpacity>
           </View>
@@ -313,6 +348,9 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: ModernTheme.spacing.xs,
     alignItems: 'center',
+    paddingVertical: ModernTheme.spacing.md,
+    minHeight: 80,
+    justifyContent: 'center',
   },
   activitySection: {
     paddingHorizontal: ModernTheme.spacing.lg,
@@ -345,7 +383,10 @@ const styles = StyleSheet.create({
     width: '48%',
     alignItems: 'center',
     paddingVertical: ModernTheme.spacing.lg,
+    paddingHorizontal: ModernTheme.spacing.md,
     marginBottom: ModernTheme.spacing.md,
+    minHeight: 80,
+    justifyContent: 'center',
   },
   quickActionIcon: {
     fontSize: 24,

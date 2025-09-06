@@ -7,32 +7,58 @@ import {
 } from 'react-native';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
+// Fallback icon component in case vector icons don't load
+const FallbackIcon = ({ name, size, color }) => {
+  const iconMap = {
+    'home': '🏠',
+    'book': '📚',
+    'message-circle': '💬',
+    'dollar-sign': '💰',
+    'user': '👤',
+  };
+  
+  return (
+    <Text style={{ fontSize: size, color }}>
+      {iconMap[name] || '📱'}
+    </Text>
+  );
+};
+
+// Try to import vector icons, fallback to emoji if not available
+let Icon;
+try {
+  Icon = require('react-native-vector-icons/Feather').default;
+} catch (error) {
+  console.warn('Vector icons not available, using fallback icons');
+  Icon = FallbackIcon;
+}
+
 const ModernBottomNavigation = ({ activeTab, onTabPress }) => {
   const navItems = [
     {
       id: 'dashboard',
-      icon: '📊',
+      icon: 'home',
       label: 'Dashboard',
     },
     {
       id: 'borrowedBooks',
-      icon: '📚',
+      icon: 'book',
       label: 'Books',
     },
     {
       id: 'chatbot',
-      icon: '🤖',
+      icon: 'message-circle',
       label: 'AI Assistant',
       isSpecial: true,
     },
     {
       id: 'penalties',
-      icon: '💰',
+      icon: 'dollar-sign',
       label: 'Fines',
     },
     {
       id: 'profile',
-      icon: '👤',
+      icon: 'user',
       label: 'Profile',
     },
   ];
@@ -59,7 +85,11 @@ const ModernBottomNavigation = ({ activeTab, onTabPress }) => {
               style={ModernStyles.chatbotButton}
               onPress={() => handleTabPress(item.id)}
             >
-              <Text style={styles.chatbotIcon}>{item.icon}</Text>
+              <Icon 
+                name={item.icon} 
+                size={24} 
+                color="#ffffff" 
+              />
             </TouchableOpacity>
           );
         }
@@ -71,9 +101,11 @@ const ModernBottomNavigation = ({ activeTab, onTabPress }) => {
             onPress={() => handleTabPress(item.id)}
           >
             <View style={styles.navIconContainer}>
-              <Text style={[styles.navIcon, isActive && styles.navIconActive]}>
-                {item.icon}
-              </Text>
+              <Icon 
+                name={item.icon} 
+                size={20} 
+                color={isActive ? ModernTheme.colors.accent : ModernTheme.colors.textTertiary} 
+              />
               {isActive && <View style={styles.activeIndicator} />}
             </View>
             <Text style={[
@@ -94,13 +126,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  navIcon: {
-    fontSize: 20,
     marginBottom: ModernTheme.spacing.xs,
-  },
-  navIconActive: {
-    fontSize: 22,
   },
   navLabelActive: {
     color: ModernTheme.colors.accent,
@@ -113,10 +139,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: ModernTheme.colors.accent,
-  },
-  chatbotIcon: {
-    fontSize: 24,
-    color: '#ffffff',
   },
 });
 

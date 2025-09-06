@@ -11,6 +11,34 @@ import {
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
+// Fallback icon component in case vector icons don't load
+const FallbackIcon = ({ name, size, color }) => {
+  const iconMap = {
+    'arrow-left': '←',
+    'calendar': '📅',
+    'search': '🔍',
+    'alert-triangle': '⚠️',
+    'clock': '⏰',
+    'book': '📚',
+    'book-open': '📖',
+  };
+  
+  return (
+    <Text style={{ fontSize: size, color }}>
+      {iconMap[name] || '📱'}
+    </Text>
+  );
+};
+
+// Try to import vector icons, fallback to emoji if not available
+let Icon;
+try {
+  Icon = require('react-native-vector-icons/Feather').default;
+} catch (error) {
+  console.warn('Vector icons not available, using fallback icons');
+  Icon = FallbackIcon;
+}
+
 const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,21 +123,21 @@ const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
       title: 'Overdue',
       count: getOverdueBooks(),
       amount: getOverdueBooks() * 5, // 5 pesos per day fine
-      icon: '🚨',
+      icon: 'alert-triangle',
       color: ModernTheme.colors.error,
     },
     {
       title: 'Due Today',
       count: getDueTodayBooks(),
       amount: 0,
-      icon: '⚠️',
+      icon: 'clock',
       color: ModernTheme.colors.warning,
     },
     {
       title: 'Due Soon',
       count: getDueTomorrowBooks(),
       amount: 0,
-      icon: '📚',
+      icon: 'book',
       color: ModernTheme.colors.blue,
     },
   ];
@@ -128,11 +156,11 @@ const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
       {/* Header */}
       <View style={ModernStyles.header}>
         <TouchableOpacity style={ModernStyles.headerButton} onPress={onBack}>
-          <Text style={ModernStyles.buttonText}>←</Text>
+          <Icon name="arrow-left" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={ModernStyles.headerTitle}>Week 2-11 October</Text>
         <TouchableOpacity style={ModernStyles.headerButton}>
-          <Text style={ModernStyles.buttonText}>📅</Text>
+          <Icon name="calendar" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -180,15 +208,15 @@ const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
         <View style={styles.categoriesHeader}>
           <Text style={ModernTheme.typography.h3}>Category</Text>
           <TouchableOpacity>
-            <Text style={ModernTheme.typography.caption}>🔍</Text>
+            <Icon name="search" size={20} color={ModernTheme.colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.categoriesContainer}>
           {categories.map((category, index) => (
-            <View key={index} style={[styles.categoryCard, { backgroundColor: category.color + '20' }]}>
+            <View key={index} style={[styles.categoryCard, { backgroundColor: category.color + '15' }]}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Icon name={category.icon} size={20} color={category.color} />
                 <Text style={[ModernTheme.typography.body, { color: category.color }]}>
                   {category.amount.toFixed(2)}
                 </Text>
@@ -208,7 +236,7 @@ const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
           <Text style={ModernTheme.typography.h3}>Your Borrowed Books</Text>
           {borrowedBooks.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📚</Text>
+              <Icon name="book" size={48} color={ModernTheme.colors.textMuted} />
               <Text style={ModernTheme.typography.body}>No books borrowed yet</Text>
               <Text style={ModernTheme.typography.caption}>
                 Visit the library to borrow some books!
@@ -218,7 +246,7 @@ const ModernBorrowedBooksScreen = ({ userData, onBack }) => {
             borrowedBooks.map((book, index) => (
               <View key={index} style={ModernStyles.listItem}>
                 <View style={[ModernStyles.listItemIcon, { backgroundColor: getStatusColor(book.dueStatus) + '20' }]}>
-                  <Text style={styles.bookIcon}>📖</Text>
+                  <Icon name="book-open" size={20} color={getStatusColor(book.dueStatus)} />
                 </View>
                 <View style={ModernStyles.listItemContent}>
                   <Text style={ModernStyles.listItemTitle}>{book.title}</Text>
@@ -314,14 +342,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: ModernTheme.spacing.xs,
     borderRadius: ModernTheme.borderRadius.lg,
-    padding: ModernTheme.spacing.md,
+    padding: ModernTheme.spacing.lg,
+    minHeight: 100,
+    justifyContent: 'space-between',
     ...ModernTheme.shadows.card,
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: ModernTheme.spacing.xs,
+    alignItems: 'flex-start',
+    marginBottom: ModernTheme.spacing.sm,
   },
   categoryIcon: {
     fontSize: 20,
