@@ -23,7 +23,7 @@ import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
 import ModernForgotPasswordScreen from './screens/ModernForgotPasswordScreen';
 import ModernBottomNavigation from './components/ModernBottomNavigation';
 import NotificationService from './services/NotificationService';
-import ChatbotWidget from './components/ChatbotWidget';
+import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
 
 const App = () => {
@@ -1062,7 +1062,7 @@ const App = () => {
         />
 
         {/* Chatbot Widget */}
-        <ChatbotWidget 
+        <ModernChatbotWidget 
           isVisible={isChatbotVisible} 
           onClose={() => setIsChatbotVisible(false)} 
         />
@@ -1133,7 +1133,7 @@ const App = () => {
       </ScrollView>
 
       {/* Chatbot Widget */}
-      <ChatbotWidget 
+      <ModernChatbotWidget 
         isVisible={isChatbotVisible} 
         onClose={() => setIsChatbotVisible(false)} 
       />

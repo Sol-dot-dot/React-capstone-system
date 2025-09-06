@@ -1,4 +1,5 @@
 const chatbotService = require('./chatbotService');
+const vectorStorage = require('./vectorStorage');
 const db = require('../config/database');
 
 class VectorDBService {
@@ -12,6 +13,9 @@ class VectorDBService {
   async initialize() {
     try {
       console.log('Initializing OpenAI-powered similarity database...');
+      
+      // Initialize vector storage
+      await vectorStorage.initialize();
       
       // Get ALL books from database (not just available ones)
       const [books] = await db.execute(`
@@ -33,34 +37,68 @@ class VectorDBService {
         searchText: `${book.title} ${book.author} ${book.genre} ${book.description}`.toLowerCase()
       }));
 
-      // Generate OpenAI embeddings
-      console.log('🚀 Generating OpenAI embeddings for all books...');
-      try {
-        this.embeddings = [];
-        for (let i = 0; i < this.books.length; i++) {
-          const book = this.books[i];
-          console.log(`📚 Generating embedding for book ${i + 1}/${this.books.length}: ${book.title} (Status: ${book.status})`);
-          
-          const text = `${book.title} ${book.author} ${book.genre} ${book.description}`;
-          const embedding = await chatbotService.generateEmbedding(text);
-          
-          if (embedding && Array.isArray(embedding) && embedding.length === 1536) {
-            this.embeddings.push(embedding);
-            console.log(`✅ OpenAI embedding generated for: ${book.title}`);
-          } else {
-            throw new Error(`Invalid OpenAI embedding for book: ${book.title} (expected 1536 dimensions, got ${embedding ? embedding.length : 'null'})`);
-          }
-        }
-        
-        if (this.embeddings.length === this.books.length) {
-          this.useRealEmbeddings = true;
-          console.log(`🎉 Successfully generated OpenAI embeddings for ${this.embeddings.length} books!`);
+      // Check which books need embeddings
+      const booksNeedingEmbeddings = [];
+      const existingEmbeddings = [];
+      
+      for (const book of this.books) {
+        const existingEmbedding = vectorStorage.getEmbedding(book.id);
+        if (existingEmbedding) {
+          existingEmbeddings.push(existingEmbedding);
+          console.log(`📚 Using cached embedding for: ${book.title}`);
         } else {
-          throw new Error(`Only generated ${this.embeddings.length} embeddings for ${this.books.length} books`);
+          booksNeedingEmbeddings.push(book);
         }
-      } catch (error) {
-        console.error('❌ Failed to generate OpenAI embeddings:', error.message);
-        throw new Error('OpenAI embedding generation failed - cannot proceed without real embeddings');
+      }
+
+      console.log(`📚 Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
+
+      // Generate OpenAI embeddings for new books
+      if (booksNeedingEmbeddings.length > 0) {
+        console.log('🚀 Generating OpenAI embeddings for new books...');
+        try {
+          for (let i = 0; i < booksNeedingEmbeddings.length; i++) {
+            const book = booksNeedingEmbeddings[i];
+            console.log(`📚 Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
+            
+            const text = `${book.title} ${book.author} ${book.genre} ${book.description}`;
+            const embedding = await chatbotService.generateEmbedding(text);
+            
+            if (embedding && Array.isArray(embedding) && embedding.length === 1536) {
+              // Save to persistent storage
+              await vectorStorage.saveEmbedding(book.id, embedding, {
+                title: book.title,
+                author: book.author,
+                genre: book.genre,
+                status: book.status
+              });
+              
+              existingEmbeddings.push(embedding);
+              console.log(`✅ OpenAI embedding generated and saved for: ${book.title}`);
+            } else {
+              throw new Error(`Invalid OpenAI embedding for book: ${book.title} (expected 1536 dimensions, got ${embedding ? embedding.length : 'null'})`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Failed to generate OpenAI embeddings:', error.message);
+          throw new Error('OpenAI embedding generation failed - cannot proceed without real embeddings');
+        }
+      }
+      
+      // Load all embeddings into memory
+      this.embeddings = [];
+      for (const book of this.books) {
+        const embedding = vectorStorage.getEmbedding(book.id);
+        if (embedding) {
+          this.embeddings.push(embedding);
+        }
+      }
+      
+      if (this.embeddings.length === this.books.length) {
+        this.useRealEmbeddings = true;
+        console.log(`🎉 Successfully loaded OpenAI embeddings for ${this.embeddings.length} books!`);
+      } else {
+        throw new Error(`Only loaded ${this.embeddings.length} embeddings for ${this.books.length} books`);
       }
 
       console.log(`OpenAI-powered similarity database initialized with ${this.books.length} books`);
@@ -143,6 +181,10 @@ class VectorDBService {
       this.books = [];
       this.embeddings = [];
       this.useRealEmbeddings = false;
+      
+      // Clear persistent storage and regenerate all embeddings
+      await vectorStorage.clearAll();
+      
       await this.initialize();
       console.log('OpenAI similarity database refreshed');
     } catch (error) {

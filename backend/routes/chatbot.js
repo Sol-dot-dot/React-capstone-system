@@ -53,17 +53,13 @@ router.post('/recommend', [
           response = await chatbotService.generateRecommendation(message, books);
         } else {
           // No books found, get general response
-          response = await chatbotService.getGeneralResponse(
-            `I couldn't find specific books matching "${message}". Could you please provide more details about what you're looking for?`
-          );
+          response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific genre, author, or describe the type of story you want to read.";
         }
       } catch (searchError) {
         console.error('❌ Error in book search:', searchError.message);
-        return res.status(500).json({
-          success: false,
-          message: 'Failed to search for books. Please try again.',
-          error: searchError.message
-        });
+        // Graceful fallback for RAG failures
+        response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific genre, author, or describe the type of story you want to read.";
+        books = [];
       }
     } else {
       // General chat response

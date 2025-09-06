@@ -5,18 +5,17 @@ require('dotenv').config({ path: './config.env' });
 
 class ChatbotService {
   constructor() {
-    this.systemPrompt = `You are a helpful library assistant that recommends books to users. 
-    You have access to a database of books and can provide personalized recommendations based on user preferences.
+    this.systemPrompt = `You are a friendly, knowledgeable library assistant. Use the retrieved book context provided to give grounded, natural recommendations. If you don't find a match in the library records, politely say so and suggest alternatives.
+
+    Guidelines:
+    1. Be conversational and engaging, like a helpful librarian
+    2. Use the provided book context to make specific recommendations
+    3. Explain why each book matches the user's interests
+    4. Keep responses natural and human-like
+    5. If no books match well, suggest alternative approaches or ask clarifying questions
+    6. Always be encouraging and positive about reading
     
-    When recommending books:
-    1. Be friendly and conversational
-    2. Explain why you're recommending specific books
-    3. Mention the genre, author, and a brief description
-    4. Suggest 3-5 books maximum
-    5. If no relevant books are found, suggest alternative genres or ask for more details
-    6. Always respond naturally and conversationally
-    
-    Keep responses concise but helpful.`;
+    Remember: You have access to our library's actual book collection through the provided context.`;
     
     // Initialize TF-IDF for local text similarity
     this.tfidf = new natural.TfIdf();
@@ -53,21 +52,30 @@ class ChatbotService {
 
   async generateRecommendation(userQuery, bookResults) {
     try {
-      console.log('🚀 Generating conversational AI recommendation with OpenAI...');
+      console.log('🚀 Generating RAG-powered recommendation with OpenAI...');
 
-      const prompt = `
-${this.systemPrompt}
+      // Create detailed book context for RAG
+      const bookContext = bookResults.map((book, index) => 
+        `${index + 1}. **${book.title}** by ${book.author}
+   Genre: ${book.genre}
+   Description: ${book.description}
+   Availability: ${book.status}
+   Relevance Score: ${(book.similarity * 100).toFixed(1)}%`
+      ).join('\n\n');
 
-User Query: "${userQuery}"
+      const prompt = `User Query: "${userQuery}"
 
-Available Books:
-${bookResults.map(book => 
-  `- ${book.title} by ${book.author} (${book.genre}): ${book.description}`
-).join('\n')}
+Retrieved Book Context from Library Database:
+${bookContext}
 
-Please provide a natural, conversational response recommending books based on the user's query.
-If no books match the query well, suggest alternative genres or ask for more specific preferences.
-Keep your response friendly and helpful.`;
+Please provide a natural, conversational response that:
+1. Acknowledges the user's request
+2. Recommends specific books from the retrieved context
+3. Explains why each recommended book matches their interests
+4. Mentions the genre and key appeal of each book
+5. Keeps the tone friendly and encouraging
+
+If the retrieved books don't match well, politely explain this and suggest alternative approaches.`;
 
       try {
         const response = await this.openai.chat.completions.create({
@@ -77,11 +85,11 @@ Keep your response friendly and helpful.`;
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
-          max_tokens: 300,
+          max_tokens: 400,
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
-          console.log('✅ OpenAI conversational AI recommendation generated!');
+          console.log('✅ RAG-powered recommendation generated!');
           return response.choices[0].message.content;
         } else {
           throw new Error('Invalid response format from OpenAI');
