@@ -467,4 +467,112 @@ router.post('/recalculate/:studentId', async (req, res) => {
     }
 });
 
+// POST /api/penalty/pay-all/:studentId - Pay all unpaid fines for a student
+router.post('/pay-all/:studentId', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId } = req.params;
+        const adminId = req.user.id;
+
+        // Get all unpaid fines for the student
+        const fines = await getStudentFines(studentId, 'unpaid', true);
+        
+        if (fines.length === 0) {
+            return res.json({
+                success: true,
+                message: 'No unpaid fines found for this student',
+                data: { paidFines: 0, returnedBooks: 0 }
+            });
+        }
+
+        const connection = await pool.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            let paidFinesCount = 0;
+            let returnedBooksCount = 0;
+
+            // Process each unpaid fine
+            for (const fine of fines) {
+                const remainingAmount = fine.fine_amount - fine.paid_amount;
+                
+                if (remainingAmount > 0) {
+                    // Update fine to paid
+                    await connection.execute(`
+                        UPDATE fines 
+                        SET paid_amount = fine_amount, 
+                            status = 'paid', 
+                            paid_date = NOW(),
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    `, [fine.id]);
+
+                    // Add payment record
+                    await connection.execute(`
+                        INSERT INTO fine_payments 
+                        (fine_id, payment_amount, payment_method, processed_by, notes) 
+                        VALUES (?, ?, 'cash', ?, 'Full payment - All fines paid at once')
+                    `, [fine.id, remainingAmount, adminId]);
+
+                    // Return the book to available status
+                    await connection.execute(`
+                        UPDATE borrowing_transactions 
+                        SET status = 'returned', 
+                            returned_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    `, [fine.transaction_id]);
+
+                    // Update book status to available
+                    await connection.execute(`
+                        UPDATE books 
+                        SET status = 'available', 
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = (
+                            SELECT book_id FROM borrowing_transactions WHERE id = ?
+                        )
+                    `, [fine.transaction_id]);
+
+                    paidFinesCount++;
+                    returnedBooksCount++;
+                }
+            }
+
+            // Update student borrowing status
+            await checkAndUpdateStudentBorrowingStatus(studentId);
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: `Successfully paid ${paidFinesCount} fines and returned ${returnedBooksCount} books`,
+                data: {
+                    paidFines: paidFinesCount,
+                    returnedBooks: returnedBooksCount,
+                    totalAmount: fines.reduce((sum, fine) => sum + (fine.fine_amount - fine.paid_amount), 0)
+                }
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+
+    } catch (error) {
+        console.error('Error paying all fines for student:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process payment for all fines'
+        });
+    }
+});
+
 module.exports = router;

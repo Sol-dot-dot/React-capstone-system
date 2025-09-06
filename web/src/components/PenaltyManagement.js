@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import './PenaltyManagement.css';
 
 const PenaltyManagement = () => {
-    const [activeTab, setActiveTab] = useState('settings');
+    const [activeTab, setActiveTab] = useState('fines');
     const [settings, setSettings] = useState({});
-    const [fines, setFines] = useState([]);
+    const [students, setStudents] = useState([]);
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedFine, setSelectedFine] = useState(null);
-    const [paymentAmount, setPaymentAmount] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [studentFines, setStudentFines] = useState([]);
+    const [expandedStudents, setExpandedStudents] = useState(new Set());
 
     useEffect(() => {
         loadData();
@@ -31,13 +31,7 @@ const PenaltyManagement = () => {
                     setSettings(data.data);
                 }
             } else if (activeTab === 'fines') {
-                const response = await fetch('/api/penalty/all-fines', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    setFines(data.data.fines);
-                }
+                await loadStudentsWithFines();
             } else if (activeTab === 'stats') {
                 const response = await fetch('/api/penalty/stats', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -52,6 +46,55 @@ const PenaltyManagement = () => {
             setMessage('Error loading data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadStudentsWithFines = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            
+            // Get all fines grouped by student
+            const response = await fetch('/api/penalty/all-fines', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                const fines = data.data.fines;
+                
+                // Group fines by student
+                const studentMap = new Map();
+                
+                fines.forEach(fine => {
+                    const studentId = fine.student_id_number;
+                    if (!studentMap.has(studentId)) {
+                        studentMap.set(studentId, {
+                            studentId,
+                            email: fine.email,
+                            totalFines: 0,
+                            unpaidFines: 0,
+                            totalAmount: 0,
+                            unpaidAmount: 0,
+                            fines: []
+                        });
+                    }
+                    
+                    const student = studentMap.get(studentId);
+                    student.fines.push(fine);
+                    student.totalFines++;
+                    student.totalAmount += parseFloat(fine.fine_amount);
+                    
+                    if (fine.status === 'unpaid') {
+                        student.unpaidFines++;
+                        student.unpaidAmount += parseFloat(fine.fine_amount - fine.paid_amount);
+                    }
+                });
+                
+                setStudents(Array.from(studentMap.values()));
+            }
+        } catch (error) {
+            console.error('Error loading students with fines:', error);
+            setMessage('Error loading students data');
         }
     };
 
@@ -133,51 +176,53 @@ const PenaltyManagement = () => {
         }
     };
 
-    const processPayment = async () => {
-        if (!selectedFine || !paymentAmount) {
-            setMessage('Please select a fine and enter payment amount');
+    const confirmAllPayments = async (studentId) => {
+        if (!window.confirm('Are you sure you want to confirm payment for ALL unpaid fines for this student? This will return all books and allow the student to borrow again.')) {
             return;
         }
 
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/api/penalty/pay', {
+            
+            // Process payment for all unpaid fines
+            const response = await fetch(`/api/penalty/pay-all/${studentId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    fineId: selectedFine.id,
-                    paymentAmount: parseFloat(paymentAmount),
-                    paymentMethod,
-                    notes: `Payment of ${paymentAmount} pesos via ${paymentMethod}`
-                })
+                }
             });
             
             const data = await response.json();
             if (data.success) {
-                setMessage('Payment processed successfully');
-                setSelectedFine(null);
-                setPaymentAmount('');
-                loadData();
-                setTimeout(() => setMessage(''), 3000);
+                setMessage(`Payment confirmed successfully! Paid ${data.data.paidFines} fines, returned ${data.data.returnedBooks} books. Total amount: ₱${data.data.totalAmount.toFixed(2)}`);
+                loadStudentsWithFines();
+                setTimeout(() => setMessage(''), 5000);
             } else {
-                setMessage('Error processing payment');
+                setMessage('Error confirming payment');
             }
         } catch (error) {
-            console.error('Error processing payment:', error);
-            setMessage('Error processing payment');
+            console.error('Error confirming payment:', error);
+            setMessage('Error confirming payment');
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredFines = fines.filter(fine => 
-        fine.student_id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fine.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fine.number_code.toLowerCase().includes(searchTerm.toLowerCase())
+    const toggleStudentExpansion = (studentId) => {
+        const newExpanded = new Set(expandedStudents);
+        if (newExpanded.has(studentId)) {
+            newExpanded.delete(studentId);
+        } else {
+            newExpanded.add(studentId);
+        }
+        setExpandedStudents(newExpanded);
+    };
+
+    const filteredStudents = students.filter(student => 
+        student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const getStatusBadge = (status) => {
@@ -196,7 +241,7 @@ const PenaltyManagement = () => {
     return (
         <div className="penalty-management">
             <div className="penalty-header">
-                <h2>Penalty & Rules Management</h2>
+                <h2>Student Fines Management</h2>
                 {message && (
                     <div className={`alert ${message.includes('Error') ? 'alert-danger' : 'alert-success'}`}>
                         {message}
@@ -206,16 +251,16 @@ const PenaltyManagement = () => {
 
             <div className="penalty-tabs">
                 <button 
+                    className={`tab-button ${activeTab === 'fines' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('fines')}
+                >
+                    Student Fines
+                </button>
+                <button 
                     className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
                     onClick={() => setActiveTab('settings')}
                 >
                     System Settings
-                </button>
-                <button 
-                    className={`tab-button ${activeTab === 'fines' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('fines')}
-                >
-                    Fines Management
                 </button>
                 <button 
                     className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`}
@@ -226,6 +271,143 @@ const PenaltyManagement = () => {
             </div>
 
             <div className="penalty-content">
+                {activeTab === 'fines' && (
+                    <div className="fines-panel">
+                        <div className="fines-header">
+                            <h3>Student Fines Management</h3>
+                            <div className="fines-actions">
+                                <div className="search-container">
+                                    <input
+                                        type="text"
+                                        placeholder="Search by Student ID or Email..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="search-input"
+                                    />
+                                    <span className="search-icon">🔍</span>
+                                </div>
+                                <div className="action-buttons">
+                                    <button 
+                                        className="btn btn-warning"
+                                        onClick={processOverdueFines}
+                                        disabled={loading}
+                                    >
+                                        Process Overdue Fines
+                                    </button>
+                                    <button 
+                                        className="btn btn-info"
+                                        onClick={recalculateSemesterCounts}
+                                        disabled={loading}
+                                    >
+                                        Recalculate Semester Counts
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="students-list">
+                            {loading ? (
+                                <div className="loading">Loading students...</div>
+                            ) : filteredStudents.length === 0 ? (
+                                <div className="no-data">No students with fines found</div>
+                            ) : (
+                                filteredStudents.map(student => (
+                                    <div key={student.studentId} className="student-card">
+                                        <div className="student-header" onClick={() => toggleStudentExpansion(student.studentId)}>
+                                            <div className="student-info">
+                                                <h4>{student.studentId}</h4>
+                                                <p className="student-email">{student.email}</p>
+                                            </div>
+                                            <div className="student-summary">
+                                                <div className="summary-item">
+                                                    <span className="label">Total Fines:</span>
+                                                    <span className="value">{student.totalFines}</span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="label">Unpaid:</span>
+                                                    <span className="value unpaid">{student.unpaidFines}</span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="label">Total Amount:</span>
+                                                    <span className="value amount">{formatCurrency(student.totalAmount)}</span>
+                                                </div>
+                                                <div className="summary-item">
+                                                    <span className="label">Unpaid Amount:</span>
+                                                    <span className="value amount unpaid">{formatCurrency(student.unpaidAmount)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="expand-icon">
+                                                {expandedStudents.has(student.studentId) ? '▼' : '▶'}
+                                            </div>
+                                        </div>
+
+                                        {expandedStudents.has(student.studentId) && (
+                                            <div className="student-details">
+                                                <div className="student-actions">
+                                                    {student.unpaidFines > 0 && (
+                                                        <div className="payment-summary">
+                                                            <div className="payment-info">
+                                                                <h5>Payment Summary</h5>
+                                                                <p>Total unpaid amount: <strong>{formatCurrency(student.unpaidAmount)}</strong></p>
+                                                                <p>Number of unpaid fines: <strong>{student.unpaidFines}</strong></p>
+                                                                <p className="payment-note">Clicking "Confirm All Payments" will pay all fines and return all books to available status.</p>
+                                                            </div>
+                                                            <button 
+                                                                className="btn btn-success btn-lg"
+                                                                onClick={() => confirmAllPayments(student.studentId)}
+                                                                disabled={loading}
+                                                            >
+                                                                {loading ? 'Processing...' : 'Confirm All Payments'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="fines-list">
+                                                    <h5>Borrowed Books & Fines</h5>
+                                                    {student.fines.map(fine => (
+                                                        <div key={fine.id} className="fine-item">
+                                                            <div className="book-info">
+                                                                <h6>{fine.title}</h6>
+                                                                <p className="book-code">{fine.number_code}</p>
+                                                                <p className="book-author">by {fine.author}</p>
+                                                            </div>
+                                                            <div className="fine-details">
+                                                                <div className="fine-amounts">
+                                                                    <div className="amount-item">
+                                                                        <span className="label">Total Fine:</span>
+                                                                        <span className="value">{formatCurrency(fine.fine_amount)}</span>
+                                                                    </div>
+                                                                    <div className="amount-item">
+                                                                        <span className="label">Paid:</span>
+                                                                        <span className="value">{formatCurrency(fine.paid_amount)}</span>
+                                                                    </div>
+                                                                    <div className="amount-item">
+                                                                        <span className="label">Remaining:</span>
+                                                                        <span className="value remaining">{formatCurrency(fine.fine_amount - fine.paid_amount)}</span>
+                                                                    </div>
+                                                                    <div className="amount-item">
+                                                                        <span className="label">Days Overdue:</span>
+                                                                        <span className="value">{fine.days_overdue}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="fine-status">
+                                                                    <span className={`badge ${getStatusBadge(fine.status)}`}>
+                                                                        {fine.status.toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'settings' && (
                     <div className="settings-panel">
                         <h3>System Settings</h3>
@@ -307,85 +489,6 @@ const PenaltyManagement = () => {
                     </div>
                 )}
 
-                {activeTab === 'fines' && (
-                    <div className="fines-panel">
-                        <div className="fines-header">
-                            <h3>Fines Management</h3>
-                            <div className="fines-actions">
-                                <input
-                                    type="text"
-                                    placeholder="Search fines..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="search-input"
-                                />
-                                <button 
-                                    className="btn btn-warning"
-                                    onClick={processOverdueFines}
-                                    disabled={loading}
-                                >
-                                    Process Overdue Fines
-                                </button>
-                                <button 
-                                    className="btn btn-info"
-                                    onClick={recalculateSemesterCounts}
-                                    disabled={loading}
-                                >
-                                    Recalculate Semester Counts
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="fines-table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Student ID</th>
-                                        <th>Book</th>
-                                        <th>Fine Amount</th>
-                                        <th>Paid Amount</th>
-                                        <th>Days Overdue</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredFines.map(fine => (
-                                        <tr key={fine.id}>
-                                            <td>{fine.student_id_number}</td>
-                                            <td>
-                                                <div>
-                                                    <strong>{fine.title}</strong>
-                                                    <br />
-                                                    <small>{fine.number_code}</small>
-                                                </div>
-                                            </td>
-                                            <td>{formatCurrency(fine.fine_amount)}</td>
-                                            <td>{formatCurrency(fine.paid_amount)}</td>
-                                            <td>{fine.days_overdue}</td>
-                                            <td>
-                                                <span className={`badge ${getStatusBadge(fine.status)}`}>
-                                                    {fine.status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {fine.status === 'unpaid' && (
-                                                    <button 
-                                                        className="btn btn-sm btn-success"
-                                                        onClick={() => setSelectedFine(fine)}
-                                                    >
-                                                        Pay
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
                 {activeTab === 'stats' && (
                     <div className="stats-panel">
                         <h3>Penalty System Statistics</h3>
@@ -418,70 +521,6 @@ const PenaltyManagement = () => {
                     </div>
                 )}
             </div>
-
-            {/* Payment Modal */}
-            {selectedFine && (
-                <div className="modal-overlay">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3>Process Fine Payment</h3>
-                            <button 
-                                className="close-btn"
-                                onClick={() => setSelectedFine(null)}
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="fine-details">
-                                <p><strong>Student:</strong> {selectedFine.student_id_number}</p>
-                                <p><strong>Book:</strong> {selectedFine.title}</p>
-                                <p><strong>Total Fine:</strong> {formatCurrency(selectedFine.fine_amount)}</p>
-                                <p><strong>Already Paid:</strong> {formatCurrency(selectedFine.paid_amount)}</p>
-                                <p><strong>Remaining:</strong> {formatCurrency(selectedFine.fine_amount - selectedFine.paid_amount)}</p>
-                            </div>
-                            <div className="payment-form">
-                                <div className="form-group">
-                                    <label>Payment Amount:</label>
-                                    <input
-                                        type="number"
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(e.target.value)}
-                                        max={selectedFine.fine_amount - selectedFine.paid_amount}
-                                        step="0.50"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Payment Method:</label>
-                                    <select
-                                        value={paymentMethod}
-                                        onChange={(e) => setPaymentMethod(e.target.value)}
-                                    >
-                                        <option value="cash">Cash</option>
-                                        <option value="online">Online</option>
-                                        <option value="waived">Waived</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button 
-                                className="btn btn-secondary"
-                                onClick={() => setSelectedFine(null)}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                className="btn btn-primary"
-                                onClick={processPayment}
-                                disabled={loading || !paymentAmount}
-                            >
-                                {loading ? 'Processing...' : 'Process Payment'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
