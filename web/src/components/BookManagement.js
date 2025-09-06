@@ -1,4 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FiBook, 
+  FiPlus, 
+  FiEdit, 
+  FiTrash2, 
+  FiSearch, 
+  FiFilter,
+  FiRefreshCw,
+  FiSave,
+  FiX,
+  FiEye,
+  FiChevronLeft,
+  FiChevronRight
+} from 'react-icons/fi';
+import designSystem from '../styles/designSystem';
 import './BookManagement.css';
 
 const BookManagement = ({ user }) => {
@@ -218,6 +233,7 @@ const BookManagement = ({ user }) => {
                     className="add-book-btn"
                     onClick={() => setShowAddForm(true)}
                 >
+                    <FiPlus />
                     Add New Book
                 </button>
             </div>
@@ -257,6 +273,7 @@ const BookManagement = ({ user }) => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    <FiSearch className="search-icon" />
                 </div>
                 <div className="filter-controls">
                     <select 
@@ -327,12 +344,14 @@ const BookManagement = ({ user }) => {
                                             className="edit-btn"
                                             onClick={() => openEditForm(book)}
                                         >
+                                            <FiEdit />
                                             Edit
                                         </button>
                                         <button 
                                             className="delete-btn"
                                             onClick={() => handleDeleteBook(book.id)}
                                         >
+                                            <FiTrash2 />
                                             Delete
                                         </button>
                                     </div>
@@ -461,9 +480,11 @@ const BookManagement = ({ user }) => {
                             </div>
                             <div className="modal-actions">
                                 <button type="button" onClick={() => setShowAddForm(false)}>
+                                    <FiX />
                                     Cancel
                                 </button>
                                 <button type="submit" className="primary">
+                                    <FiSave />
                                     Add Book
                                 </button>
                             </div>
@@ -570,9 +591,11 @@ const BookManagement = ({ user }) => {
                             </div>
                             <div className="modal-actions">
                                 <button type="button" onClick={() => setShowEditForm(false)}>
+                                    <FiX />
                                     Cancel
                                 </button>
                                 <button type="submit" className="primary">
+                                    <FiSave />
                                     Update Book
                                 </button>
                             </div>

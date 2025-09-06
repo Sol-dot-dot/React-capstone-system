@@ -3,6 +3,51 @@
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* React Icons Styling */
+.action-buttons .btn svg,
+.search-icon,
+.expand-icon svg,
+.tab-button svg,
+.modal-header .btn svg {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.search-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+}
+
+.expand-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.expand-icon svg {
+  margin-right: 0;
+  transition: transform 0.2s ease;
+}
+
+.expand-icon.expanded svg {
+  transform: rotate(180deg);
+}
+
+.tab-button svg {
+  margin-right: 0.5rem;
+}
+
+.modal-header .btn svg {
+  margin-right: 0;
 }
 
 /* Header */
@@ -31,19 +76,21 @@
 .user-name-button {
   background: none;
   border: none;
-  color: #2c3e50;
+  color: #111827;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background-color 0.3s ease;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
 }
 
 .user-name-button:hover {
-  background: #f8f9fa;
+  background: #f3f4f6;
+  color: #3b82f6;
 }
 
 .expand-icon {
@@ -68,6 +115,33 @@
   margin: 10px;
   border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.user-action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.user-action-buttons .btn {
+  font-size: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  min-width: 80px;
+  justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .user-details-grid {
@@ -132,26 +206,34 @@
 
 .search-input {
   width: 100%;
-  padding: 12px 45px 12px 15px;
-  border: 2px solid #e9ecef;
-  border-radius: 25px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  background: white;
+  color: #374151;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
 }
 
 .search-icon {
   position: absolute;
-  right: 15px;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.2rem;
-  color: #6c757d;
+  color: #6b7280;
+  pointer-events: none;
 }
 
 /* Professional Icons */
@@ -264,38 +346,43 @@
 }
 
 .filter-select {
-  padding: 10px 15px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
   background: white;
+  color: #374151;
   cursor: pointer;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.2s ease;
+  outline: none;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .filter-select:focus {
-  outline: none;
-  border-color: #667eea;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
 }
 
 /* Users Table */
 .users-table-container {
   background: white;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.06);
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .table-header {
-  padding: 20px 25px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
+  padding: 1.5rem 2rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .table-header h3 {
   margin: 0;
-  color: #2c3e50;
-  font-size: 1.3rem;
+  color: #111827;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .table-responsive {
@@ -305,54 +392,68 @@
 .users-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  background: white;
 }
 
 .users-table th {
-  background: #f8f9fa;
-  padding: 15px 12px;
+  background: #f9fafb;
+  padding: 1rem 0.75rem;
   text-align: left;
   font-weight: 600;
-  color: #495057;
-  border-bottom: 2px solid #dee2e6;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 10;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .users-table th.sortable {
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .users-table th.sortable:hover {
-  background: #e9ecef;
+  background: #f3f4f6;
+  color: #1f2937;
 }
 
 .users-table td {
-  padding: 12px;
-  border-bottom: 1px solid #f1f3f4;
+  padding: 1rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
+  color: #374151;
 }
 
 .user-row:hover {
-  background: #f8f9fa;
+  background: #f9fafb;
 }
 
 .user-id {
   font-weight: 600;
-  color: #2c3e50;
+  color: #1f2937;
+  font-size: 0.875rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .user-email {
-  color: #6c757d;
-  font-size: 0.85rem;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .stat-number {
   text-align: center;
-  font-weight: 600;
+  font-weight: 400;
+  font-size: 0.875rem;
+  color: #374151;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .semester-progress {
@@ -361,16 +462,17 @@
 
 .progress-bar {
   position: relative;
-  background: #e9ecef;
-  border-radius: 10px;
-  height: 20px;
+  background: #f3f4f6;
+  border-radius: 0.5rem;
+  height: 1.25rem;
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .progress-fill {
-  background: linear-gradient(90deg, #28a745, #20c997);
+  background: #10b981;
   height: 100%;
-  border-radius: 10px;
+  border-radius: 0.5rem;
   transition: width 0.3s ease;
 }
 
@@ -379,56 +481,144 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #495057;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: #374151;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .unpaid-amount {
-  color: #dc3545;
-  font-weight: 600;
+  color: #374151;
+  font-weight: 400;
+  font-size: 0.875rem;
+  background: none;
+  padding: 0;
+  border: none;
+  display: inline;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .action-buttons {
   display: flex;
-  gap: 5px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .action-buttons .btn {
-  font-size: 0.8rem;
-  padding: 6px 10px;
+  font-size: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  min-width: 80px;
+  justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Badges */
-.badge {
-  display: inline-block;
-  padding: 4px 8px;
+.action-buttons .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-secondary {
+  background: #6b7280;
+  color: white;
+  border-color: #6b7280;
+}
+
+.btn-secondary:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+}
+
+.btn-sm {
   font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 6px;
+  padding: 0.375rem 0.75rem;
+  min-width: 70px;
+}
+
+.btn-outline {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.btn-outline:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+/* Badges - Simple Text */
+.badge {
+  display: inline;
+  font-size: 0.75rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.025em;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #374151;
 }
 
 .badge-success {
-  background: #d4edda;
-  color: #155724;
+  color: #374151;
 }
 
 .badge-danger {
-  background: #f8d7da;
-  color: #721c24;
+  color: #374151;
 }
 
 .badge-warning {
-  background: #fff3cd;
-  color: #856404;
+  color: #374151;
+  background: none;
+  border: none;
+  padding: 0;
 }
 
 .badge-secondary {
-  background: #e2e3e5;
-  color: #383d41;
+  color: #374151;
 }
 
 /* No Data */

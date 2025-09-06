@@ -105,6 +105,28 @@
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.search-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+}
+
+/* React Icons Styling */
+.add-book-btn svg,
+.actions .edit-btn svg,
+.actions .delete-btn svg,
+.modal-actions button svg {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
 .filter-controls {
     display: flex;
     gap: 15px;

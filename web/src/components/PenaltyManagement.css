@@ -143,7 +143,33 @@
     position: absolute;
     right: 12px;
     color: #6c757d;
-    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* React Icons Styling */
+.tab-button svg,
+.action-buttons .btn svg,
+.expand-icon svg {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+.expand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.expand-icon:hover {
+    background: #e9ecef;
 }
 
 .action-buttons {

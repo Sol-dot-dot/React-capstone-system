@@ -1,5 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { 
+  FiUsers, 
+  FiUserCheck, 
+  FiUserX, 
+  FiTrash2, 
+  FiRefreshCw, 
+  FiSearch, 
+  FiChevronDown, 
+  FiChevronUp,
+  FiEye,
+  FiCheck,
+  FiX,
+  FiUser,
+  FiBook,
+  FiDollarSign,
+  FiActivity,
+  FiClock,
+  FiTrendingUp
+} from 'react-icons/fi';
+import designSystem from '../styles/designSystem';
 import './UserManagement.css';
 
 const UserManagement = () => {
@@ -194,7 +214,7 @@ const UserManagement = () => {
         <h1>User Management</h1>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={fetchUsers}>
-            <span className="icon-refresh"></span>
+            <FiRefreshCw />
             Refresh
           </button>
         </div>
@@ -211,7 +231,7 @@ const UserManagement = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-          <span className="search-icon icon-search"></span>
+          <FiSearch className="search-icon" />
         </div>
         <div className="filter-options">
           <select 
@@ -229,7 +249,7 @@ const UserManagement = () => {
             className="btn btn-sm btn-outline"
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
           >
-            <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>
+            {sortOrder === 'asc' ? <FiTrendingUp /> : <FiTrendingUp style={{ transform: 'rotate(180deg)' }} />}
             </button>
         </div>
       </div>
@@ -245,22 +265,14 @@ const UserManagement = () => {
               <thead>
                 <tr>
                   <th onClick={() => handleSort('id_number')} className="sortable">
-                    ID Number {sortBy === 'id_number' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                    ID Number {sortBy === 'id_number' && (sortOrder === 'asc' ? <FiTrendingUp /> : <FiTrendingUp style={{ transform: 'rotate(180deg)' }} />)}
                   </th>
                   <th onClick={() => handleSort('email')} className="sortable">
-                    Email {sortBy === 'email' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                    Email {sortBy === 'email' && (sortOrder === 'asc' ? <FiTrendingUp /> : <FiTrendingUp style={{ transform: 'rotate(180deg)' }} />)}
                   </th>
-                  <th>Status</th>
-                  <th onClick={() => handleSort('total_borrowed')} className="sortable">
-                    Books Borrowed {sortBy === 'total_borrowed' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                  <th onClick={() => handleSort('semester_books')} className="sortable">
+                    Semester Progress {sortBy === 'semester_books' && (sortOrder === 'asc' ? <FiTrendingUp /> : <FiTrendingUp style={{ transform: 'rotate(180deg)' }} />)}
                   </th>
-                  <th>Current</th>
-                  <th>Overdue</th>
-                  <th onClick={() => handleSort('unpaid_fines')} className="sortable">
-                    Unpaid Fines {sortBy === 'unpaid_fines' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
-                  </th>
-                  <th>Semester</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,35 +286,11 @@ const UserManagement = () => {
                         >
                           {user.id_number}
                           <span className={`expand-icon ${expandedUser === user.id ? 'expanded' : ''}`}>
-                            <span className="icon-chevron"></span>
+                            {expandedUser === user.id ? <FiChevronUp /> : <FiChevronDown />}
                           </span>
                         </button>
                       </td>
                       <td className="user-email">{user.email}</td>
-                      <td>
-                        <span className={`badge ${getStatusBadge(user.is_verified ? 'verified' : 'unverified').class}`}>
-                          {getStatusBadge(user.is_verified ? 'verified' : 'unverified').text}
-                      </span>
-                    </td>
-                      <td className="stat-number">{user.total_borrowed || 0}</td>
-                      <td className="stat-number">
-                        {user.currently_borrowed > 0 && (
-                          <span className="badge badge-warning">{user.currently_borrowed}</span>
-                        )}
-                        {user.currently_borrowed === 0 && <span className="text-muted">0</span>}
-                      </td>
-                      <td className="stat-number">
-                        {user.overdue_books > 0 && (
-                          <span className="badge badge-danger">{user.overdue_books}</span>
-                        )}
-                        {user.overdue_books === 0 && <span className="text-muted">0</span>}
-                      </td>
-                      <td className="stat-number">
-                        {user.unpaid_fines > 0 && (
-                          <span className="unpaid-amount">{formatCurrency(user.unpaid_amount)}</span>
-                        )}
-                        {user.unpaid_fines === 0 && <span className="text-muted">₱0.00</span>}
-                      </td>
                       <td className="semester-progress">
                         {user.semester_books !== null ? (
                           <div className="progress-bar">
@@ -313,41 +301,16 @@ const UserManagement = () => {
                           <span className="text-muted">N/A</span>
                         )}
                       </td>
-                      <td>
-                        <div className="action-buttons">
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={() => fetchUserDetails(user.id_number)}
-                        >
-                            <span className="icon-details"></span>
-                          Details
-                        </button>
-                        <button
-                          className="btn btn-sm btn-warning"
-                          onClick={() => updateUserVerification(user.id_number, !user.is_verified)}
-                        >
-                            <span className="icon-verify"></span>
-                          {user.is_verified ? 'Unverify' : 'Verify'}
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => deleteUser(user.id_number)}
-                        >
-                            <span className="icon-delete"></span>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                     
                     {/* Expanded User Details */}
                     {expandedUser === user.id && (
                       <tr className="user-details-row">
-                        <td colSpan="9" className="user-details-cell">
+                        <td colSpan="3" className="user-details-cell">
                           <div className="user-details-content">
                             <div className="user-details-grid">
                               <div className="detail-section">
-                                <h5><span className="icon-account"></span> Account Information</h5>
+                                <h5><FiUser /> Account Information</h5>
                                 <div className="detail-item">
                                   <span className="detail-label">ID Number:</span>
                                   <span className="detail-value">{user.id_number}</span>
@@ -367,7 +330,7 @@ const UserManagement = () => {
                               </div>
                               
                               <div className="detail-section">
-                                <h5><span className="icon-books"></span> Borrowing Statistics</h5>
+                                <h5><FiBook /> Borrowing Statistics</h5>
                                 <div className="detail-item">
                                   <span className="detail-label">Total Borrowed:</span>
                                   <span className="detail-value">{user.total_borrowed || 0}</span>
@@ -387,7 +350,7 @@ const UserManagement = () => {
                               </div>
                               
                               <div className="detail-section">
-                                <h5><span className="icon-finance"></span> Financial Status</h5>
+                                <h5><FiDollarSign /> Financial Status</h5>
                                 <div className="detail-item">
                                   <span className="detail-label">Total Fines:</span>
                                   <span className="detail-value">{user.total_fines || 0}</span>
@@ -409,6 +372,31 @@ const UserManagement = () => {
                                   </span>
                                 </div>
                               </div>
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="user-action-buttons">
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => fetchUserDetails(user.id_number)}
+                              >
+                                <FiEye />
+                                Details
+                              </button>
+                              <button
+                                className="btn btn-sm btn-warning"
+                                onClick={() => updateUserVerification(user.id_number, !user.is_verified)}
+                              >
+                                {user.is_verified ? <FiUserX /> : <FiUserCheck />}
+                                {user.is_verified ? 'Unverify' : 'Verify'}
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => deleteUser(user.id_number)}
+                              >
+                                <FiTrash2 />
+                                Delete
+                              </button>
                             </div>
                           </div>
                         </td>
@@ -436,7 +424,7 @@ const UserManagement = () => {
                 className="btn btn-sm btn-secondary" 
                 onClick={() => setShowDetails(false)}
               >
-                ×
+                <FiX />
               </button>
             </div>
             
@@ -488,28 +476,28 @@ const UserManagement = () => {
                   className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setActiveTab('overview')}
                 >
-                  <span className="icon-overview"></span>
+                  <FiUser />
                   Overview
                 </button>
                 <button 
                   className={`tab-button ${activeTab === 'borrowing' ? 'active' : ''}`}
                   onClick={() => setActiveTab('borrowing')}
                 >
-                  <span className="icon-borrowing"></span>
+                  <FiBook />
                   Borrowing History
                 </button>
                 <button 
                   className={`tab-button ${activeTab === 'fines' ? 'active' : ''}`}
                   onClick={() => setActiveTab('fines')}
                 >
-                  <span className="icon-fines"></span>
+                  <FiDollarSign />
                   Fines History
                 </button>
                 <button 
                   className={`tab-button ${activeTab === 'activity' ? 'active' : ''}`}
                   onClick={() => setActiveTab('activity')}
                 >
-                  <span className="icon-activity"></span>
+                  <FiActivity />
                   Activity Log
                 </button>
               </div>
@@ -695,7 +683,7 @@ const UserManagement = () => {
                     setShowDetails(false);
                   }}
                 >
-                  <span className="icon-verify"></span>
+                  {userDetails.is_verified ? <FiUserX /> : <FiUserCheck />}
                   {userDetails.is_verified ? 'Unverify User' : 'Verify User'}
                 </button>
                 <button
@@ -704,7 +692,7 @@ const UserManagement = () => {
                     deleteUser(userDetails.id_number);
                   }}
                 >
-                  <span className="icon-delete"></span>
+                  <FiTrash2 />
                   Delete User
                 </button>
               </div>

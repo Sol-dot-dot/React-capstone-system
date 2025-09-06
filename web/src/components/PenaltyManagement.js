@@ -1,4 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FiDollarSign, 
+  FiSettings, 
+  FiUsers, 
+  FiSearch, 
+  FiChevronDown, 
+  FiChevronUp,
+  FiCheck,
+  FiRefreshCw,
+  FiBook,
+  FiClock,
+  FiAlertCircle
+} from 'react-icons/fi';
+import designSystem from '../styles/designSystem';
 import './PenaltyManagement.css';
 
 const PenaltyManagement = () => {
@@ -254,18 +268,21 @@ const PenaltyManagement = () => {
                     className={`tab-button ${activeTab === 'fines' ? 'active' : ''}`}
                     onClick={() => setActiveTab('fines')}
                 >
+                    <FiDollarSign />
                     Student Fines
                 </button>
                 <button 
                     className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
                     onClick={() => setActiveTab('settings')}
                 >
+                    <FiSettings />
                     System Settings
                 </button>
                 <button 
                     className={`tab-button ${activeTab === 'stats' ? 'active' : ''}`}
                     onClick={() => setActiveTab('stats')}
                 >
+                    <FiUsers />
                     Statistics
                 </button>
             </div>
@@ -284,7 +301,7 @@ const PenaltyManagement = () => {
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="search-input"
                                     />
-                                    <span className="search-icon">🔍</span>
+                                    <FiSearch className="search-icon" />
                                 </div>
                                 <div className="action-buttons">
                                     <button 
@@ -292,6 +309,7 @@ const PenaltyManagement = () => {
                                         onClick={processOverdueFines}
                                         disabled={loading}
                                     >
+                                        <FiRefreshCw />
                                         Process Overdue Fines
                                     </button>
                                     <button 
@@ -299,6 +317,7 @@ const PenaltyManagement = () => {
                                         onClick={recalculateSemesterCounts}
                                         disabled={loading}
                                     >
+                                        <FiClock />
                                         Recalculate Semester Counts
                                     </button>
                                 </div>
@@ -337,7 +356,7 @@ const PenaltyManagement = () => {
                                                 </div>
                                             </div>
                                             <div className="expand-icon">
-                                                {expandedStudents.has(student.studentId) ? '▼' : '▶'}
+                                                {expandedStudents.has(student.studentId) ? <FiChevronDown /> : <FiChevronUp />}
                                             </div>
                                         </div>
 
@@ -357,6 +376,7 @@ const PenaltyManagement = () => {
                                                                 onClick={() => confirmAllPayments(student.studentId)}
                                                                 disabled={loading}
                                                             >
+                                                                <FiCheck />
                                                                 {loading ? 'Processing...' : 'Confirm All Payments'}
                                                             </button>
                                                         </div>
@@ -484,6 +504,7 @@ const PenaltyManagement = () => {
                             onClick={updateSettings}
                             disabled={loading}
                         >
+                            <FiCheck />
                             {loading ? 'Updating...' : 'Update Settings'}
                         </button>
                     </div>
