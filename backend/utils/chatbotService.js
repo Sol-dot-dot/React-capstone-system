@@ -1,6 +1,6 @@
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
-const axios = require('axios');
+const OpenAI = require('openai');
 require('dotenv').config({ path: './config.env' });
 
 class ChatbotService {
@@ -22,73 +22,38 @@ class ChatbotService {
     this.tfidf = new natural.TfIdf();
     this.isInitialized = false;
     
-    // LM Studio local server configuration
-    this.lmStudioURL = 'http://127.0.0.1:1234/v1';
+    // Initialize OpenAI client
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
     
-    console.log('🚀 LM Studio client initialized for conversational AI');
+    console.log('🚀 OpenAI client initialized for conversational AI');
   }
 
   async generateEmbedding(text) {
     try {
-      console.log('🚀 Generating local AI embedding using TF-IDF...');
+      console.log('🚀 Generating OpenAI embedding...');
       
-      // Convert text to lowercase and tokenize
-      const tokens = tokenizer.tokenize(text.toLowerCase());
+      const response = await this.openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: text,
+      });
       
-      // Create a simple but effective vector representation
-      const embedding = this.createTextVector(tokens);
-      
-      if (embedding && Array.isArray(embedding)) {
-        console.log('✅ Local AI embedding generated successfully!');
-        return embedding;
+      if (response.data && response.data[0] && response.data[0].embedding) {
+        console.log('✅ OpenAI embedding generated successfully!');
+        return response.data[0].embedding;
       } else {
-        throw new Error('Failed to generate text vector');
+        throw new Error('Invalid response format from OpenAI embeddings API');
       }
     } catch (error) {
-      console.error('❌ Error generating embedding:', error.message);
-      throw new Error('Local embedding generation failed');
+      console.error('❌ Error generating OpenAI embedding:', error.message);
+      throw new Error('OpenAI embedding generation failed');
     }
-  }
-
-  createTextVector(tokens) {
-    // Create a 100-dimensional vector based on word frequency and importance
-    const vector = new Array(100).fill(0);
-    
-    if (!tokens || tokens.length === 0) return vector;
-    
-    // Simple but effective text vectorization
-    tokens.forEach((token, index) => {
-      if (token && token.length > 2) { // Only meaningful tokens
-        const hash = this.simpleHash(token);
-        const position = hash % 100;
-        vector[position] += 1;
-      }
-    });
-    
-    // Normalize the vector
-    const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-    if (magnitude > 0) {
-      for (let i = 0; i < vector.length; i++) {
-        vector[i] = vector[i] / magnitude;
-      }
-    }
-    
-    return vector;
-  }
-
-  simpleHash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
   }
 
   async generateRecommendation(userQuery, bookResults) {
     try {
-      console.log('🚀 Generating conversational AI recommendation with LM Studio...');
+      console.log('🚀 Generating conversational AI recommendation with OpenAI...');
 
       const prompt = `
 ${this.systemPrompt}
@@ -105,34 +70,27 @@ If no books match the query well, suggest alternative genres or ask for more spe
 Keep your response friendly and helpful.`;
 
       try {
-        // Use LM Studio local server with OpenAI-compatible API
-        const response = await axios.post(`${this.lmStudioURL}/chat/completions`, {
-          model: 'llama-3-8b-lexi-uncensored', // Use your loaded model name
+        const response = await this.openai.chat.completions.create({
+          model: "gpt-4o-mini",
           messages: [
             { role: 'system', content: this.systemPrompt },
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
           max_tokens: 300,
-          stream: false
-        }, {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
         });
         
-        if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
-          console.log('✅ LM Studio conversational AI recommendation generated!');
-          return response.data.choices[0].message.content;
+        if (response.choices && response.choices[0] && response.choices[0].message) {
+          console.log('✅ OpenAI conversational AI recommendation generated!');
+          return response.choices[0].message.content;
         } else {
-          throw new Error('Invalid response format from LM Studio');
+          throw new Error('Invalid response format from OpenAI');
         }
       } catch (apiError) {
-        console.log('🔄 LM Studio failed, falling back to smart response...');
+        console.log('🔄 OpenAI failed, falling back to smart response...');
         console.log('Error details:', apiError.message);
         
-        // Fallback to smart NLP response if LM Studio fails
+        // Fallback to smart NLP response if OpenAI fails
         const response = this.generateSmartResponse(userQuery, bookResults);
         console.log('✅ Fallback smart response generated!');
         return response;
@@ -205,33 +163,27 @@ Keep your response friendly and helpful.`;
 
   async getGeneralResponse(userQuery) {
     try {
-      console.log('🚀 Generating conversational AI response with LM Studio...');
+      console.log('🚀 Generating conversational AI response with OpenAI...');
 
       try {
-        const response = await axios.post(`${this.lmStudioURL}/chat/completions`, {
-          model: 'llama-3-8b-lexi-uncensored', // Use your loaded model name
+        const response = await this.openai.chat.completions.create({
+          model: "gpt-4o-mini",
           messages: [
             { role: 'system', content: this.systemPrompt },
             { role: 'user', content: userQuery }
           ],
           temperature: 0.7,
           max_tokens: 200,
-          stream: false
-        }, {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
         });
         
-        if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
-          console.log('✅ LM Studio conversational AI response generated!');
-          return response.data.choices[0].message.content;
+        if (response.choices && response.choices[0] && response.choices[0].message) {
+          console.log('✅ OpenAI conversational AI response generated!');
+          return response.choices[0].message.content;
         } else {
-          throw new Error('Invalid response format from LM Studio');
+          throw new Error('Invalid response format from OpenAI');
         }
       } catch (apiError) {
-        console.log('🔄 LM Studio failed, falling back to smart response...');
+        console.log('🔄 OpenAI failed, falling back to smart response...');
         
         const response = this.generateGeneralResponse(userQuery);
         console.log('✅ Fallback smart response generated!');
@@ -248,19 +200,19 @@ Keep your response friendly and helpful.`;
     
     // Simple but effective response generation
     if (this.containsGreeting(queryTokens)) {
-      return "Hello! I'm your library assistant powered by local AI. I can help you find great books based on your interests. What kind of books are you looking for today?";
+      return "Hello! I'm your library assistant powered by AI. I can help you find great books based on your interests. What kind of books are you looking for today?";
     }
     
     if (this.containsHelp(queryTokens)) {
-      return "I can help you find books by genre, author, theme, or description using my local AI intelligence. Just tell me what you're interested in, and I'll recommend some great reads!";
+      return "I can help you find books by genre, author, theme, or description using my AI intelligence. Just tell me what you're interested in, and I'll recommend some great reads!";
     }
     
     if (this.containsThanks(queryTokens)) {
-      return "You're welcome! I'm here to help you discover amazing books using my local AI capabilities. Feel free to ask for more recommendations anytime!";
+      return "You're welcome! I'm here to help you discover amazing books using my AI capabilities. Feel free to ask for more recommendations anytime!";
     }
     
     // Default helpful response
-    return "I'd be happy to help you find the perfect book using my local AI intelligence! Could you tell me more about what you're looking for? For example, you could mention a genre you enjoy, an author you like, or describe the type of story you want to read.";
+    return "I'd be happy to help you find the perfect book using my AI intelligence! Could you tell me more about what you're looking for? For example, you could mention a genre you enjoy, an author you like, or describe the type of story you want to read.";
   }
 
   containsGreeting(tokens) {

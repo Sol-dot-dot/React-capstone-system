@@ -11,7 +11,7 @@ class VectorDBService {
 
   async initialize() {
     try {
-      console.log('Initializing AI-powered similarity database...');
+      console.log('Initializing OpenAI-powered similarity database...');
       
       // Get ALL books from database (not just available ones)
       const [books] = await db.execute(`
@@ -33,8 +33,8 @@ class VectorDBService {
         searchText: `${book.title} ${book.author} ${book.genre} ${book.description}`.toLowerCase()
       }));
 
-      // Generate real AI embeddings
-      console.log('🚀 Generating real AI embeddings for all books...');
+      // Generate OpenAI embeddings
+      console.log('🚀 Generating OpenAI embeddings for all books...');
       try {
         this.embeddings = [];
         for (let i = 0; i < this.books.length; i++) {
@@ -44,26 +44,26 @@ class VectorDBService {
           const text = `${book.title} ${book.author} ${book.genre} ${book.description}`;
           const embedding = await chatbotService.generateEmbedding(text);
           
-          if (embedding && Array.isArray(embedding) && embedding.length === 100) {
+          if (embedding && Array.isArray(embedding) && embedding.length === 1536) {
             this.embeddings.push(embedding);
-            console.log(`✅ Embedding generated for: ${book.title}`);
+            console.log(`✅ OpenAI embedding generated for: ${book.title}`);
           } else {
-            throw new Error(`Invalid embedding for book: ${book.title}`);
+            throw new Error(`Invalid OpenAI embedding for book: ${book.title} (expected 1536 dimensions, got ${embedding ? embedding.length : 'null'})`);
           }
         }
         
         if (this.embeddings.length === this.books.length) {
           this.useRealEmbeddings = true;
-          console.log(`🎉 Successfully generated real AI embeddings for ${this.embeddings.length} books!`);
+          console.log(`🎉 Successfully generated OpenAI embeddings for ${this.embeddings.length} books!`);
         } else {
           throw new Error(`Only generated ${this.embeddings.length} embeddings for ${this.books.length} books`);
         }
       } catch (error) {
-        console.error('❌ Failed to generate AI embeddings:', error.message);
-        throw new Error('AI embedding generation failed - cannot proceed without real embeddings');
+        console.error('❌ Failed to generate OpenAI embeddings:', error.message);
+        throw new Error('OpenAI embedding generation failed - cannot proceed without real embeddings');
       }
 
-      console.log(`AI-powered similarity database initialized with ${this.books.length} books`);
+      console.log(`OpenAI-powered similarity database initialized with ${this.books.length} books`);
       this.isInitialized = true;
     } catch (error) {
       console.error('Error initializing similarity database:', error);
@@ -78,10 +78,10 @@ class VectorDBService {
       }
 
       if (this.books.length === 0 || !this.useRealEmbeddings) {
-        throw new Error('Database not properly initialized with AI embeddings');
+        throw new Error('Database not properly initialized with OpenAI embeddings');
       }
 
-      console.log('🔍 Using REAL AI embeddings for similarity search!');
+      console.log('🔍 Using OpenAI embeddings for similarity search!');
       
       // Generate embedding for query
       const queryEmbedding = await chatbotService.generateEmbedding(query);
@@ -110,7 +110,7 @@ class VectorDBService {
           similarity: result.similarity
         }));
       
-      console.log('✅ AI-powered similarity search completed!');
+      console.log('✅ OpenAI-powered similarity search completed!');
       return topResults;
     } catch (error) {
       console.error('Error in similarity search:', error);
@@ -144,7 +144,7 @@ class VectorDBService {
       this.embeddings = [];
       this.useRealEmbeddings = false;
       await this.initialize();
-      console.log('AI similarity database refreshed');
+      console.log('OpenAI similarity database refreshed');
     } catch (error) {
       console.error('Error refreshing similarity database:', error);
       throw error;
