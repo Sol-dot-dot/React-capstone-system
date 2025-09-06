@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './UserManagement.css';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -8,6 +9,10 @@ const UserManagement = () => {
   const [error, setError] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [expandedUser, setExpandedUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -111,11 +116,61 @@ const UserManagement = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  // Filter users based on search term
-  const filteredUsers = users.filter(user => 
+  const formatCurrency = (amount) => {
+    return `₱${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      'verified': { class: 'badge-success', text: 'Verified' },
+      'unverified': { class: 'badge-danger', text: 'Unverified' },
+      'borrowed': { class: 'badge-warning', text: 'Borrowed' },
+      'returned': { class: 'badge-success', text: 'Returned' },
+      'overdue': { class: 'badge-danger', text: 'Overdue' },
+      'paid': { class: 'badge-success', text: 'Paid' },
+      'unpaid': { class: 'badge-danger', text: 'Unpaid' }
+    };
+    return badges[status] || { class: 'badge-secondary', text: status };
+  };
+
+  // Filter and sort users
+  const filteredAndSortedUsers = users
+    .filter(user => 
     user.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    )
+    .sort((a, b) => {
+      let aVal = a[sortBy];
+      let bVal = b[sortBy];
+      
+      if (sortBy === 'created_at') {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      }
+      
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const toggleUserExpansion = (userId) => {
+    if (expandedUser === userId) {
+      setExpandedUser(null);
+    } else {
+      setExpandedUser(userId);
+    }
+  };
 
   if (loading) {
     return <div className="loading">Loading users...</div>;
@@ -134,106 +189,249 @@ const UserManagement = () => {
   }
 
   return (
-    <div>
-      <h1 style={{ marginBottom: '30px' }}>User Management</h1>
-
-      {/* Search and Stats */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <div>
-            <h3>Total Users: {users.length}</h3>
-            <p>Verified: {users.filter(u => u.is_verified).length} | Unverified: {users.filter(u => !u.is_verified).length}</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search by ID or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd', minWidth: '200px' }}
-            />
-            <button className="btn btn-secondary" onClick={fetchUsers}>
-              Refresh
-            </button>
-          </div>
+    <div className="user-management">
+      <div className="user-header">
+        <h1>User Management</h1>
+        <div className="header-actions">
+          <button className="btn btn-secondary" onClick={fetchUsers}>
+            <span className="icon-refresh"></span>
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* Users List */}
-      <div className="card">
-        <h2>All Users ({filteredUsers.length})</h2>
-        {filteredUsers.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table">
+
+      {/* Search and Filters */}
+      <div className="search-filters">
+        <div className="search-container">
+            <input
+              type="text"
+            placeholder="Search by ID number or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          <span className="search-icon icon-search"></span>
+        </div>
+        <div className="filter-options">
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="filter-select"
+          >
+            <option value="created_at">Sort by Registration Date</option>
+            <option value="id_number">Sort by ID Number</option>
+            <option value="total_borrowed">Sort by Books Borrowed</option>
+            <option value="unpaid_fines">Sort by Unpaid Fines</option>
+            <option value="login_count">Sort by Login Count</option>
+          </select>
+          <button 
+            className="btn btn-sm btn-outline"
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          >
+            <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>
+            </button>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="users-table-container">
+        <div className="table-header">
+          <h3>All Users ({filteredAndSortedUsers.length})</h3>
+        </div>
+        {filteredAndSortedUsers.length > 0 ? (
+          <div className="table-responsive">
+            <table className="users-table">
               <thead>
                 <tr>
-                  <th>ID Number</th>
-                  <th>Email</th>
+                  <th onClick={() => handleSort('id_number')} className="sortable">
+                    ID Number {sortBy === 'id_number' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                  </th>
+                  <th onClick={() => handleSort('email')} className="sortable">
+                    Email {sortBy === 'email' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                  </th>
                   <th>Status</th>
-                  <th>Login Count</th>
-                  <th>Created</th>
+                  <th onClick={() => handleSort('total_borrowed')} className="sortable">
+                    Books Borrowed {sortBy === 'total_borrowed' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                  </th>
+                  <th>Current</th>
+                  <th>Overdue</th>
+                  <th onClick={() => handleSort('unpaid_fines')} className="sortable">
+                    Unpaid Fines {sortBy === 'unpaid_fines' && <span className={`icon-sort ${sortOrder === 'asc' ? 'asc' : 'desc'}`}></span>}
+                  </th>
+                  <th>Semester</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.id_number}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        backgroundColor: user.is_verified ? '#28a745' : '#dc3545',
-                        color: 'white'
-                      }}>
-                        {user.is_verified ? 'Verified' : 'Unverified'}
+                {filteredAndSortedUsers.map((user) => (
+                  <React.Fragment key={user.id}>
+                    <tr className="user-row">
+                      <td className="user-id">
+                        <button 
+                          className="user-name-button"
+                          onClick={() => toggleUserExpansion(user.id)}
+                        >
+                          {user.id_number}
+                          <span className={`expand-icon ${expandedUser === user.id ? 'expanded' : ''}`}>
+                            <span className="icon-chevron"></span>
+                          </span>
+                        </button>
+                      </td>
+                      <td className="user-email">{user.email}</td>
+                      <td>
+                        <span className={`badge ${getStatusBadge(user.is_verified ? 'verified' : 'unverified').class}`}>
+                          {getStatusBadge(user.is_verified ? 'verified' : 'unverified').text}
                       </span>
                     </td>
-                    <td>{user.login_count || 0}</td>
-                    <td>{formatDate(user.created_at)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '5px' }}>
+                      <td className="stat-number">{user.total_borrowed || 0}</td>
+                      <td className="stat-number">
+                        {user.currently_borrowed > 0 && (
+                          <span className="badge badge-warning">{user.currently_borrowed}</span>
+                        )}
+                        {user.currently_borrowed === 0 && <span className="text-muted">0</span>}
+                      </td>
+                      <td className="stat-number">
+                        {user.overdue_books > 0 && (
+                          <span className="badge badge-danger">{user.overdue_books}</span>
+                        )}
+                        {user.overdue_books === 0 && <span className="text-muted">0</span>}
+                      </td>
+                      <td className="stat-number">
+                        {user.unpaid_fines > 0 && (
+                          <span className="unpaid-amount">{formatCurrency(user.unpaid_amount)}</span>
+                        )}
+                        {user.unpaid_fines === 0 && <span className="text-muted">₱0.00</span>}
+                      </td>
+                      <td className="semester-progress">
+                        {user.semester_books !== null ? (
+                          <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${Math.min((user.semester_books / 20) * 100, 100)}%` }}></div>
+                            <span className="progress-text">{user.semester_books}/20</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted">N/A</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="action-buttons">
                         <button
                           className="btn btn-sm btn-primary"
                           onClick={() => fetchUserDetails(user.id_number)}
                         >
+                            <span className="icon-details"></span>
                           Details
                         </button>
                         <button
                           className="btn btn-sm btn-warning"
                           onClick={() => updateUserVerification(user.id_number, !user.is_verified)}
                         >
+                            <span className="icon-verify"></span>
                           {user.is_verified ? 'Unverify' : 'Verify'}
                         </button>
                         <button
                           className="btn btn-sm btn-danger"
                           onClick={() => deleteUser(user.id_number)}
                         >
+                            <span className="icon-delete"></span>
                           Delete
                         </button>
                       </div>
                     </td>
                   </tr>
+                    
+                    {/* Expanded User Details */}
+                    {expandedUser === user.id && (
+                      <tr className="user-details-row">
+                        <td colSpan="9" className="user-details-cell">
+                          <div className="user-details-content">
+                            <div className="user-details-grid">
+                              <div className="detail-section">
+                                <h5><span className="icon-account"></span> Account Information</h5>
+                                <div className="detail-item">
+                                  <span className="detail-label">ID Number:</span>
+                                  <span className="detail-value">{user.id_number}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Email:</span>
+                                  <span className="detail-value">{user.email}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Registration Date:</span>
+                                  <span className="detail-value">{formatDate(user.created_at)}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Login Count:</span>
+                                  <span className="detail-value">{user.login_count || 0}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="detail-section">
+                                <h5><span className="icon-books"></span> Borrowing Statistics</h5>
+                                <div className="detail-item">
+                                  <span className="detail-label">Total Borrowed:</span>
+                                  <span className="detail-value">{user.total_borrowed || 0}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Currently Borrowed:</span>
+                                  <span className="detail-value">{user.currently_borrowed || 0}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Overdue Books:</span>
+                                  <span className="detail-value">{user.overdue_books || 0}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Semester Progress:</span>
+                                  <span className="detail-value">{user.semester_books || 0}/20 books</span>
+                                </div>
+                              </div>
+                              
+                              <div className="detail-section">
+                                <h5><span className="icon-finance"></span> Financial Status</h5>
+                                <div className="detail-item">
+                                  <span className="detail-label">Total Fines:</span>
+                                  <span className="detail-value">{user.total_fines || 0}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Unpaid Fines:</span>
+                                  <span className="detail-value">{user.unpaid_fines || 0}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Unpaid Amount:</span>
+                                  <span className="detail-value">{formatCurrency(user.unpaid_amount)}</span>
+                                </div>
+                                <div className="detail-item">
+                                  <span className="detail-label">Account Status:</span>
+                                  <span className="detail-value">
+                                    <span className={`badge ${getStatusBadge(user.is_verified ? 'verified' : 'unverified').class}`}>
+                                      {getStatusBadge(user.is_verified ? 'verified' : 'unverified').text}
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
-            {searchTerm ? 'No users found matching your search.' : 'No users found.'}
-          </p>
+          <div className="no-data">
+            <p>{searchTerm ? 'No users found matching your search.' : 'No users found.'}</p>
+          </div>
         )}
       </div>
 
       {/* User Details Modal */}
       {showDetails && userDetails && (
         <div className="modal-overlay" onClick={() => setShowDetails(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content user-details-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>User Details - {userDetails.id_number}</h3>
+              <h3>User Profile - {userDetails.id_number}</h3>
               <button 
                 className="btn btn-sm btn-secondary" 
                 onClick={() => setShowDetails(false)}
@@ -241,31 +439,228 @@ const UserManagement = () => {
                 ×
               </button>
             </div>
+            
             <div className="modal-body">
-              <div className="user-info">
-                <p><strong>ID Number:</strong> {userDetails.id_number}</p>
-                <p><strong>Email:</strong> {userDetails.email}</p>
-                <p><strong>Status:</strong> 
-                  <span style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    backgroundColor: userDetails.is_verified ? '#28a745' : '#dc3545',
-                    color: 'white',
-                    marginLeft: '10px'
-                  }}>
-                    {userDetails.is_verified ? 'Verified' : 'Unverified'}
+              {/* User Overview */}
+              <div className="user-overview">
+                <div className="user-basic-info">
+                  <h4>{userDetails.id_number}</h4>
+                  <p className="user-email">{userDetails.email}</p>
+                  <div className="user-status">
+                    <span className={`badge ${getStatusBadge(userDetails.is_verified ? 'verified' : 'unverified').class}`}>
+                      {getStatusBadge(userDetails.is_verified ? 'verified' : 'unverified').text}
+                    </span>
+                    {userDetails.borrowingStatus && (
+                      <span className={`badge ${userDetails.borrowingStatus.can_borrow ? 'badge-success' : 'badge-danger'}`}>
+                        {userDetails.borrowingStatus.can_borrow ? 'Can Borrow' : 'Blocked'}
                   </span>
-                </p>
-                <p><strong>Created:</strong> {formatDate(userDetails.created_at)}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="user-stats">
+                  <div className="stat-item">
+                    <span className="stat-label">Total Borrowed:</span>
+                    <span className="stat-value">{userDetails.total_borrowed || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Currently Borrowed:</span>
+                    <span className="stat-value">{userDetails.currently_borrowed || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Overdue Books:</span>
+                    <span className="stat-value">{userDetails.overdue_books || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Unpaid Fines:</span>
+                    <span className="stat-value">{formatCurrency(userDetails.unpaid_amount)}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-label">Semester Progress:</span>
+                    <span className="stat-value">{userDetails.semester_books || 0}/20</span>
+                  </div>
+                </div>
               </div>
 
-              {userDetails.loginHistory && userDetails.loginHistory.length > 0 && (
-                <div className="login-history">
-                  <h4>Recent Login History</h4>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="table">
+              {/* Tabs */}
+              <div className="tabs">
+                <button 
+                  className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('overview')}
+                >
+                  <span className="icon-overview"></span>
+                  Overview
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'borrowing' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('borrowing')}
+                >
+                  <span className="icon-borrowing"></span>
+                  Borrowing History
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'fines' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('fines')}
+                >
+                  <span className="icon-fines"></span>
+                  Fines History
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'activity' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('activity')}
+                >
+                  <span className="icon-activity"></span>
+                  Activity Log
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="tab-content">
+                {activeTab === 'overview' && (
+                  <div className="overview-tab">
+                    <div className="info-grid">
+                      <div className="info-card">
+                        <h5>Account Information</h5>
+                        <p><strong>ID Number:</strong> {userDetails.id_number}</p>
+                        <p><strong>Email:</strong> {userDetails.email}</p>
+                        <p><strong>Registration Date:</strong> {formatDate(userDetails.created_at)}</p>
+                        <p><strong>Login Count:</strong> {userDetails.login_count || 0}</p>
+                      </div>
+                      
+                      <div className="info-card">
+                        <h5>Borrowing Status</h5>
+                        <p><strong>Can Borrow:</strong> {userDetails.borrowingStatus?.can_borrow ? 'Yes' : 'No'}</p>
+                        {userDetails.borrowingStatus?.reason_blocked && (
+                          <p><strong>Blocked Reason:</strong> {userDetails.borrowingStatus.reason_blocked}</p>
+                        )}
+                        {userDetails.borrowingStatus?.blocked_until && (
+                          <p><strong>Blocked Until:</strong> {formatDate(userDetails.borrowingStatus.blocked_until)}</p>
+                        )}
+                      </div>
+                      
+                      <div className="info-card">
+                        <h5>Semester Tracking</h5>
+                        {userDetails.semesterTracking && userDetails.semesterTracking.length > 0 ? (
+                          userDetails.semesterTracking.map((semester, index) => (
+                            <div key={index} className="semester-info">
+                              <p><strong>Semester:</strong> {new Date(semester.semester_start_date).toLocaleDateString()} - {new Date(semester.semester_end_date).toLocaleDateString()}</p>
+                              <p><strong>Books Borrowed:</strong> {semester.books_borrowed_count}/{semester.books_required}</p>
+                              <p><strong>Status:</strong> {semester.status}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p>No semester tracking data available</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'borrowing' && (
+                  <div className="borrowing-tab">
+                    <h5>Borrowing History</h5>
+                    {userDetails.borrowingHistory && userDetails.borrowingHistory.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="history-table">
+                          <thead>
+                            <tr>
+                              <th>Book</th>
+                              <th>Borrowed Date</th>
+                              <th>Due Date</th>
+                              <th>Returned Date</th>
+                              <th>Status</th>
+                              <th>Days Overdue</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userDetails.borrowingHistory.map((transaction) => (
+                              <tr key={transaction.id}>
+                                <td>
+                                  <div>
+                                    <strong>{transaction.title}</strong>
+                                    <br />
+                                    <small>{transaction.author} - {transaction.number_code}</small>
+                                  </div>
+                                </td>
+                                <td>{formatDate(transaction.borrowed_at)}</td>
+                                <td>{formatDate(transaction.due_date)}</td>
+                                <td>{transaction.returned_at ? formatDate(transaction.returned_at) : 'Not returned'}</td>
+                                <td>
+                                  <span className={`badge ${getStatusBadge(transaction.status).class}`}>
+                                    {getStatusBadge(transaction.status).text}
+                                  </span>
+                                </td>
+                                <td>
+                                  {transaction.days_overdue > 0 && (
+                                    <span className="overdue-days">{transaction.days_overdue} days</span>
+                                  )}
+                                  {transaction.days_overdue <= 0 && <span className="text-muted">On time</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="no-data">No borrowing history found</p>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'fines' && (
+                  <div className="fines-tab">
+                    <h5>Fines History</h5>
+                    {userDetails.finesHistory && userDetails.finesHistory.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="history-table">
+                          <thead>
+                            <tr>
+                              <th>Book</th>
+                              <th>Fine Date</th>
+                              <th>Fine Amount</th>
+                              <th>Paid Amount</th>
+                              <th>Days Overdue</th>
+                              <th>Status</th>
+                              <th>Paid Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userDetails.finesHistory.map((fine) => (
+                              <tr key={fine.id}>
+                                <td>
+                                  <div>
+                                    <strong>{fine.title}</strong>
+                                    <br />
+                                    <small>{fine.number_code}</small>
+                                  </div>
+                                </td>
+                                <td>{formatDate(fine.fine_date)}</td>
+                                <td>{formatCurrency(fine.fine_amount)}</td>
+                                <td>{formatCurrency(fine.paid_amount)}</td>
+                                <td>{fine.days_overdue}</td>
+                                <td>
+                                  <span className={`badge ${getStatusBadge(fine.status).class}`}>
+                                    {getStatusBadge(fine.status).text}
+                                  </span>
+                                </td>
+                                <td>{fine.paid_date ? formatDate(fine.paid_date) : 'Not paid'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="no-data">No fines history found</p>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'activity' && (
+                  <div className="activity-tab">
+                    <h5>Login Activity</h5>
+                    {userDetails.loginHistory && userDetails.loginHistory.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="history-table">
                       <thead>
                         <tr>
                           <th>Login Time</th>
@@ -278,18 +673,21 @@ const UserManagement = () => {
                           <tr key={index}>
                             <td>{formatDate(login.login_time)}</td>
                             <td>{login.ip_address || 'N/A'}</td>
-                            <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {login.user_agent || 'N/A'}
-                            </td>
+                                <td className="user-agent">{login.user_agent || 'N/A'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                    ) : (
+                      <p className="no-data">No login activity found</p>
+                    )}
                 </div>
               )}
+              </div>
 
-              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              {/* Action Buttons */}
+              <div className="modal-actions">
                 <button
                   className="btn btn-warning"
                   onClick={() => {
@@ -297,6 +695,7 @@ const UserManagement = () => {
                     setShowDetails(false);
                   }}
                 >
+                  <span className="icon-verify"></span>
                   {userDetails.is_verified ? 'Unverify User' : 'Verify User'}
                 </button>
                 <button
@@ -305,6 +704,7 @@ const UserManagement = () => {
                     deleteUser(userDetails.id_number);
                   }}
                 >
+                  <span className="icon-delete"></span>
                   Delete User
                 </button>
               </div>

@@ -77,14 +77,21 @@ router.get('/users', authMiddleware, async (req, res) => {
 
         const [users] = await pool.execute(`
             SELECT 
-                id,
-                id_number,
-                email,
-                is_verified,
-                created_at,
-                (SELECT COUNT(*) FROM login_logs WHERE user_id = users.id) as login_count
-            FROM users 
-            ORDER BY created_at DESC
+                u.id,
+                u.id_number,
+                u.email,
+                u.is_verified,
+                u.created_at,
+                (SELECT COUNT(*) FROM login_logs WHERE user_id = u.id) as login_count,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number) as total_borrowed,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'borrowed') as currently_borrowed,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'overdue') as overdue_books,
+                (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number) as total_fines,
+                (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_fines,
+                (SELECT COALESCE(SUM(fine_amount - paid_amount), 0) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_amount,
+                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books
+            FROM users u
+            ORDER BY u.created_at DESC
         `);
 
         res.json({
@@ -109,13 +116,21 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         const [users] = await pool.execute(`
             SELECT 
-                id,
-                id_number,
-                email,
-                is_verified,
-                created_at
-            FROM users 
-            WHERE id_number = ?
+                u.id,
+                u.id_number,
+                u.email,
+                u.is_verified,
+                u.created_at,
+                (SELECT COUNT(*) FROM login_logs WHERE user_id = u.id) as login_count,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number) as total_borrowed,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'borrowed') as currently_borrowed,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'overdue') as overdue_books,
+                (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number) as total_fines,
+                (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_fines,
+                (SELECT COALESCE(SUM(fine_amount - paid_amount), 0) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_amount,
+                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books
+            FROM users u
+            WHERE u.id_number = ?
         `, [idNumber]);
 
         if (users.length === 0) {
@@ -133,14 +148,82 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
             FROM login_logs 
             WHERE user_id = ?
             ORDER BY login_time DESC
-            LIMIT 10
+            LIMIT 20
         `, [user.id]);
+
+        // Get user's borrowing history
+        const [borrowingHistory] = await pool.execute(`
+            SELECT 
+                bt.id,
+                bt.borrowed_at,
+                bt.due_date,
+                bt.returned_at,
+                bt.status,
+                b.title,
+                b.author,
+                b.number_code,
+                DATEDIFF(COALESCE(bt.returned_at, NOW()), bt.due_date) as days_overdue
+            FROM borrowing_transactions bt
+            JOIN books b ON bt.book_id = b.id
+            WHERE bt.student_id_number = ?
+            ORDER BY bt.borrowed_at DESC
+            LIMIT 50
+        `, [idNumber]);
+
+        // Get user's fines history
+        const [finesHistory] = await pool.execute(`
+            SELECT 
+                f.id,
+                f.fine_amount,
+                f.paid_amount,
+                f.days_overdue,
+                f.fine_date,
+                f.paid_date,
+                f.status,
+                b.title,
+                b.number_code,
+                bt.borrowed_at,
+                bt.due_date
+            FROM fines f
+            JOIN borrowing_transactions bt ON f.transaction_id = bt.id
+            JOIN books b ON bt.book_id = b.id
+            WHERE f.student_id_number = ?
+            ORDER BY f.fine_date DESC
+            LIMIT 50
+        `, [idNumber]);
+
+        // Get user's semester tracking
+        const [semesterTracking] = await pool.execute(`
+            SELECT 
+                semester_start_date,
+                semester_end_date,
+                books_borrowed_count,
+                books_required,
+                status
+            FROM semester_tracking
+            WHERE student_id_number = ?
+            ORDER BY semester_start_date DESC
+        `, [idNumber]);
+
+        // Get user's borrowing status
+        const [borrowingStatus] = await pool.execute(`
+            SELECT 
+                can_borrow,
+                reason_blocked,
+                blocked_until
+            FROM student_borrowing_status
+            WHERE student_id_number = ?
+        `, [idNumber]);
 
         res.json({
             message: 'User details retrieved successfully',
             user: {
                 ...user,
-                loginHistory
+                loginHistory,
+                borrowingHistory,
+                finesHistory,
+                semesterTracking,
+                borrowingStatus: borrowingStatus[0] || null
             }
         });
     } catch (error) {
