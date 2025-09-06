@@ -5,6 +5,7 @@ const {
     getSystemSettings,
     updateSystemSetting,
     getStudentFines,
+    recalculateStudentFines,
     processFinePayment,
     checkAndUpdateStudentBorrowingStatus,
     getSemesterTracking,
@@ -164,12 +165,13 @@ router.get('/fines/:studentId', auth, async (req, res) => {
         }
 
         const { studentId } = req.params;
-        const { status } = req.query;
+        const { status, recalculate = 'true' } = req.query;
 
-        const fines = await getStudentFines(studentId, status);
+        const fines = await getStudentFines(studentId, status, recalculate === 'true');
         res.json({
             success: true,
-            data: fines
+            data: fines,
+            lastUpdated: new Date().toISOString()
         });
     } catch (error) {
         console.error('Error fetching student fines:', error);
@@ -389,9 +391,10 @@ router.get('/all-fines', auth, async (req, res) => {
 router.get('/user/:studentId', async (req, res) => {
     try {
         const { studentId } = req.params;
+        const { recalculate = 'true' } = req.query;
 
-        // Get student's fines
-        const fines = await getStudentFines(studentId);
+        // Get student's fines with real-time recalculation
+        const fines = await getStudentFines(studentId, null, recalculate === 'true');
         
         // Get student's borrowing status
         const borrowingStatus = await checkAndUpdateStudentBorrowingStatus(studentId);
@@ -416,7 +419,8 @@ router.get('/user/:studentId', async (req, res) => {
                 totalUnpaidAmount,
                 borrowingStatus,
                 semesterTracking: semesterTracking[0] || null,
-                currentBorrowedCount: currentBorrowed[0].count
+                currentBorrowedCount: currentBorrowed[0].count,
+                lastUpdated: new Date().toISOString()
             }
         });
 
@@ -425,6 +429,40 @@ router.get('/user/:studentId', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch penalty data'
+        });
+    }
+});
+
+// POST /api/penalty/recalculate/:studentId - Force recalculation of student's fines
+router.post('/recalculate/:studentId', async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // Force recalculation of student's fines
+        await recalculateStudentFines(studentId);
+        
+        // Get updated fines
+        const fines = await getStudentFines(studentId, null, false); // Don't recalculate again
+        
+        // Calculate total unpaid fine amount
+        const unpaidFines = fines.filter(fine => fine.status === 'unpaid');
+        const totalUnpaidAmount = unpaidFines.reduce((sum, fine) => sum + (fine.fine_amount - fine.paid_amount), 0);
+
+        res.json({
+            success: true,
+            message: 'Fines recalculated successfully',
+            data: {
+                fines: unpaidFines,
+                totalUnpaidAmount,
+                recalculatedAt: new Date().toISOString()
+            }
+        });
+
+    } catch (error) {
+        console.error('Error recalculating student fines:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to recalculate fines'
         });
     }
 });

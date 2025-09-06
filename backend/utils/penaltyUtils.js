@@ -161,9 +161,14 @@ async function createOrUpdateFine(transactionId, adminId) {
     }
 }
 
-// Get student's fines
-async function getStudentFines(studentIdNumber, status = null) {
+// Get student's fines with real-time recalculation
+async function getStudentFines(studentIdNumber, status = null, recalculate = true) {
     try {
+        // If recalculate is true, update fines before fetching
+        if (recalculate) {
+            await recalculateStudentFines(studentIdNumber);
+        }
+
         let query = `
             SELECT 
                 f.id,
@@ -199,6 +204,46 @@ async function getStudentFines(studentIdNumber, status = null) {
         return rows;
     } catch (error) {
         console.error('Error getting student fines:', error);
+        throw error;
+    }
+}
+
+// Recalculate fines for a specific student
+async function recalculateStudentFines(studentIdNumber) {
+    try {
+        // Get all unpaid fines for the student
+        const [unpaidFines] = await db.execute(`
+            SELECT f.id, f.transaction_id, f.fine_amount, f.days_overdue
+            FROM fines f
+            JOIN borrowing_transactions bt ON f.transaction_id = bt.id
+            WHERE f.student_id_number = ? AND f.status = 'unpaid'
+        `, [studentIdNumber]);
+
+        for (const fine of unpaidFines) {
+            try {
+                // Calculate current fine amount
+                const fineCalculation = await calculateFine(fine.transaction_id);
+                
+                if (fineCalculation.fineAmount > 0) {
+                    // Update fine if amount has changed
+                    if (fine.fine_amount !== fineCalculation.fineAmount || 
+                        fine.days_overdue !== fineCalculation.daysOverdue) {
+                        
+                        await db.execute(`
+                            UPDATE fines 
+                            SET fine_amount = ?, 
+                                days_overdue = ?, 
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        `, [fineCalculation.fineAmount, fineCalculation.daysOverdue, fine.id]);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error recalculating fine ${fine.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('Error recalculating student fines:', error);
         throw error;
     }
 }
@@ -499,6 +544,7 @@ module.exports = {
     calculateFine,
     createOrUpdateFine,
     getStudentFines,
+    recalculateStudentFines,
     processFinePayment,
     checkAndUpdateStudentBorrowingStatus,
     getSemesterTracking,

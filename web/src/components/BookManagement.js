@@ -144,7 +144,7 @@ const BookManagement = ({ user }) => {
     };
 
     const handleDeleteBook = async (bookId) => {
-        if (!confirm('Are you sure you want to delete this book?')) return;
+        if (!window.confirm('Are you sure you want to delete this book?')) return;
 
         try {
             const token = localStorage.getItem('token');
