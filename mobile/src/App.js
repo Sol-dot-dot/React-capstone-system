@@ -1064,7 +1064,8 @@ const App = () => {
         {/* Chatbot Widget */}
         <ModernChatbotWidget 
           isVisible={isChatbotVisible} 
-          onClose={() => setIsChatbotVisible(false)} 
+          onClose={() => setIsChatbotVisible(false)}
+          userInfo={userData}
         />
       </SafeAreaView>
     );
@@ -1135,7 +1136,8 @@ const App = () => {
       {/* Chatbot Widget */}
       <ModernChatbotWidget 
         isVisible={isChatbotVisible} 
-        onClose={() => setIsChatbotVisible(false)} 
+        onClose={() => setIsChatbotVisible(false)}
+        userInfo={userData}
       />
     </SafeAreaView>
   );

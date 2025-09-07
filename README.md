@@ -79,7 +79,7 @@ A comprehensive library management system with web admin panel and mobile applic
 - **Natural Language Processing**: Conversational interface for book queries
 - **Vector Search**: FAISS-powered similarity search for books
 - **Real-time Chat**: Interactive chatbot widget for both web and mobile
-- **Admin Controls**: Refresh AI database and manage chatbot settings
+- **Admin Controls**: Refresh AI database and manage chatbot settingsi
 
 ## Prerequisites
 
@@ -591,7 +591,7 @@ This is a **comprehensive library management system** with the following fully i
 - **Web Admin Panel**: Full-featured admin interface with all management modules
 - **Real-time Notifications**: Due date reminders and system notifications
 - **Analytics & Reporting**: Comprehensive statistics and activity monitoring
-
+- **AI Enhancements**: Personalized recommendations, reading history analysis
 ### 🔮 Future Enhancement Opportunities
 For production deployment, consider adding:
 
@@ -603,5 +603,5 @@ For production deployment, consider adding:
 - **Testing Suite**: Unit tests, integration tests, automated testing
 - **Monitoring & Logging**: Error tracking, performance monitoring, audit logs
 - **Mobile Features**: Offline mode, book scanning, location services
-- **AI Enhancements**: Personalized recommendations, reading history analysis
+
 - **Multi-language Support**: Internationalization for different languages

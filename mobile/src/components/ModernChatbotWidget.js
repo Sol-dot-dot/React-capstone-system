@@ -43,7 +43,7 @@ try {
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const ModernChatbotWidget = ({ isVisible, onClose }) => {
+const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -112,9 +112,26 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
     setIsTyping(true);
 
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/chatbot/recommend', {
+      const requestData = {
         message: inputText.trim(),
-      });
+      };
+      
+      // Add student ID for personalized recommendations if available
+      if (userInfo && userInfo.id_number) {
+        requestData.studentIdNumber = userInfo.id_number;
+        console.log('📱 Adding student ID to request:', userInfo.id_number);
+      } else {
+        console.log('📱 No user info available for personalization:', { userInfo, hasIdNumber: userInfo?.id_number });
+      }
+
+      let response;
+      try {
+        response = await axios.post('http://10.0.2.2:5000/api/chatbot/recommend', requestData);
+      } catch (mainError) {
+        console.log('🔄 Main chatbot failed, trying simple endpoint...');
+        // Try simple endpoint as fallback
+        response = await axios.post('http://10.0.2.2:5000/api/chatbot/simple', { message: inputText.trim() });
+      }
 
       if (response.data.success) {
         const botMessage = {
@@ -132,9 +149,81 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
       }
     } catch (error) {
       console.error('Chatbot error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        requestData: { message: inputText.trim(), hasUserInfo: !!userInfo }
+      });
+      
+      let errorText = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for?";
+      
+      // Provide more specific error messages based on the error type
+      if (error.response?.status === 400) {
+        errorText = "There was an issue with your request. Please try asking in a different way or check your message length.";
+      } else if (error.response?.status === 503) {
+        errorText = "The AI service is currently being set up. Please try again in a few moments.";
+      } else if (error.response?.status >= 500) {
+        errorText = "The server is experiencing issues. Please try again later.";
+      }
+      
       const errorMessage = {
         id: Date.now() + 1,
-        text: "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for?",
+        text: errorText,
+        isBot: true,
+        timestamp: new Date(),
+        isTyping: false,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
+  };
+
+  const getPersonalizedRecommendations = async () => {
+    if (!userInfo || !userInfo.id_number) {
+      const errorMessage = {
+        id: Date.now(),
+        text: "I need to know who you are to provide personalized recommendations. Please make sure you're logged in.",
+        isBot: true,
+        timestamp: new Date(),
+        isTyping: false,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
+    setIsLoading(true);
+    setIsTyping(true);
+
+    try {
+      const response = await axios.post('http://10.0.2.2:5000/api/chatbot/personalized', {
+        studentIdNumber: userInfo.id_number,
+        limit: 5
+      });
+
+      if (response.data.success) {
+        const botMessage = {
+          id: Date.now(),
+          text: response.data.data.response,
+          isBot: true,
+          timestamp: new Date(),
+          books: response.data.data.books || [],
+          isTyping: false,
+          isPersonalized: response.data.data.isPersonalized,
+          userPreferences: response.data.data.userPreferences,
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+      } else {
+        throw new Error(response.data.message || 'Failed to get personalized recommendations');
+      }
+    } catch (error) {
+      console.error('Personalized recommendations error:', error);
+      const errorMessage = {
+        id: Date.now(),
+        text: "I couldn't generate personalized recommendations right now. Please try again later or ask me about specific books you're interested in.",
         isBot: true,
         timestamp: new Date(),
         isTyping: false,
@@ -300,6 +389,20 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
         {messages.map(renderMessage)}
         {isTyping && renderTypingIndicator()}
       </ScrollView>
+
+      {/* Personalized Recommendations Button */}
+      {userInfo && userInfo.id_number && (
+        <View style={styles.personalizedButtonContainer}>
+          <TouchableOpacity
+            style={[styles.personalizedButton, isLoading && styles.personalizedButtonDisabled]}
+            onPress={getPersonalizedRecommendations}
+            disabled={isLoading}
+          >
+            <Icon name="book" size={16} color="#ffffff" />
+            <Text style={styles.personalizedButtonText}>Get Personalized Recommendations</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
@@ -545,6 +648,30 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: ModernTheme.colors.textMuted,
     marginHorizontal: 2,
+  },
+  personalizedButtonContainer: {
+    paddingHorizontal: ModernTheme.spacing.md,
+    paddingTop: ModernTheme.spacing.sm,
+    paddingBottom: ModernTheme.spacing.xs,
+  },
+  personalizedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ModernTheme.colors.accent,
+    paddingVertical: ModernTheme.spacing.sm,
+    paddingHorizontal: ModernTheme.spacing.md,
+    borderRadius: ModernTheme.borderRadius.lg,
+    ...ModernTheme.shadows.button,
+  },
+  personalizedButtonDisabled: {
+    backgroundColor: ModernTheme.colors.textMuted,
+  },
+  personalizedButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: ModernTheme.spacing.xs,
   },
   inputContainer: {
     padding: ModernTheme.spacing.md,

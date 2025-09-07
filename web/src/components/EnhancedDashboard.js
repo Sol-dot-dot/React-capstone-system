@@ -10,6 +10,7 @@ const EnhancedDashboard = () => {
   const [stats, setStats] = useState(null);
   const [logs, setLogs] = useState([]);
   const [bookStats, setBookStats] = useState(null);
+  const [aiAnalytics, setAiAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -40,6 +41,15 @@ const EnhancedDashboard = () => {
       } catch (bookError) {
         console.warn('Book statistics not available:', bookError.message);
         setBookStats({ totalBooks: 0, statusStats: [], genreStats: [], monthlyAdded: 0 });
+      }
+
+      // Try to fetch AI analytics (optional - won't break dashboard if it fails)
+      try {
+        const aiAnalyticsResponse = await axios.get('/api/chatbot/analytics', config);
+        setAiAnalytics(aiAnalyticsResponse.data.data);
+      } catch (aiError) {
+        console.warn('AI analytics not available:', aiError.message);
+        setAiAnalytics(null);
       }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -262,6 +272,170 @@ const EnhancedDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Reading Analytics */}
+      {aiAnalytics && (
+        <div style={{
+          ...dashboardStyles.statCard,
+          marginBottom: designSystem.spacing[8],
+        }}>
+          <div style={dashboardStyles.statHeader}>
+            <div style={{ ...dashboardStyles.statIcon, backgroundColor: designSystem.colors.accent.warning }}>
+              <FiBook />
+            </div>
+            <h2 style={{ ...dashboardStyles.statLabel, fontSize: designSystem.typography.fontSize.xl, margin: 0 }}>
+              AI Reading Analytics
+            </h2>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: designSystem.spacing[4],
+            marginBottom: designSystem.spacing[6],
+          }}>
+            <div style={{ 
+              padding: designSystem.spacing[4], 
+              backgroundColor: designSystem.colors.semantic.surface, 
+              borderRadius: designSystem.borderRadius.lg,
+              textAlign: 'center',
+            }}>
+              <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>Total Borrows</h4>
+              <div style={{ 
+                fontSize: designSystem.typography.fontSize['2xl'], 
+                fontWeight: designSystem.typography.fontWeight.bold, 
+                color: designSystem.colors.primary[600],
+                marginBottom: designSystem.spacing[1],
+              }}>
+                {aiAnalytics.overall?.total_borrows || 0}
+              </div>
+              <small style={{ ...dashboardStyles.statDescription }}>All-time book borrows</small>
+            </div>
+            <div style={{ 
+              padding: designSystem.spacing[4], 
+              backgroundColor: designSystem.colors.semantic.surface, 
+              borderRadius: designSystem.borderRadius.lg,
+              textAlign: 'center',
+            }}>
+              <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>Active Readers</h4>
+              <div style={{ 
+                fontSize: designSystem.typography.fontSize['2xl'], 
+                fontWeight: designSystem.typography.fontWeight.bold, 
+                color: designSystem.colors.accent.success,
+                marginBottom: designSystem.spacing[1],
+              }}>
+                {aiAnalytics.overall?.active_readers || 0}
+              </div>
+              <small style={{ ...dashboardStyles.statDescription }}>Unique users who borrowed</small>
+            </div>
+            <div style={{ 
+              padding: designSystem.spacing[4], 
+              backgroundColor: designSystem.colors.semantic.surface, 
+              borderRadius: designSystem.borderRadius.lg,
+              textAlign: 'center',
+            }}>
+              <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>Completed Reads</h4>
+              <div style={{ 
+                fontSize: designSystem.typography.fontSize['2xl'], 
+                fontWeight: designSystem.typography.fontWeight.bold, 
+                color: designSystem.colors.accent.info,
+                marginBottom: designSystem.spacing[1],
+              }}>
+                {aiAnalytics.overall?.completed_reads || 0}
+              </div>
+              <small style={{ ...dashboardStyles.statDescription }}>Books returned</small>
+            </div>
+            <div style={{ 
+              padding: designSystem.spacing[4], 
+              backgroundColor: designSystem.colors.semantic.surface, 
+              borderRadius: designSystem.borderRadius.lg,
+              textAlign: 'center',
+            }}>
+              <h4 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[2] }}>Avg. Reading Time</h4>
+              <div style={{ 
+                fontSize: designSystem.typography.fontSize['2xl'], 
+                fontWeight: designSystem.typography.fontWeight.bold, 
+                color: designSystem.colors.accent.warning,
+                marginBottom: designSystem.spacing[1],
+              }}>
+                {aiAnalytics.overall?.avg_days_kept ? Math.round(aiAnalytics.overall.avg_days_kept) : 0} days
+              </div>
+              <small style={{ ...dashboardStyles.statDescription }}>Average per book</small>
+            </div>
+          </div>
+
+          {/* Popular Genres */}
+          {aiAnalytics.popularGenres && aiAnalytics.popularGenres.length > 0 && (
+            <div style={{ marginBottom: designSystem.spacing[6] }}>
+              <h3 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[4] }}>Most Popular Genres</h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: designSystem.spacing[3],
+              }}>
+                {aiAnalytics.popularGenres.slice(0, 6).map((genre, index) => (
+                  <div key={index} style={{ 
+                    padding: designSystem.spacing[3], 
+                    backgroundColor: designSystem.colors.semantic.surface, 
+                    borderRadius: designSystem.borderRadius.md,
+                    border: `2px solid ${designSystem.colors.primary[100]}`,
+                  }}>
+                    <div style={{ 
+                      fontSize: designSystem.typography.fontSize.lg, 
+                      fontWeight: designSystem.typography.fontWeight.semibold, 
+                      color: designSystem.colors.text.primary,
+                      marginBottom: designSystem.spacing[1],
+                    }}>
+                      {genre.genre}
+                    </div>
+                    <div style={{ 
+                      fontSize: designSystem.typography.fontSize.sm, 
+                      color: designSystem.colors.text.secondary,
+                    }}>
+                      {genre.borrow_count} borrows • {genre.unique_readers} readers
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Popular Authors */}
+          {aiAnalytics.popularAuthors && aiAnalytics.popularAuthors.length > 0 && (
+            <div>
+              <h3 style={{ ...dashboardStyles.statLabel, marginBottom: designSystem.spacing[4] }}>Most Popular Authors</h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: designSystem.spacing[3],
+              }}>
+                {aiAnalytics.popularAuthors.slice(0, 6).map((author, index) => (
+                  <div key={index} style={{ 
+                    padding: designSystem.spacing[3], 
+                    backgroundColor: designSystem.colors.semantic.surface, 
+                    borderRadius: designSystem.borderRadius.md,
+                    border: `2px solid ${designSystem.colors.accent.info}20`,
+                  }}>
+                    <div style={{ 
+                      fontSize: designSystem.typography.fontSize.lg, 
+                      fontWeight: designSystem.typography.fontWeight.semibold, 
+                      color: designSystem.colors.text.primary,
+                      marginBottom: designSystem.spacing[1],
+                    }}>
+                      {author.author}
+                    </div>
+                    <div style={{ 
+                      fontSize: designSystem.typography.fontSize.sm, 
+                      color: designSystem.colors.text.secondary,
+                    }}>
+                      {author.borrow_count} borrows • {author.unique_readers} readers
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Login Activity */}
       <div style={dashboardStyles.statCard}>

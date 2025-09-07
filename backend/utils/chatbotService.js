@@ -1,6 +1,7 @@
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const OpenAI = require('openai');
+const readingHistoryService = require('./readingHistoryService');
 require('dotenv').config({ path: './config.env' });
 
 class ChatbotService {
@@ -50,9 +51,20 @@ class ChatbotService {
     }
   }
 
-  async generateRecommendation(userQuery, bookResults) {
+  async generateRecommendation(userQuery, bookResults, studentIdNumber = null) {
     try {
       console.log('🚀 Generating RAG-powered recommendation with OpenAI...');
+
+      // Get user's reading history for personalized recommendations
+      let userPreferences = null;
+      if (studentIdNumber) {
+        try {
+          userPreferences = await readingHistoryService.analyzeUserReadingHistory(studentIdNumber);
+          console.log('📚 User reading preferences loaded for personalization');
+        } catch (error) {
+          console.log('⚠️ Could not load user preferences, using general recommendations');
+        }
+      }
 
       // Create detailed book context for RAG
       const bookContext = bookResults.map((book, index) => 
@@ -63,17 +75,34 @@ class ChatbotService {
    Relevance Score: ${(book.similarity * 100).toFixed(1)}%`
       ).join('\n\n');
 
+      // Create personalized context if user preferences are available
+      let personalizationContext = '';
+      if (userPreferences && userPreferences.totalBooksBorrowed > 0) {
+        personalizationContext = `
+
+User's Reading Profile:
+- Total books borrowed: ${userPreferences.totalBooksBorrowed}
+- Favorite genres: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
+- Favorite authors: ${userPreferences.favoriteAuthors.slice(0, 3).map(a => a.name).join(', ')}
+- Reading frequency: ${userPreferences.readingFrequency} books/month
+- Average reading time: ${userPreferences.averageDaysKept} days per book
+- Genre diversity: ${(userPreferences.genreDiversity * 100).toFixed(0)}% diverse
+
+Use this information to make more personalized recommendations that align with their reading patterns.`;
+      }
+
       const prompt = `User Query: "${userQuery}"
 
 Retrieved Book Context from Library Database:
-${bookContext}
+${bookContext}${personalizationContext}
 
 Please provide a natural, conversational response that:
 1. Acknowledges the user's request
 2. Recommends specific books from the retrieved context
 3. Explains why each recommended book matches their interests
 4. Mentions the genre and key appeal of each book
-5. Keeps the tone friendly and encouraging
+5. ${userPreferences ? 'References their reading history and preferences when relevant' : 'Keeps the tone friendly and encouraging'}
+6. Suggests how the books relate to their reading patterns (if user has history)
 
 If the retrieved books don't match well, politely explain this and suggest alternative approaches.`;
 
@@ -85,11 +114,11 @@ If the retrieved books don't match well, politely explain this and suggest alter
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
-          max_tokens: 400,
+          max_tokens: 500,
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
-          console.log('✅ RAG-powered recommendation generated!');
+          console.log('✅ RAG-powered personalized recommendation generated!');
           return response.choices[0].message.content;
         } else {
           throw new Error('Invalid response format from OpenAI');
@@ -99,7 +128,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
         console.log('Error details:', apiError.message);
         
         // Fallback to smart NLP response if OpenAI fails
-        const response = this.generateSmartResponse(userQuery, bookResults);
+        const response = this.generateSmartResponse(userQuery, bookResults, userPreferences);
         console.log('✅ Fallback smart response generated!');
         return response;
       }
@@ -109,7 +138,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
     }
   }
 
-  generateSmartResponse(userQuery, bookResults) {
+  generateSmartResponse(userQuery, bookResults, userPreferences = null) {
     const queryTokens = tokenizer.tokenize(userQuery.toLowerCase());
     
     // Analyze user intent
@@ -130,13 +159,35 @@ If the retrieved books don't match well, politely explain this and suggest alter
       response += `   ${book.description}\n\n`;
     });
     
-    // Add personalized suggestion
-    if (isGenreRequest) {
-      response += `These books are perfect for someone interested in ${this.extractGenre(queryTokens)}! `;
-    } else if (isAuthorRequest) {
-      response += `I've included books from authors that match your preferences. `;
-    } else if (isThemeRequest) {
-      response += `These selections focus on the themes you mentioned. `;
+    // Add personalized suggestion based on user preferences
+    if (userPreferences && userPreferences.totalBooksBorrowed > 0) {
+      // Check if any recommended books match user's favorite genres
+      const matchingGenres = bookResults.filter(book => 
+        userPreferences.favoriteGenres.some(genre => 
+          genre.name.toLowerCase() === book.genre.toLowerCase()
+        )
+      );
+      
+      if (matchingGenres.length > 0) {
+        response += `I've selected these books because they match your reading preferences! `;
+        if (userPreferences.favoriteGenres.length > 0) {
+          response += `You seem to enjoy ${userPreferences.favoriteGenres[0].name} books (${userPreferences.favoriteGenres[0].percentage}% of your reading), and some of these recommendations align with that preference. `;
+        }
+      }
+      
+      // Add reading pattern insights
+      if (userPreferences.readingFrequency > 0) {
+        response += `Based on your reading pace of ${userPreferences.readingFrequency} books per month, these selections should fit well into your reading schedule. `;
+      }
+    } else {
+      // Generic suggestions for new users
+      if (isGenreRequest) {
+        response += `These books are perfect for someone interested in ${this.extractGenre(queryTokens)}! `;
+      } else if (isAuthorRequest) {
+        response += `I've included books from authors that match your preferences. `;
+      } else if (isThemeRequest) {
+        response += `These selections focus on the themes you mentioned. `;
+      }
     }
     
     response += `Would you like me to suggest more books in a specific category or help you find something else?`;
@@ -236,6 +287,136 @@ If the retrieved books don't match well, politely explain this and suggest alter
   containsThanks(tokens) {
     const thanksKeywords = ['thanks', 'thank you', 'appreciate', 'grateful'];
     return tokens.some(token => thanksKeywords.includes(token));
+  }
+
+  /**
+   * Generate personalized recommendations based on user's reading history
+   * @param {string} studentIdNumber - Student ID number
+   * @param {number} limit - Number of recommendations to generate
+   * @returns {Object} Personalized recommendations with AI explanation
+   */
+  async generatePersonalizedRecommendations(studentIdNumber, limit = 5) {
+    try {
+      console.log(`🎯 Generating personalized recommendations for: ${studentIdNumber}`);
+
+      // Get personalized recommendations from reading history service
+      const recommendations = await readingHistoryService.generatePersonalizedRecommendations(studentIdNumber, limit);
+      
+      if (recommendations.length === 0) {
+        return {
+          response: "I don't have enough information about your reading preferences yet. Try borrowing some books first, and I'll be able to provide personalized recommendations based on your reading history!",
+          books: [],
+          isPersonalized: false
+        };
+      }
+
+      // Get user's reading preferences for context
+      const userPreferences = await readingHistoryService.analyzeUserReadingHistory(studentIdNumber);
+
+      // Generate AI explanation for the recommendations
+      const bookContext = recommendations.map((book, index) => 
+        `${index + 1}. **${book.title}** by ${book.author}
+   Genre: ${book.genre}
+   Description: ${book.description}
+   Personalization Score: ${book.personalizationScore.toFixed(1)}%
+   Reason: ${book.recommendationReason}`
+      ).join('\n\n');
+
+      const prompt = `Based on this user's reading history and preferences, I've generated personalized book recommendations:
+
+User's Reading Profile:
+- Total books borrowed: ${userPreferences.totalBooksBorrowed}
+- Favorite genres: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
+- Favorite authors: ${userPreferences.favoriteAuthors.slice(0, 3).map(a => a.name).join(', ')}
+- Reading frequency: ${userPreferences.readingFrequency} books/month
+- Average reading time: ${userPreferences.averageDaysKept} days per book
+
+Personalized Recommendations:
+${bookContext}
+
+Please provide a natural, conversational response that:
+1. Acknowledges that these are personalized recommendations based on their reading history
+2. Explains why these specific books were chosen for them
+3. References their reading patterns and preferences
+4. Encourages them to explore these recommendations
+5. Keeps the tone friendly and personalized
+
+Make it sound like a knowledgeable librarian who knows their reading habits well.`;
+
+      try {
+        const response = await this.openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: 'system', content: this.systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 400,
+        });
+        
+        if (response.choices && response.choices[0] && response.choices[0].message) {
+          console.log('✅ Personalized recommendations with AI explanation generated!');
+          return {
+            response: response.choices[0].message.content,
+            books: recommendations,
+            isPersonalized: true,
+            userPreferences: {
+              totalBooks: userPreferences.totalBooksBorrowed,
+              favoriteGenres: userPreferences.favoriteGenres.slice(0, 3),
+              readingFrequency: userPreferences.readingFrequency
+            }
+          };
+        } else {
+          throw new Error('Invalid response format from OpenAI');
+        }
+      } catch (apiError) {
+        console.log('🔄 OpenAI failed, using fallback personalized response...');
+        
+        // Fallback personalized response
+        const response = this.generateFallbackPersonalizedResponse(recommendations, userPreferences);
+        return {
+          response,
+          books: recommendations,
+          isPersonalized: true,
+          userPreferences: {
+            totalBooks: userPreferences.totalBooksBorrowed,
+            favoriteGenres: userPreferences.favoriteGenres.slice(0, 3),
+            readingFrequency: userPreferences.readingFrequency
+          }
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error generating personalized recommendations:', error.message);
+      throw new Error('Personalized recommendation generation failed');
+    }
+  }
+
+  /**
+   * Generate fallback personalized response when OpenAI fails
+   * @param {Array} recommendations - Personalized book recommendations
+   * @param {Object} userPreferences - User's reading preferences
+   * @returns {string} Fallback personalized response
+   */
+  generateFallbackPersonalizedResponse(recommendations, userPreferences) {
+    let response = `Based on your reading history, I've found some great personalized recommendations for you!\n\n`;
+    
+    if (userPreferences.favoriteGenres.length > 0) {
+      response += `Since you enjoy ${userPreferences.favoriteGenres[0].name} books (${userPreferences.favoriteGenres[0].percentage}% of your reading), `;
+    }
+    
+    response += `here are some books I think you'll love:\n\n`;
+    
+    recommendations.forEach((book, index) => {
+      response += `${index + 1}. **${book.title}** by ${book.author}\n`;
+      response += `   Genre: ${book.genre}\n`;
+      response += `   ${book.description}\n`;
+      response += `   Why I recommend it: ${book.recommendationReason}\n\n`;
+    });
+    
+    response += `These recommendations are tailored to your reading patterns and preferences. `;
+    response += `Would you like me to suggest more books or help you find something specific?`;
+    
+    return response;
   }
 }
 
