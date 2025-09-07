@@ -5,9 +5,18 @@ require('dotenv').config({ path: './config.env' });
 // Import the fine calculation service
 const fineCalculationService = require('./services/fineCalculationService');
 
+// Import monitoring middleware (temporarily disabled)
+// const { logger } = require('./config/logger');
+
 const app = express();
 
-// Middleware
+// Monitoring middleware (temporarily disabled)
+// app.use(requestTiming);
+// app.use(performanceMonitoring);
+// app.use(auditLogging);
+// app.use(securityMonitoring);
+
+// Standard middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -21,6 +30,7 @@ app.use('/api/borrowing', require('./routes/borrowing'));
 app.use('/api/penalty', require('./routes/penalty'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/notifications', require('./routes/notifications'));
+// app.use('/api/monitoring', require('./routes/monitoring'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -58,6 +68,10 @@ app.post('/api/fine-service/force-process', (req, res) => {
 });
 
 // Error handling middleware
+// Error tracking middleware (temporarily disabled)
+// app.use(errorTracking);
+
+// Error handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
@@ -73,6 +87,13 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/api/health`);
+    
+    // Initialize logging (temporarily disabled)
+    // logger.info('🚀 Server started successfully', {
+    //     port: PORT,
+    //     environment: process.env.NODE_ENV || 'development',
+    //     timestamp: new Date().toISOString()
+    // });
     
     // Start the fine calculation service
     fineCalculationService.start();

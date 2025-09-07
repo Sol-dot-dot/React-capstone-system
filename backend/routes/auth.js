@@ -66,7 +66,7 @@ router.post('/admin/login', [
 
 // Step 1: Check ID Number
 router.post('/user/check-id', [
-    body('idNumber').matches(/^[A-Z]\d{2}-\d{4}$/).withMessage('ID Number must be in format XXX-XXXX')
+    body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -101,7 +101,7 @@ router.post('/user/check-id', [
 
 // Step 2: Check Email and Send Verification Code
 router.post('/user/check-email', [
-    body('idNumber').matches(/^[A-Z]\d{2}-\d{4}$/).withMessage('ID Number must be in format XXX-XXXX'),
+    body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('email').matches(/@my\.smciligan\.edu\.ph$/).withMessage('Email must be from @my.smciligan.edu.ph domain')
 ], async (req, res) => {
@@ -177,7 +177,7 @@ router.post('/user/check-email', [
 
 // Step 3: Verify Email Code
 router.post('/user/verify-code', [
-    body('idNumber').matches(/^[A-Z]\d{2}-\d{4}$/).withMessage('ID Number must be in format XXX-XXXX'),
+    body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('verificationCode').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits')
 ], async (req, res) => {
@@ -265,7 +265,7 @@ router.post('/user/complete-registration', [
 
 // Legacy registration endpoint (for backward compatibility)
 router.post('/user/register', [
-    body('idNumber').matches(/^[A-Z]\d{2}-\d{4}$/).withMessage('ID Number must be in format XXX-XXXX'),
+    body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('email').matches(/@my\.smciligan\.edu\.ph$/).withMessage('Email must be from @my.smciligan.edu.ph domain'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
@@ -354,7 +354,7 @@ router.post('/user/verify', [
 
 // User Login
 router.post('/user/login', [
-    body('idNumber').matches(/^[A-Z]\d{2}-\d{4}$/).withMessage('ID Number must be in format XXX-XXXX'),
+    body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
     body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
     try {

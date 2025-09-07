@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\React-capstone-system\\backend\\logs\\.b5003c0a98bf3af9e23c1b2ba85d80260e4727cc-audit.json",
+    "files": [
+        {
+            "date": 1757254733463,
+            "name": "C:\\React-capstone-system\\backend\\logs\\application-2025-09-07.log",
+            "hash": "204febfca5c2080be9817d80acd0d6955b9226b956e21863e8fd5404a85634d1"
+        }
+    ],
+    "hashType": "sha256"
+}

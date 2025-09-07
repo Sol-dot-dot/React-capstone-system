@@ -19,6 +19,7 @@ import ModernDashboardScreen from './screens/ModernDashboardScreen';
 import ModernPenaltyScreen from './screens/ModernPenaltyScreen';
 import ModernLoginScreen from './screens/ModernLoginScreen';
 import ModernRegisterScreen from './screens/ModernRegisterScreen';
+import ModernVerificationScreen from './screens/ModernVerificationScreen';
 import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
 import ModernForgotPasswordScreen from './screens/ModernForgotPasswordScreen';
 import ModernBottomNavigation from './components/ModernBottomNavigation';
@@ -43,6 +44,7 @@ const App = () => {
   const [profileEmail, setProfileEmail] = useState('');
   const [isChatbotVisible, setIsChatbotVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [verificationData, setVerificationData] = useState(null);
 
   // Initialize push notifications when app starts
   React.useEffect(() => {
@@ -1072,7 +1074,7 @@ const App = () => {
   }
 
   // Show modern auth screens fullscreen
-  if (['welcome', 'login', 'register', 'forgotPassword'].includes(currentScreen)) {
+  if (['welcome', 'login', 'register', 'verify', 'forgotPassword'].includes(currentScreen)) {
     console.log('Rendering modern auth screen:', currentScreen);
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
@@ -1095,8 +1097,20 @@ const App = () => {
         {currentScreen === 'register' && (
           <ModernRegisterScreen 
             onRegister={() => {}}
-            onNavigate={setCurrentScreen}
+            onNavigate={(screen, data) => {
+              if (screen === 'verify') {
+                setVerificationData(data);
+              }
+              setCurrentScreen(screen);
+            }}
             onBack={() => setCurrentScreen('welcome')}
+          />
+        )}
+        {currentScreen === 'verify' && (
+          <ModernVerificationScreen 
+            userData={verificationData}
+            onNavigate={setCurrentScreen}
+            onBack={() => setCurrentScreen('register')}
           />
         )}
         {currentScreen === 'forgotPassword' && (

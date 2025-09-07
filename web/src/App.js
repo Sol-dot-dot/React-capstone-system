@@ -7,6 +7,7 @@ import ActivityLogs from './components/ActivityLogs';
 import BookManagement from './components/BookManagement';
 import BorrowingManagement from './components/BorrowingManagement';
 import PenaltyManagement from './components/PenaltyManagement';
+import MonitoringDashboard from './components/MonitoringDashboard';
 import ChatbotWidget from './components/ChatbotWidget';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -160,6 +161,14 @@ function App() {
               element={
                 isAuthenticated ? 
                 <PenaltyManagement user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/monitoring" 
+              element={
+                isAuthenticated ? 
+                <MonitoringDashboard user={user} /> : 
                 <Navigate to="/login" />
               } 
             />

@@ -33,6 +33,26 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
       return false;
     }
 
+    // Validate ID Number format (XXX-XXX or XXX-XXXX)
+    const idNumberRegex = /^[A-Z]\d{2}-\d{3,4}$/;
+    if (!idNumberRegex.test(idNumber)) {
+      Alert.alert('Error', 'ID Number must be in format XXX-XXX or XXX-XXXX (e.g., C22-004 or C22-0044)');
+      return false;
+    }
+
+    // Validate email format and domain
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+
+    // Check if email is from the required domain
+    if (!email.endsWith('@my.smciligan.edu.ph')) {
+      Alert.alert('Error', 'Email must be from @my.smciligan.edu.ph domain');
+      return false;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return false;
@@ -40,12 +60,6 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
 
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters long');
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
       return false;
     }
 
@@ -57,30 +71,64 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
 
     try {
       setLoading(true);
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/register', {
+      
+      // Step 1: Check ID Number
+      console.log('Step 1: Checking ID number...');
+      const idCheckResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/check-id', {
         idNumber: formData.idNumber,
-        email: formData.email,
-        password: formData.password,
       });
 
-      if (response.data.success) {
-        Alert.alert(
-          'Registration Successful',
-          'Please check your email for verification instructions.',
-          [{ text: 'OK', onPress: () => onNavigate('email') }]
-        );
-        setFormData({
-          idNumber: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-        });
-      } else {
-        Alert.alert('Registration Failed', response.data.message || 'Registration failed');
+      if (!idCheckResponse.data.success) {
+        Alert.alert('Registration Failed', idCheckResponse.data.message || 'ID number check failed');
+        return;
       }
+
+      // Step 2: Check Email and Send Verification Code
+      console.log('Step 2: Checking email and sending verification code...');
+      const emailCheckResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
+        idNumber: formData.idNumber,
+        email: formData.email,
+      });
+
+      if (!emailCheckResponse.data.success) {
+        Alert.alert('Registration Failed', emailCheckResponse.data.message || 'Email check failed');
+        return;
+      }
+
+      // Store user data for next steps
+      const userId = emailCheckResponse.data.userId;
+      
+      Alert.alert(
+        'Verification Code Sent',
+        'Please check your email for the verification code.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to verification screen with user data
+              onNavigate('verify', { 
+                userId, 
+                idNumber: formData.idNumber, 
+                email: formData.email,
+                password: formData.password 
+              });
+            },
+          },
+        ]
+      );
+      
+      // Clear form data
+      setFormData({
+        idNumber: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+      });
+      
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', 'Registration failed. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -114,26 +162,29 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
               <Text style={styles.inputLabel}>Student ID Number</Text>
               <TextInput
                 style={[ModernStyles.input, styles.input]}
-                placeholder="Enter your student ID"
+                placeholder="C22-004"
                 placeholderTextColor={ModernTheme.colors.textMuted}
                 value={formData.idNumber}
-                onChangeText={(value) => handleInputChange('idNumber', value)}
-                autoCapitalize="none"
-                keyboardType="numeric"
+                onChangeText={(value) => handleInputChange('idNumber', value.toUpperCase())}
+                autoCapitalize="characters"
+                keyboardType="default"
+                maxLength={8}
               />
+              <Text style={styles.inputHint}>Format: XXX-XXX or XXX-XXXX (e.g., C22-004 or C22-0044)</Text>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <TextInput
                 style={[ModernStyles.input, styles.input]}
-                placeholder="Enter your email"
+                placeholder="yourname@my.smciligan.edu.ph"
                 placeholderTextColor={ModernTheme.colors.textMuted}
                 value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
+                onChangeText={(value) => handleInputChange('email', value.toLowerCase())}
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
+              <Text style={styles.inputHint}>Must be from @my.smciligan.edu.ph domain</Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -246,6 +297,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   passwordHint: {
+    ...ModernTheme.typography.small,
+    marginTop: ModernTheme.spacing.xs,
+    color: ModernTheme.colors.textMuted,
+  },
+  inputHint: {
     ...ModernTheme.typography.small,
     marginTop: ModernTheme.spacing.xs,
     color: ModernTheme.colors.textMuted,
