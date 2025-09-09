@@ -10,8 +10,7 @@ import {
   FiSettings,
   FiLogOut,
   FiMenu,
-  FiX,
-  FiActivity
+  FiX
 } from 'react-icons/fi';
 import designSystem from '../styles/designSystem';
 
@@ -48,12 +47,6 @@ const Sidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
       label: 'Penalty Management',
       icon: FiDollarSign,
       description: 'Manage overdue fines'
-    },
-    {
-      path: '/monitoring',
-      label: 'System Monitoring',
-      icon: FiActivity,
-      description: 'Monitor system performance'
     },
     {
       path: '/activity-logs',

@@ -201,3 +201,4 @@ FROM performance_metrics
 WHERE recorded_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
 GROUP BY DATE(recorded_at)
 ORDER BY date DESC;
+

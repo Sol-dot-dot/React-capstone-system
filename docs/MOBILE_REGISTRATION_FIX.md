@@ -167,3 +167,5 @@ The mobile registration bug has been completely fixed! Users can now:
 - ✅ Login immediately after registration
 
 The registration process is now robust, user-friendly, and fully integrated with the backend's multi-step verification system! 🎉
+
+

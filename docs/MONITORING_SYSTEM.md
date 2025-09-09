@@ -345,3 +345,5 @@ For issues or questions about the monitoring system:
 4. Check the audit logs for recent system activities
 
 The monitoring system provides comprehensive visibility into your React Capstone System, enabling proactive management and optimal performance! 🚀
+
+

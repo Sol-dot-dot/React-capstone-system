@@ -511,3 +511,4 @@ const MonitoringDashboard = () => {
 };
 
 export default MonitoringDashboard;
+
