@@ -164,8 +164,12 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-100 text-blue-600">
-                          <Bot className="h-4 w-4" />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12C2 13.54 2.38 14.99 3.05 16.28L2 22L7.72 20.95C9.01 21.62 10.46 22 12 22C17.52 22 22 17.52 22 12S17.52 2 12 2ZM12 20C10.74 20 9.54 19.78 8.44 19.38L8 19.15L5.2 20.05L6.1 17.25L5.87 16.81C5.47 15.71 5.25 14.51 5.25 13.25C5.25 8.13 9.13 4.25 14.25 4.25S23.25 8.13 23.25 13.25 19.37 20 14.25 20H12Z" fill="currentColor"/>
+                            <circle cx="9" cy="12" r="1" fill="currentColor"/>
+                            <circle cx="15" cy="12" r="1" fill="currentColor"/>
+                          </svg>
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -210,9 +214,17 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
                             <AvatarFallback className={`text-xs ${
                               message.type === 'user' 
                                 ? 'bg-green-100 text-green-600' 
-                                : 'bg-blue-100 text-blue-600'
+                                : 'bg-gradient-to-br from-blue-500 to-purple-600 text-white'
                             }`}>
-                              {message.type === 'user' ? <User className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
+                              {message.type === 'user' ? (
+                                <User className="h-3 w-3" />
+                              ) : (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12C2 13.54 2.38 14.99 3.05 16.28L2 22L7.72 20.95C9.01 21.62 10.46 22 12 22C17.52 22 22 17.52 22 12S17.52 2 12 2ZM12 20C10.74 20 9.54 19.78 8.44 19.38L8 19.15L5.2 20.05L6.1 17.25L5.87 16.81C5.47 15.71 5.25 14.51 5.25 13.25C5.25 8.13 9.13 4.25 14.25 4.25S23.25 8.13 23.25 13.25 19.37 20 14.25 20H12Z" fill="currentColor"/>
+                                  <circle cx="9" cy="12" r="1" fill="currentColor"/>
+                                  <circle cx="15" cy="12" r="1" fill="currentColor"/>
+                                </svg>
+                              )}
                             </AvatarFallback>
                           </Avatar>
                           <div className={`rounded-lg px-3 py-2 ${
@@ -239,8 +251,12 @@ const ModernChatbotWidget = ({ isVisible, onClose }) => {
                       >
                         <div className="flex items-start space-x-2">
                           <Avatar className="h-6 w-6 mt-1">
-                            <AvatarFallback className="bg-blue-100 text-blue-600">
-                              <Bot className="h-3 w-3" />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12C2 13.54 2.38 14.99 3.05 16.28L2 22L7.72 20.95C9.01 21.62 10.46 22 12 22C17.52 22 22 17.52 22 12S17.52 2 12 2ZM12 20C10.74 20 9.54 19.78 8.44 19.38L8 19.15L5.2 20.05L6.1 17.25L5.87 16.81C5.47 15.71 5.25 14.51 5.25 13.25C5.25 8.13 9.13 4.25 14.25 4.25S23.25 8.13 23.25 13.25 19.37 20 14.25 20H12Z" fill="currentColor"/>
+                                <circle cx="9" cy="12" r="1" fill="currentColor"/>
+                                <circle cx="15" cy="12" r="1" fill="currentColor"/>
+                              </svg>
                             </AvatarFallback>
                           </Avatar>
                           <div className="bg-slate-100 rounded-lg px-3 py-2">

@@ -214,7 +214,7 @@ function App() {
         )}
 
         {/* Floating Chatbot Button */}
-        {isAuthenticated && (
+        {isAuthenticated && !isChatbotVisible && (
           <button 
             className="floating-chat-button"
             onClick={() => setIsChatbotVisible(true)}
@@ -247,7 +247,11 @@ function App() {
               e.target.style.backgroundColor = designSystem.colors.primary[600];
             }}
           >
-            💬
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 13.54 2.38 14.99 3.05 16.28L2 22L7.72 20.95C9.01 21.62 10.46 22 12 22C17.52 22 22 17.52 22 12S17.52 2 12 2ZM12 20C10.74 20 9.54 19.78 8.44 19.38L8 19.15L5.2 20.05L6.1 17.25L5.87 16.81C5.47 15.71 5.25 14.51 5.25 13.25C5.25 8.13 9.13 4.25 14.25 4.25S23.25 8.13 23.25 13.25 19.37 20 14.25 20H12Z" fill="currentColor"/>
+              <circle cx="9" cy="12" r="1" fill="currentColor"/>
+              <circle cx="15" cy="12" r="1" fill="currentColor"/>
+            </svg>
           </button>
         )}
 

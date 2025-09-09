@@ -33,12 +33,6 @@ const ModernPenaltyManagement = ({ user }) => {
   const [activeTab, setActiveTab] = useState('fines');
   const [settings, setSettings] = useState({});
   const [students, setStudents] = useState([]);
-  const [stats, setStats] = useState({
-    totalFines: 0,
-    unpaidFines: 0,
-    totalAmount: 0,
-    unpaidAmount: 0
-  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,13 +58,6 @@ const ModernPenaltyManagement = ({ user }) => {
         }
       } else if (activeTab === 'fines') {
         await loadStudentsWithFines();
-      } else if (activeTab === 'stats') {
-        const response = await axios.get('/api/penalty/stats', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.data.success) {
-          setStats(response.data.data);
-        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -179,44 +166,6 @@ const ModernPenaltyManagement = ({ user }) => {
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const statCards = [
-    {
-      title: 'Total Fines',
-      value: stats.totalFines || 0,
-      description: 'All penalty records',
-      icon: DollarSign,
-      color: 'bg-blue-500',
-      change: '+8%',
-      trend: 'up'
-    },
-    {
-      title: 'Unpaid Fines',
-      value: stats.unpaidFines || 0,
-      description: 'Pending payments',
-      icon: AlertCircle,
-      color: 'bg-red-500',
-      change: '+12%',
-      trend: 'up'
-    },
-    {
-      title: 'Total Amount',
-      value: `₱${stats.totalAmount || 0}`,
-      description: 'All penalty amounts',
-      icon: Calculator,
-      color: 'bg-green-500',
-      change: '+15%',
-      trend: 'up'
-    },
-    {
-      title: 'Unpaid Amount',
-      value: `₱${stats.unpaidAmount || 0}`,
-      description: 'Outstanding payments',
-      icon: CreditCard,
-      color: 'bg-orange-500',
-      change: '+10%',
-      trend: 'up'
-    }
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -288,51 +237,6 @@ const ModernPenaltyManagement = ({ user }) => {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          {statCards.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
-                        <stat.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">
-                          {stat.title}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {stat.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.1 + 0.5, type: "spring" }}
-                        className="text-3xl font-bold text-slate-900"
-                      >
-                        {stat.value}
-                      </motion.div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        {stat.change}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
 
         {/* Main Content */}
         <motion.div
@@ -608,23 +512,10 @@ const ModernPenaltyManagement = ({ user }) => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {statCards.map((stat, index) => (
-                    <motion.div
-                      key={stat.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="text-center p-6 bg-slate-50 rounded-lg"
-                    >
-                      <div className={`inline-flex p-3 rounded-xl ${stat.color} mb-4`}>
-                        <stat.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-slate-900 mb-1">{stat.value}</h3>
-                      <p className="text-sm text-slate-600">{stat.title}</p>
-                      <p className="text-xs text-slate-500 mt-1">{stat.description}</p>
-                    </motion.div>
-                  ))}
+                <div className="text-center py-12">
+                  <DollarSign className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">No Penalty Data</h3>
+                  <p className="text-slate-500">Penalty statistics will appear here once students have overdue books.</p>
                 </div>
               </CardContent>
             </Card>

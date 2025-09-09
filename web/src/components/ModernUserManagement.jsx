@@ -34,12 +34,6 @@ const ModernUserManagement = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [expandedUser, setExpandedUser] = useState(null);
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    verifiedUsers: 0,
-    unverifiedUsers: 0,
-    activeUsers: 0
-  });
 
   useEffect(() => {
     fetchUsers();
@@ -62,20 +56,6 @@ const ModernUserManagement = ({ user }) => {
 
       const response = await axios.get('/api/admin/users', config);
       setUsers(response.data.users || []);
-      
-      // Calculate stats
-      const users = response.data.users || [];
-      const total = users.length;
-      const verified = users.filter(u => u.is_verified).length;
-      const unverified = total - verified;
-      const active = users.filter(u => u.login_count > 0).length;
-      
-      setStats({
-        totalUsers: total,
-        verifiedUsers: verified,
-        unverifiedUsers: unverified,
-        activeUsers: active
-      });
     } catch (err) {
       console.error('User fetch error:', err);
       if (err.code === 'ECONNREFUSED') {
@@ -136,44 +116,6 @@ const ModernUserManagement = ({ user }) => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      description: 'All registered users',
-      icon: Users,
-      color: 'bg-blue-500',
-      change: '+12%',
-      trend: 'up'
-    },
-    {
-      title: 'Verified Users',
-      value: stats.verifiedUsers,
-      description: 'Email verified accounts',
-      icon: UserCheck,
-      color: 'bg-green-500',
-      change: '+8%',
-      trend: 'up'
-    },
-    {
-      title: 'Unverified Users',
-      value: stats.unverifiedUsers,
-      description: 'Pending verification',
-      icon: UserX,
-      color: 'bg-orange-500',
-      change: '-5%',
-      trend: 'down'
-    },
-    {
-      title: 'Active Users',
-      value: stats.activeUsers,
-      description: 'Recently logged in',
-      icon: Activity,
-      color: 'bg-purple-500',
-      change: '+15%',
-      trend: 'up'
-    }
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -243,51 +185,6 @@ const ModernUserManagement = ({ user }) => {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          {statCards.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
-                        <stat.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">
-                          {stat.title}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {stat.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.1 + 0.5, type: "spring" }}
-                        className="text-3xl font-bold text-slate-900"
-                      >
-                        {stat.value}
-                      </motion.div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        {stat.change}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
 
         {/* Search and Filters */}
         <motion.div

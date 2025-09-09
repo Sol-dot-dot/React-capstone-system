@@ -34,17 +34,7 @@ const ModernReturningManagement = ({ user }) => {
   const [conditionNotes, setConditionNotes] = useState({});
   const [processingNotes, setProcessingNotes] = useState({});
 
-  // Statistics state
-  const [stats, setStats] = useState({
-    totalReturns: 0,
-    overdueReturns: 0,
-    todayReturns: 0,
-    pendingReturns: 0
-  });
 
-  useEffect(() => {
-    loadStats();
-  }, []);
 
   // Listen for payment processed events to refresh data
   useEffect(() => {
@@ -57,7 +47,6 @@ const ModernReturningManagement = ({ user }) => {
           searchStudentBooks();
         }, 500); // Small delay to ensure backend has processed
       }
-      loadStats();
     };
 
     window.addEventListener('paymentProcessed', handlePaymentProcessed);
@@ -67,25 +56,6 @@ const ModernReturningManagement = ({ user }) => {
     };
   }, [searchedStudent]);
 
-  const loadStats = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/borrowing/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.data.success) {
-        setStats({
-          totalReturns: response.data.data.todayReturns || 0,
-          overdueReturns: response.data.data.overdueBooks || 0,
-          todayReturns: response.data.data.todayReturns || 0,
-          pendingReturns: response.data.data.currentlyBorrowed || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    }
-  };
 
   // Returning Management functions
   const searchStudentBooks = async () => {
@@ -197,8 +167,6 @@ const ModernReturningManagement = ({ user }) => {
         
         // Refresh the student's books
         await searchStudentBooks();
-        // Refresh stats
-        await loadStats();
       } else {
         if (response.data.requiresPayment) {
           setMessage(`Cannot return book. Student has unpaid fines. Please process payment in Penalty Management for student ${response.data.studentId}.`);
@@ -218,44 +186,6 @@ const ModernReturningManagement = ({ user }) => {
     }
   };
 
-  const statCards = [
-    {
-      title: 'Total Returns',
-      value: stats.totalReturns,
-      description: 'Books returned today',
-      icon: CheckCircle,
-      color: 'bg-green-500',
-      change: '+15%',
-      trend: 'up'
-    },
-    {
-      title: 'Overdue Returns',
-      value: stats.overdueReturns,
-      description: 'Books overdue for return',
-      icon: AlertCircle,
-      color: 'bg-red-500',
-      change: '+5%',
-      trend: 'up'
-    },
-    {
-      title: 'Today\'s Returns',
-      value: stats.todayReturns,
-      description: 'Returns processed today',
-      icon: ArrowLeft,
-      color: 'bg-blue-500',
-      change: '+8%',
-      trend: 'up'
-    },
-    {
-      title: 'Pending Returns',
-      value: stats.pendingReturns,
-      description: 'Books awaiting return',
-      icon: Clock,
-      color: 'bg-orange-500',
-      change: '+12%',
-      trend: 'up'
-    }
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -296,46 +226,6 @@ const ModernReturningManagement = ({ user }) => {
           </p>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          {statCards.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 mb-1">
-                        {stat.title}
-                      </p>
-                      <p className="text-3xl font-bold text-slate-900">
-                        {stat.value}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {stat.description}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-full ${stat.color} bg-opacity-10 group-hover:scale-110 transition-transform duration-300`}>
-                      <stat.icon className={`h-6 w-6 ${stat.color.replace('bg-', 'text-')}`} />
-                    </div>
-                  </div>
-                  <div className="flex items-center mt-4">
-                    <span className={`text-sm font-medium ${
-                      stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {stat.change}
-                    </span>
-                    <span className="text-xs text-slate-500 ml-2">vs last week</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
 
         {/* Main Content */}
         <motion.div

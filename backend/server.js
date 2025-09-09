@@ -30,6 +30,7 @@ app.use('/api/borrowing', require('./routes/borrowing'));
 app.use('/api/penalty', require('./routes/penalty'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/', require('./routes/dashboard'));
 // app.use('/api/monitoring', require('./routes/monitoring'));
 
 // Health check endpoint

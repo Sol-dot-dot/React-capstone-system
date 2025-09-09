@@ -38,11 +38,11 @@ const ModernBookManagement = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [genreFilter, setGenreFilter] = useState('');
   const [genres, setGenres] = useState([]);
-  const [stats, setStats] = useState({
-    totalBooks: 0,
-    availableBooks: 0,
-    borrowedBooks: 0,
-    addedThisMonth: 0
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0
   });
 
   const [formData, setFormData] = useState({
@@ -62,6 +62,12 @@ const ModernBookManagement = ({ user }) => {
     fetchGenres();
   }, []);
 
+  useEffect(() => {
+    if (pagination.page > 1) {
+      fetchBooks();
+    }
+  }, [pagination.page]);
+
   const fetchBooks = async () => {
     try {
       setLoading(true);
@@ -77,36 +83,21 @@ const ModernBookManagement = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      const response = await axios.get('/api/books', config);
+      const response = await axios.get(`/api/books?page=${pagination.page}&limit=${pagination.limit}`, config);
       
       if (response.data.success) {
         const booksData = response.data.data.books || [];
         setBooks(booksData);
         
-        // Calculate stats
-        const total = response.data.data.pagination.total || 0;
-        const available = booksData.filter(b => b.status === 'available').length;
-        const borrowed = booksData.filter(b => b.status === 'borrowed').length;
-        const thisMonth = booksData.filter(b => {
-          const bookDate = new Date(b.created_at);
-          const now = new Date();
-          return bookDate.getMonth() === now.getMonth() && bookDate.getFullYear() === now.getFullYear();
-        }).length;
+        // Update pagination
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.data.pagination.total || 0,
+          totalPages: response.data.data.pagination.totalPages || 0
+        }));
         
-        setStats({
-          totalBooks: total,
-          availableBooks: available,
-          borrowedBooks: borrowed,
-          addedThisMonth: thisMonth
-        });
       } else {
         setBooks([]);
-        setStats({
-          totalBooks: 0,
-          availableBooks: 0,
-          borrowedBooks: 0,
-          addedThisMonth: 0
-        });
       }
     } catch (err) {
       console.error('Books fetch error:', err);
@@ -217,44 +208,6 @@ const ModernBookManagement = ({ user }) => {
     return matchesSearch && matchesStatus && matchesGenre;
   });
 
-  const statCards = [
-    {
-      title: 'Total Books',
-      value: stats.totalBooks,
-      description: 'Books in library',
-      icon: BookOpen,
-      color: 'bg-blue-500',
-      change: '+5%',
-      trend: 'up'
-    },
-    {
-      title: 'Available',
-      value: stats.availableBooks,
-      description: 'Ready to borrow',
-      icon: CheckCircle,
-      color: 'bg-green-500',
-      change: '+8%',
-      trend: 'up'
-    },
-    {
-      title: 'Borrowed',
-      value: stats.borrowedBooks,
-      description: 'Currently borrowed',
-      icon: Clock,
-      color: 'bg-orange-500',
-      change: '+12%',
-      trend: 'up'
-    },
-    {
-      title: 'Added This Month',
-      value: stats.addedThisMonth,
-      description: 'New additions',
-      icon: TrendingUp,
-      color: 'bg-purple-500',
-      change: '+25%',
-      trend: 'up'
-    }
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -324,51 +277,6 @@ const ModernBookManagement = ({ user }) => {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
-          {statCards.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
-                        <stat.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">
-                          {stat.title}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {stat.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.1 + 0.5, type: "spring" }}
-                        className="text-3xl font-bold text-slate-900"
-                      >
-                        {stat.value}
-                      </motion.div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        {stat.change}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
 
         {/* Search and Filters */}
         <motion.div
@@ -428,7 +336,7 @@ const ModernBookManagement = ({ user }) => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Book Collection ({filteredBooks.length})
+                Book Collection ({pagination.total || books.length})
               </CardTitle>
               <CardDescription>
                 Manage your library's book inventory and availability
@@ -549,6 +457,42 @@ const ModernBookManagement = ({ user }) => {
                   <p className="text-slate-600">
                     {searchTerm ? 'Try adjusting your search terms' : 'No books have been added yet'}
                   </p>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                  <div className="text-sm text-slate-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} books
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPagination(prev => ({ ...prev, page: prev.page - 1 }));
+                        fetchBooks();
+                      }}
+                      disabled={pagination.page === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-slate-600">
+                      Page {pagination.page} of {pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPagination(prev => ({ ...prev, page: prev.page + 1 }));
+                        fetchBooks();
+                      }}
+                      disabled={pagination.page === pagination.totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

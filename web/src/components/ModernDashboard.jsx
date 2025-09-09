@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 import { 
   Users, 
   UserCheck, 
@@ -9,92 +10,58 @@ import {
   Activity,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  BookMarked,
+  ArrowUpRight,
+  ArrowDownRight,
+  DollarSign,
+  FileText,
+  UserPlus,
+  BookX,
+  Calendar,
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
+import { Button } from './ui/button';
 
 const ModernDashboard = ({ user }) => {
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    verifiedUsers: 0,
-    todayLogins: 0,
-    totalBooks: 0,
-    verificationRate: 0,
-    dailyActivity: 0,
-    systemStatus: 'Online'
+  const [dashboardData, setDashboardData] = useState({
+    users: { total: 0, verified: 0, todayLogins: 0, students: 0, admins: 0, verificationRate: 0 },
+    books: { total: 0, available: 0, borrowed: 0, overdue: 0, addedToday: 0 },
+    borrowing: { currentlyBorrowed: 0, overdueBooks: 0, todayBorrowings: 0, todayReturns: 0 },
+    penalties: { totalFines: 0, unpaidFines: 0, totalAmount: 0, unpaidAmount: 0, finesToday: 0 },
+    activity: { totalLogs: 0, todayLogins: 0, activeUsers: 0, systemActivity: 0 },
+    system: { status: 'Online', lastCheck: null, activeUsers: 0 },
+    recentActivity: []
   });
-  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Simulate API call with animation
-    const timer = setTimeout(() => {
-      setStats({
-        totalUsers: 4,
-        verifiedUsers: 3,
-        todayLogins: 4,
-        totalBooks: 56,
-        verificationRate: 75,
-        dailyActivity: 3,
-        systemStatus: 'Online'
-      });
-      setRecentActivity([
-        {
-          id: 1,
-          time: '09/09/2025, 11:32:17',
-          userType: 'admin',
-          userId: 'Admin',
-          ipAddress: '::1',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      ]);
+  const fetchDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      const response = await axios.get('/api/dashboard/stats', config);
+      
+      if (response.data.success) {
+        setDashboardData(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      description: 'All registered users',
-      icon: Users,
-      color: 'bg-blue-500',
-      change: '+12%',
-      trend: 'up'
-    },
-    {
-      title: 'Verified Users',
-      value: stats.verifiedUsers,
-      description: 'Email verified accounts',
-      icon: UserCheck,
-      color: 'bg-green-500',
-      change: '+8%',
-      trend: 'up'
-    },
-    {
-      title: "Today's Logins",
-      value: stats.todayLogins,
-      description: 'Login activity today',
-      icon: LogIn,
-      color: 'bg-orange-500',
-      change: '+23%',
-      trend: 'up'
-    },
-    {
-      title: 'Total Books',
-      value: stats.totalBooks,
-      description: 'Books in library',
-      icon: BookOpen,
-      color: 'bg-purple-500',
-      change: '+5%',
-      trend: 'up'
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -125,7 +92,7 @@ const ModernDashboard = ({ user }) => {
           <div className="animate-pulse">
             <div className="h-8 bg-slate-200 rounded w-1/4 mb-6"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(8)].map((_, i) => (
                 <div key={i} className="h-32 bg-slate-200 rounded-lg"></div>
               ))}
             </div>
@@ -143,137 +110,620 @@ const ModernDashboard = ({ user }) => {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="mb-8"
+          className="mb-8 flex justify-between items-center"
         >
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">
-            Admin Dashboard
-          </h1>
-          <p className="text-slate-600 text-lg">
-            Overview of your library management system
-          </p>
+          <div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">
+              Library Management Dashboard
+            </h1>
+            <p className="text-slate-600 text-lg">
+              Comprehensive overview of your library system
+            </p>
+          </div>
+          <Button 
+            onClick={fetchDashboardStats}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
         </motion.div>
 
-        {/* Stats Grid */}
+        {/* User Management Stats */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          className="mb-8"
         >
-          {statCards.map((stat, index) => (
-            <motion.div key={stat.title} variants={itemVariants}>
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">User Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants}>
               <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
-                        <stat.icon className="h-6 w-6 text-white" />
+                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
+                        <Users className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-600">
-                          {stat.title}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {stat.description}
-                        </p>
+                        <p className="text-sm font-medium text-slate-600">Total Users</p>
+                        <p className="text-xs text-slate-500">All registered users</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.1 + 0.5, type: "spring" }}
-                        className="text-3xl font-bold text-slate-900"
-                      >
-                        {stat.value}
-                      </motion.div>
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.users.total}
+                      </div>
                       <Badge variant="secondary" className="mt-1">
                         <TrendingUp className="h-3 w-3 mr-1" />
-                        {stat.change}
+                        +12%
                       </Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
+                        <UserCheck className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Verified Users</p>
+                        <p className="text-xs text-slate-500">Email verified accounts</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.users.verified}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        {dashboardData.users.verificationRate}%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-orange-500 group-hover:scale-110 transition-transform duration-300">
+                        <LogIn className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Today's Logins</p>
+                        <p className="text-xs text-slate-500">Login activity today</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.users.todayLogins}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +23%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
+                        <UserPlus className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Active Users</p>
+                        <p className="text-xs text-slate-500">Users with activity</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.activity.activeUsers}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +15%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
         </motion.div>
 
-        {/* Secondary Stats */}
+        {/* Book Management Stats */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          className="mb-8"
         >
-          <motion.div variants={itemVariants}>
-            <Card className="border-0 bg-gradient-to-r from-green-50 to-emerald-50">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-xl bg-green-500">
-                    <CheckCircle className="h-6 w-6 text-white" />
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">Book Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-indigo-500 group-hover:scale-110 transition-transform duration-300">
+                        <BookOpen className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Total Books</p>
+                        <p className="text-xs text-slate-500">Books in library</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.books.total}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +5%
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">
-                      User Verification Rate
-                    </p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {stats.verificationRate}%
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      3 of 4 users verified
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Card className="border-0 bg-gradient-to-r from-blue-50 to-cyan-50">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-xl bg-blue-500">
-                    <Activity className="h-6 w-6 text-white" />
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
+                        <BookMarked className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Available Books</p>
+                        <p className="text-xs text-slate-500">Books ready to borrow</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.books.available}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +8%
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">
-                      Daily Activity
-                    </p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {stats.dailyActivity}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Login attempts today
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Card className="border-0 bg-gradient-to-r from-emerald-50 to-green-50">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="p-3 rounded-xl bg-emerald-500">
-                    <CheckCircle className="h-6 w-6 text-white" />
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
+                        <BookOpen className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Borrowed Books</p>
+                        <p className="text-xs text-slate-500">Currently borrowed</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.books.borrowed}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +12%
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">
-                      System Status
-                    </p>
-                    <p className="text-2xl font-bold text-emerald-600">
-                      {stats.systemStatus}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      All systems operational
-                    </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-red-500 group-hover:scale-110 transition-transform duration-300">
+                        <BookX className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Overdue Books</p>
+                        <p className="text-xs text-slate-500">Books past due date</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.books.overdue}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +5%
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Borrowing Management Stats */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mb-8"
+        >
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">Borrowing Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
+                        <BookOpen className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Currently Borrowed</p>
+                        <p className="text-xs text-slate-500">Books currently borrowed</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.borrowing.currentlyBorrowed}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +12%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-red-500 group-hover:scale-110 transition-transform duration-300">
+                        <AlertCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Overdue Books</p>
+                        <p className="text-xs text-slate-500">Books past due date</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.borrowing.overdueBooks}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +5%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
+                        <TrendingUp className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Today's Borrowings</p>
+                        <p className="text-xs text-slate-500">Books borrowed today</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.borrowing.todayBorrowings}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +8%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
+                        <CheckCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Today's Returns</p>
+                        <p className="text-xs text-slate-500">Books returned today</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.borrowing.todayReturns}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +15%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Penalty Management Stats */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mb-8"
+        >
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">Penalty Management</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
+                        <DollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Total Fines</p>
+                        <p className="text-xs text-slate-500">All penalty records</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.penalties.totalFines}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +8%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-red-500 group-hover:scale-110 transition-transform duration-300">
+                        <AlertCircle className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Unpaid Fines</p>
+                        <p className="text-xs text-slate-500">Pending payments</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.penalties.unpaidFines}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +12%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
+                        <DollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Total Amount</p>
+                        <p className="text-xs text-slate-500">All penalty amounts</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        ₱{dashboardData.penalties.totalAmount}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +15%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-orange-500 group-hover:scale-110 transition-transform duration-300">
+                        <DollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Unpaid Amount</p>
+                        <p className="text-xs text-slate-500">Outstanding payments</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        ₱{dashboardData.penalties.unpaidAmount}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +10%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Activity Logs Stats */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="mb-8"
+        >
+          <h2 className="text-2xl font-semibold text-slate-800 mb-4">System Activity</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
+                        <FileText className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Total Logs</p>
+                        <p className="text-xs text-slate-500">All activity records</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.activity.totalLogs}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +12%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
+                        <LogIn className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Today's Logins</p>
+                        <p className="text-xs text-slate-500">Login activities today</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.activity.todayLogins}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +8%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-orange-500 group-hover:scale-110 transition-transform duration-300">
+                        <Users className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">Active Users</p>
+                        <p className="text-xs text-slate-500">Users with activity</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.activity.activeUsers}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +15%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
+                        <Activity className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-600">System Activity</p>
+                        <p className="text-xs text-slate-500">Total system events</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-900">
+                        {dashboardData.activity.systemActivity}
+                      </div>
+                      <Badge variant="secondary" className="mt-1">
+                        <TrendingUp className="h-3 w-3 mr-1" />
+                        +20%
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
         </motion.div>
 
         {/* Recent Activity */}
@@ -294,37 +744,47 @@ const ModernDashboard = ({ user }) => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {activity.userType === 'admin' ? 'A' : 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-slate-900">
-                          {activity.userId}
+                {dashboardData.recentActivity.length > 0 ? (
+                  dashboardData.recentActivity.map((activity, index) => (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-blue-100 text-blue-600">
+                          {activity.userType === 'admin' ? 'A' : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-slate-900">
+                            {activity.userId}
+                          </p>
+                          <Badge variant="outline" className="text-xs">
+                            {activity.userType}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {activity.action}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-slate-500 truncate">
+                          {activity.userAgent}
                         </p>
-                        <Badge variant="outline" className="text-xs">
-                          {activity.userType}
-                        </Badge>
+                        <p className="text-xs text-slate-400">
+                          {new Date(activity.time).toLocaleString()} • {activity.ipAddress}
+                        </p>
                       </div>
-                      <p className="text-sm text-slate-500 truncate">
-                        {activity.userAgent}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {activity.time} • {activity.ipAddress}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No recent activity found</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -335,4 +795,3 @@ const ModernDashboard = ({ user }) => {
 };
 
 export default ModernDashboard;
-
