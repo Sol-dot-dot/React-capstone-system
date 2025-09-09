@@ -176,8 +176,8 @@ const EnhancedDashboard = () => {
   return (
     <div style={dashboardStyles.container}>
       <div style={dashboardStyles.header}>
-        <h1 style={dashboardStyles.title}>Admin Dashboard</h1>
-        <p style={dashboardStyles.subtitle}>Overview of your library management system</p>
+        <h1 style={dashboardStyles.title}>SMC Library System Dashboard</h1>
+        <p style={dashboardStyles.subtitle}>St. Michael's College Library Management System Overview</p>
       </div>
 
       {/* Statistics Cards */}

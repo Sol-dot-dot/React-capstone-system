@@ -43,10 +43,10 @@ const Login = ({ onLogin }) => {
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
-              Admin Login
+              SMC Library System
             </CardTitle>
             <CardDescription className="text-center">
-              Enter your credentials to access the admin dashboard
+              St. Michael's College Library Management - Admin Login
             </CardDescription>
           </CardHeader>
           

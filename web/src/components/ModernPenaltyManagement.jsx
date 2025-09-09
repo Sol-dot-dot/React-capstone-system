@@ -81,6 +81,36 @@ const ModernPenaltyManagement = ({ user }) => {
     }
   };
 
+  const saveSettings = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      // Update each setting individually
+      for (const [key, value] of Object.entries(settings)) {
+        if (value !== undefined && value !== '') {
+          await axios.put('/api/penalty/settings', {
+            setting_key: key,
+            setting_value: value
+          }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
+      }
+      
+      setMessage('Settings saved successfully!');
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(''), 3000);
+      // Reload settings to get updated values
+      await loadData();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setMessage('Error saving settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const processOverdueFines = async () => {
     try {
       setLoading(true);
@@ -237,6 +267,17 @@ const ModernPenaltyManagement = ({ user }) => {
           </div>
         </motion.div>
 
+
+        {/* Message Display */}
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 rounded-lg bg-green-100 border border-green-200 text-green-800"
+          >
+            {message}
+          </motion.div>
+        )}
 
         {/* Main Content */}
         <motion.div
@@ -446,16 +487,18 @@ const ModernPenaltyManagement = ({ user }) => {
                             Daily Fine Rate (₱)
                           </label>
                           <Input
-                            value={settings.daily_fine_rate || ''}
+                            value={settings.fine_per_day || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, fine_per_day: e.target.value }))}
                             className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Maximum Fine Amount (₱)
+                            Borrowing Period (Days)
                           </label>
                           <Input
-                            value={settings.max_fine_amount || ''}
+                            value={settings.borrowing_period_days || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, borrowing_period_days: e.target.value }))}
                             className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
@@ -469,16 +512,28 @@ const ModernPenaltyManagement = ({ user }) => {
                             Required Books per Semester
                           </label>
                           <Input
-                            value={settings.required_books_per_semester || ''}
+                            value={settings.books_required_per_semester || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, books_required_per_semester: e.target.value }))}
                             className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Penalty per Missing Book (₱)
+                            Semester Duration (Months)
                           </label>
                           <Input
-                            value={settings.penalty_per_missing_book || ''}
+                            value={settings.semester_duration_months || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, semester_duration_months: e.target.value }))}
+                            className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Max Books per Borrowing
+                          </label>
+                          <Input
+                            value={settings.max_books_per_borrowing || ''}
+                            onChange={(e) => setSettings(prev => ({ ...prev, max_books_per_borrowing: e.target.value }))}
                             className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </div>
@@ -487,11 +542,19 @@ const ModernPenaltyManagement = ({ user }) => {
                   </div>
                   
                   <div className="flex gap-3 pt-4">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button 
+                      onClick={saveSettings}
+                      disabled={loading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
                       <Check className="h-4 w-4 mr-2" />
-                      Save Settings
+                      {loading ? 'Saving...' : 'Save Settings'}
                     </Button>
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline"
+                      onClick={() => loadData()}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
                       Reset to Default
                     </Button>
                   </div>

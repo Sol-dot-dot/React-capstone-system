@@ -257,7 +257,7 @@ const Sidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
           <div style={sidebarStyles.logoIcon}>
             <FiBook />
           </div>
-          <span style={sidebarStyles.logoText}>Library Admin</span>
+          <span style={sidebarStyles.logoText}>SMC Library System</span>
         </Link>
         {!isCollapsed && (
           <button

@@ -62,16 +62,55 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
                   exit={{ opacity: 0, scale: 0.8 }}
                   className="flex items-center space-x-3"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <BookOpen className="h-5 w-5 text-white" />
+                  <div className="flex items-center justify-center">
+                    <img 
+                      src="/smc-logo.png" 
+                      alt="SMC Logo" 
+                      className="w-20 h-20 object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                      <BookOpen className="h-5 w-5 text-white" />
+                    </div>
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold text-slate-900">Library Admin</h1>
-                    <p className="text-xs text-slate-500">Management System</p>
+                    <h1 className="text-xl font-bold text-slate-900">SMC Library System</h1>
+                    <p className="text-xs text-slate-500">St. Michael's College</p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
+            
+            {/* Collapsed Logo */}
+            <AnimatePresence>
+              {isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center justify-center"
+                >
+                  <div className="flex items-center justify-center">
+                    <img 
+                      src="/smc-logo.png" 
+                      alt="SMC Logo" 
+                      className="w-8 h-8 object-contain"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center" style={{display: 'none'}}>
+                      <BookOpen className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
             <Button
               variant="ghost"
               size="sm"

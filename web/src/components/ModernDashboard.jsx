@@ -114,10 +114,10 @@ const ModernDashboard = ({ user }) => {
         >
           <div>
             <h1 className="text-4xl font-bold text-slate-900 mb-2">
-              Library Management Dashboard
+              SMC Library Management Dashboard
             </h1>
             <p className="text-slate-600 text-lg">
-              Comprehensive overview of your library system
+              St. Michael's College Library System - Comprehensive Overview
             </p>
           </div>
           <Button 
