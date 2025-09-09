@@ -418,6 +418,27 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
     
     return response;
   }
+
+  /**
+   * Test OpenAI API connection
+   * @returns {Promise<boolean>} True if API is working
+   */
+  async testOpenAI() {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'user', content: 'Hello, this is a test message.' }
+        ],
+        max_tokens: 10
+      });
+      
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('❌ OpenAI API test failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new ChatbotService();

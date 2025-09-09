@@ -15,89 +15,100 @@
 12-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:5-67
 12-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:22-64
 13    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\7c995fbf50e20bb02a18ce2aad652174\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:5-76
-13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\7c995fbf50e20bb02a18ce2aad652174\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:22-73
+13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\2639b12fabf4e0604e84c3524f011c07\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:5-76
+13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\2639b12fabf4e0604e84c3524f011c07\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:22-73
 14
-15    <application
-15-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:5:5-24:19
-16        android:name="com.capstonemobile.MainApplication"
-16-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
-17        android:allowBackup="false"
-17-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:10:7-34
-18        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-18-->[androidx.core:core:1.7.0] C:\Users\rhodc\.gradle\caches\transforms-3\aeccc6d471558e99810cf8041378f676\transformed\core-1.7.0\AndroidManifest.xml:24:18-86
-19        android:debuggable="true"
-20        android:extractNativeLibs="true"
-21        android:icon="@mipmap/ic_launcher"
-21-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:8:7-41
-22        android:label="@string/app_name"
-22-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:7:7-39
-23        android:roundIcon="@mipmap/ic_launcher_round"
-23-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:9:7-52
-24        android:theme="@style/AppTheme"
-24-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:11:7-38
-25        android:usesCleartextTraffic="true" >
-25-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:8:9-44
-26        <activity
-26-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:9-111
-27            android:name="com.facebook.react.devsupport.DevSettingsActivity"
-27-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:19-83
-28            android:exported="false" />
-28-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:84-108
-29        <activity
-29-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
-30            android:name="com.capstonemobile.MainActivity"
-30-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:13:9-37
-31            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-31-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:15:9-118
-32            android:exported="true"
-32-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:18:9-32
-33            android:label="@string/app_name"
-33-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:14:9-41
-34            android:launchMode="singleTask"
-34-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:16:9-40
-35            android:windowSoftInputMode="adjustResize" >
-35-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:17:9-51
-36            <intent-filter>
-36-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:19:9-22:25
-37                <action android:name="android.intent.action.MAIN" />
-37-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:13-65
-37-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:21-62
-38
-39                <category android:name="android.intent.category.LAUNCHER" />
-39-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:13-73
-39-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:23-70
-40            </intent-filter>
-41        </activity>
-42
-43        <meta-data
-43-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\bc702b3060661303a20a7301e9e9db46\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:12:9-14:37
-44            android:name="com.facebook.soloader.enabled"
-44-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\bc702b3060661303a20a7301e9e9db46\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:13:13-57
-45            android:value="false" />
-45-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\bc702b3060661303a20a7301e9e9db46\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:14:13-34
-46
-47        <provider
-47-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:26:9-34:20
-48            android:name="androidx.startup.InitializationProvider"
-48-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:27:13-67
-49            android:authorities="com.capstonemobile.androidx-startup"
-49-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:28:13-68
-50            android:exported="false" >
-50-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:29:13-37
-51            <meta-data
-51-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:31:13-33:52
-52                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-52-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:32:17-75
-53                android:value="androidx.startup" />
-53-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\29fea1584c63edbaffe59e456f0ba564\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:33:17-49
-54            <meta-data
-54-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\9a8237c46b3fcd9475007dcb679142d4\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:31:13-33:52
-55                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-55-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\9a8237c46b3fcd9475007dcb679142d4\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:32:17-78
-56                android:value="androidx.startup" />
-56-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\9a8237c46b3fcd9475007dcb679142d4\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:33:17-49
-57        </provider>
-58    </application>
-59
-60</manifest>
+15    <permission
+15-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+16        android:name="com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+16-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+17        android:protectionLevel="signature" />
+17-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+18
+19    <uses-permission android:name="com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+19-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
+19-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
+20
+21    <application
+21-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:5:5-24:19
+22        android:name="com.capstonemobile.MainApplication"
+22-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
+23        android:allowBackup="false"
+23-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:10:7-34
+24        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+24-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
+25        android:debuggable="true"
+26        android:extractNativeLibs="true"
+27        android:icon="@mipmap/ic_launcher"
+27-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:8:7-41
+28        android:label="@string/app_name"
+28-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:7:7-39
+29        android:roundIcon="@mipmap/ic_launcher_round"
+29-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:9:7-52
+30        android:theme="@style/AppTheme"
+30-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:11:7-38
+31        android:usesCleartextTraffic="true" >
+31-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:8:9-44
+32        <activity
+32-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:9-111
+33            android:name="com.facebook.react.devsupport.DevSettingsActivity"
+33-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:19-83
+34            android:exported="false" />
+34-->C:\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:84-108
+35        <activity
+35-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
+36            android:name="com.capstonemobile.MainActivity"
+36-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:13:9-37
+37            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+37-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:15:9-118
+38            android:exported="true"
+38-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:18:9-32
+39            android:label="@string/app_name"
+39-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:14:9-41
+40            android:launchMode="singleTask"
+40-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:16:9-40
+41            android:windowSoftInputMode="adjustResize" >
+41-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:17:9-51
+42            <intent-filter>
+42-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:19:9-22:25
+43                <action android:name="android.intent.action.MAIN" />
+43-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:13-65
+43-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:21-62
+44
+45                <category android:name="android.intent.category.LAUNCHER" />
+45-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:13-73
+45-->C:\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:23-70
+46            </intent-filter>
+47        </activity>
+48
+49        <provider
+49-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:26:9-34:20
+50            android:name="androidx.startup.InitializationProvider"
+50-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:27:13-67
+51            android:authorities="com.capstonemobile.androidx-startup"
+51-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:28:13-68
+52            android:exported="false" >
+52-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:29:13-37
+53            <meta-data
+53-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:31:13-33:52
+54                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+54-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:32:17-75
+55                android:value="androidx.startup" />
+55-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:33:17-49
+56            <meta-data
+56-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\edabcda1ff35c56f793d50d6120a7215\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:31:13-33:52
+57                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+57-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\edabcda1ff35c56f793d50d6120a7215\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:32:17-78
+58                android:value="androidx.startup" />
+58-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\rhodc\.gradle\caches\transforms-3\edabcda1ff35c56f793d50d6120a7215\transformed\jetified-lifecycle-process-2.4.0\AndroidManifest.xml:33:17-49
+59        </provider>
+60
+61        <meta-data
+61-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\be82dcee411e10af8f4ff8f9d09fb2b1\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:12:9-14:37
+62            android:name="com.facebook.soloader.enabled"
+62-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\be82dcee411e10af8f4ff8f9d09fb2b1\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:13:13-57
+63            android:value="false" />
+63-->[com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\caches\transforms-3\be82dcee411e10af8f4ff8f9d09fb2b1\transformed\jetified-soloader-0.10.5\AndroidManifest.xml:14:13-34
+64    </application>
+65
+66</manifest>

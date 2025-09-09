@@ -405,6 +405,8 @@ color bright_foreground_material_dark
 color bright_foreground_material_light
 color button_material_dark
 color button_material_light
+color call_notification_answer_color
+color call_notification_decline_color
 color catalyst_logbox_background
 color catalyst_redbox_background
 color dim_foreground_disabled_material_dark
@@ -662,6 +664,12 @@ drawable btn_radio_off_mtrl
 drawable btn_radio_off_to_on_mtrl_animation
 drawable btn_radio_on_mtrl
 drawable btn_radio_on_to_off_mtrl_animation
+drawable ic_call_answer
+drawable ic_call_answer_low
+drawable ic_call_answer_video
+drawable ic_call_answer_video_low
+drawable ic_call_decline
+drawable ic_call_decline_low
 drawable notification_action_background
 drawable notification_bg
 drawable notification_bg_low
@@ -791,6 +799,8 @@ id focusCrop
 id forever
 id fps_text
 id fragment_container_view_tag
+id ghost_view
+id ghost_view_holder
 id group_divider
 id home
 id homeAsUp
@@ -800,10 +810,6 @@ id ifRoom
 id image
 id info
 id italic
-id item1
-id item2
-id item3
-id item4
 id labelled_by
 id line1
 id line3
@@ -821,6 +827,7 @@ id notification_main_column_container
 id off
 id on
 id parentPanel
+id parent_matrix
 id pointer_events
 id progress_circular
 id progress_horizontal
@@ -837,6 +844,8 @@ id rn_redbox_reload_button
 id rn_redbox_report_button
 id rn_redbox_report_label
 id rn_redbox_stack
+id save_non_transition_alpha
+id save_overlay_view
 id screen
 id scrollIndicatorDown
 id scrollIndicatorUp
@@ -888,6 +897,11 @@ id titleDividerNoCustom
 id title_template
 id top
 id topPanel
+id transition_current_scene
+id transition_layout_save
+id transition_position
+id transition_scene_layoutid_cache
+id transition_transform
 id unchecked
 id uniform
 id up
@@ -959,8 +973,6 @@ layout select_dialog_item_material
 layout select_dialog_multichoice_material
 layout select_dialog_singlechoice_material
 layout support_simple_spinner_dropdown_item
-menu example_menu
-menu example_menu2
 mipmap ic_launcher
 mipmap ic_launcher_round
 string abc_action_bar_home_description
@@ -993,6 +1005,13 @@ string abc_toolbar_collapse_description
 string alert_description
 string androidx_startup
 string app_name
+string call_notification_answer_action
+string call_notification_answer_video_action
+string call_notification_decline_action
+string call_notification_hang_up_action
+string call_notification_incoming_text
+string call_notification_ongoing_text
+string call_notification_screening_text
 string catalyst_change_bundle_location
 string catalyst_copy_button
 string catalyst_debug

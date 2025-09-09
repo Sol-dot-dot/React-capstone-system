@@ -86,17 +86,6 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     });
 
     setNotifications(newNotifications);
-    
-    // Show alerts for urgent notifications
-    newNotifications.forEach(notification => {
-      if (notification.type === 'overdue' || notification.type === 'today') {
-        Alert.alert(
-          'Due Date Alert',
-          notification.message,
-          [{ text: 'OK' }]
-        );
-      }
-    });
   };
 
   const getStatusColor = (dueStatus) => {

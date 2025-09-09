@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native';
+// import { Card, TextInput, Button, Title, Paragraph } from 'react-native-paper';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
@@ -45,7 +47,7 @@ const ModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
   };
 
   return (
-    <View style={ModernStyles.container}>
+    <ScrollView style={ModernStyles.container}>
       {/* Header */}
       <View style={ModernStyles.header}>
         <TouchableOpacity style={ModernStyles.headerButton} onPress={onBack}>
@@ -120,7 +122,7 @@ const ModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -147,13 +149,13 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   welcomeTitle: {
-    ...ModernTheme.typography.h1,
     textAlign: 'center',
     marginBottom: ModernTheme.spacing.sm,
+    color: ModernTheme.colors.text,
   },
   welcomeSubtitle: {
-    ...ModernTheme.typography.caption,
     textAlign: 'center',
+    color: ModernTheme.colors.textMuted,
   },
   formSection: {
     marginBottom: ModernTheme.spacing.xl,
@@ -184,10 +186,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: ModernTheme.spacing.lg,
   },
   footerText: {
     ...ModernTheme.typography.caption,
     marginRight: ModernTheme.spacing.sm,
+    color: ModernTheme.colors.textMuted,
   },
   signUpText: {
     ...ModernTheme.typography.caption,

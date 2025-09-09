@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -35,58 +38,72 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto' }}>
-      <div className="card">
-        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>
-          Admin Login
-        </h2>
-        
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold text-center">
+              Admin Login
+            </CardTitle>
+            <CardDescription className="text-center">
+              Enter your credentials to access the admin dashboard
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {error && (
+              <div className="mb-4 p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
+                {error}
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Username
+                </label>
+                <Input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="Enter your username"
+                  required
+                />
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Password
+                </label>
+                <Input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+            </form>
 
-        <div style={{ marginTop: '20px', textAlign: 'center', color: '#666' }}>
-          <p><strong>Default Admin Credentials:</strong></p>
-          <p>Username: admin</p>
-          <p>Password: password</p>
-        </div>
+            <div className="mt-6 p-4 bg-gray-50 rounded-md">
+              <p className="text-sm font-medium text-gray-700 mb-2">Default Admin Credentials:</p>
+              <p className="text-sm text-gray-600">Username: admin</p>
+              <p className="text-sm text-gray-600">Password: password</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

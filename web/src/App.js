@@ -2,15 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import EnhancedDashboard from './components/EnhancedDashboard';
+import ModernDashboard from './components/ModernDashboard';
 import UserManagement from './components/UserManagement';
+import ModernUserManagement from './components/ModernUserManagement';
 import ActivityLogs from './components/ActivityLogs';
+import ModernActivityLogs from './components/ModernActivityLogs';
 import BookManagement from './components/BookManagement';
+import ModernBookManagement from './components/ModernBookManagement';
 import BorrowingManagement from './components/BorrowingManagement';
+import ModernBorrowingManagement from './components/ModernBorrowingManagement';
+import ModernReturningManagement from './components/ModernReturningManagement';
 import PenaltyManagement from './components/PenaltyManagement';
+import ModernPenaltyManagement from './components/ModernPenaltyManagement';
 import MonitoringDashboard from './components/MonitoringDashboard';
 import ChatbotWidget from './components/ChatbotWidget';
+import ModernChatbotWidget from './components/ModernChatbotWidget';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
+import ModernSidebar from './components/ModernSidebar';
+import ModernTopBar from './components/ModernTopBar';
 import designSystem from './styles/designSystem';
 import './App.css';
 
@@ -85,20 +95,20 @@ function App() {
     <Router>
       <div style={appStyles.app}>
         {isAuthenticated ? (
-          <div style={appStyles.layout}>
-            <Sidebar 
+          <div className="flex h-screen bg-slate-50">
+            <ModernSidebar 
               isCollapsed={sidebarCollapsed}
               onToggle={toggleSidebar}
               onLogout={handleLogout}
               user={user}
             />
-            <main style={appStyles.main}>
-              <TopBar 
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <ModernTopBar 
                 onToggleSidebar={toggleSidebar}
                 user={user}
                 notifications={[]}
               />
-              <div style={appStyles.content}>
+              <main className="flex-1 overflow-auto">
           <Routes>
             <Route 
               path="/login" 
@@ -120,7 +130,7 @@ function App() {
               path="/enhanced-dashboard" 
               element={
                 isAuthenticated ? 
-                <EnhancedDashboard user={user} /> : 
+                <ModernDashboard user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -128,7 +138,7 @@ function App() {
               path="/users" 
               element={
                 isAuthenticated ? 
-                <UserManagement user={user} /> : 
+                <ModernUserManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -136,7 +146,7 @@ function App() {
               path="/books" 
               element={
                 isAuthenticated ? 
-                <BookManagement user={user} /> : 
+                <ModernBookManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -144,7 +154,7 @@ function App() {
               path="/activity-logs" 
               element={
                 isAuthenticated ? 
-                <ActivityLogs user={user} /> : 
+                <ModernActivityLogs user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -152,7 +162,15 @@ function App() {
               path="/borrowings" 
               element={
                 isAuthenticated ? 
-                <BorrowingManagement user={user} /> : 
+                <ModernBorrowingManagement user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/returning" 
+              element={
+                isAuthenticated ? 
+                <ModernReturningManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -160,7 +178,7 @@ function App() {
               path="/penalties" 
               element={
                 isAuthenticated ? 
-                <PenaltyManagement user={user} /> : 
+                <ModernPenaltyManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -177,8 +195,8 @@ function App() {
               element={<Navigate to={isAuthenticated ? "/enhanced-dashboard" : "/login"} />} 
             />
                 </Routes>
-              </div>
-            </main>
+              </main>
+            </div>
           </div>
         ) : (
           <div style={appStyles.loginContainer}>
@@ -233,8 +251,8 @@ function App() {
           </button>
         )}
 
-        {/* Chatbot Widget */}
-        <ChatbotWidget 
+        {/* Modern Chatbot Widget */}
+        <ModernChatbotWidget 
           isVisible={isChatbotVisible} 
           onClose={() => setIsChatbotVisible(false)} 
         />

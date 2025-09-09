@@ -28,6 +28,8 @@
     <color name="bright_foreground_material_light">@android:color/black</color>
     <color name="button_material_dark">#ff5a595b</color>
     <color name="button_material_light">#ffd6d7d7</color>
+    <color name="call_notification_answer_color">#1d873b</color>
+    <color name="call_notification_decline_color">#d93025</color>
     <color name="catalyst_logbox_background">#ffffffff</color>
     <color name="catalyst_redbox_background">#eecc0000</color>
     <color name="dim_foreground_disabled_material_dark">#80bebebe</color>
@@ -247,14 +249,19 @@
     <item name="flipper_skip_empty_view_group_traversal" type="id"/>
     <item name="flipper_skip_view_traversal" type="id"/>
     <item name="fragment_container_view_tag" type="id"/>
+    <item name="ghost_view" type="id"/>
+    <item name="ghost_view_holder" type="id"/>
     <item name="home" type="id"/>
     <item name="labelled_by" type="id"/>
     <item name="line1" type="id"/>
     <item name="line3" type="id"/>
+    <item name="parent_matrix" type="id"/>
     <item name="pointer_events" type="id"/>
     <item name="progress_circular" type="id"/>
     <item name="progress_horizontal" type="id"/>
     <item name="react_test_id" type="id"/>
+    <item name="save_non_transition_alpha" type="id"/>
+    <item name="save_overlay_view" type="id"/>
     <item name="special_effects_controller_view_tag" type="id"/>
     <item name="split_action_bar" type="id"/>
     <item name="tag_accessibility_actions" type="id"/>
@@ -273,6 +280,11 @@
     <item name="text" type="id"/>
     <item name="text2" type="id"/>
     <item name="title" type="id"/>
+    <item name="transition_current_scene" type="id"/>
+    <item name="transition_layout_save" type="id"/>
+    <item name="transition_position" type="id"/>
+    <item name="transition_scene_layoutid_cache" type="id"/>
+    <item name="transition_transform" type="id"/>
     <item name="up" type="id"/>
     <item name="view_tag_instance_handle" type="id"/>
     <item name="view_tag_native_id" type="id"/>
@@ -317,6 +329,13 @@
     <string name="alert_description" translatable="false">Alert</string>
     <string name="androidx_startup" translatable="false">androidx.startup</string>
     <string name="app_name">CapstoneMobile</string>
+    <string name="call_notification_answer_action">Answer</string>
+    <string name="call_notification_answer_video_action">Video</string>
+    <string name="call_notification_decline_action">Decline</string>
+    <string name="call_notification_hang_up_action">Hang Up</string>
+    <string name="call_notification_incoming_text">Incoming call</string>
+    <string name="call_notification_ongoing_text">Ongoing call</string>
+    <string name="call_notification_screening_text">Screening an incoming call</string>
     <string name="catalyst_change_bundle_location" project="catalyst" translatable="false">Change Bundle Location</string>
     <string name="catalyst_copy_button" project="catalyst" translatable="false">Copy\n</string>
     <string name="catalyst_debug" project="catalyst" translatable="false">Debug</string>

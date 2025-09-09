@@ -26,6 +26,51 @@ router.get('/test', (req, res) => {
   });
 });
 
+// Chatbot status endpoint
+router.get('/status', async (req, res) => {
+  try {
+    const status = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      services: {
+        vectorDB: {
+          isInitialized: vectorDBService.isInitialized,
+          useRealEmbeddings: vectorDBService.useRealEmbeddings,
+          bookCount: vectorDBService.books?.length || 0,
+          status: vectorDBService.isInitialized ? 'Ready' : 'Not Initialized'
+        },
+        chatbot: {
+          status: 'Running',
+          aiPowered: vectorDBService.isInitialized && vectorDBService.useRealEmbeddings
+        },
+        openai: {
+          status: 'Unknown',
+          lastError: null
+        }
+      }
+    };
+
+    // Test OpenAI API key by making a simple request
+    try {
+      const testResponse = await chatbotService.testOpenAI();
+      status.services.openai.status = 'Working';
+      status.services.openai.lastTest = new Date().toISOString();
+    } catch (openaiError) {
+      status.services.openai.status = 'Error';
+      status.services.openai.lastError = openaiError.message;
+      status.services.openai.lastErrorTime = new Date().toISOString();
+    }
+
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get chatbot status',
+      error: error.message
+    });
+  }
+});
+
 // Simple fallback endpoint for basic chat without AI
 router.post('/simple', async (req, res) => {
   try {

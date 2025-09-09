@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import com.oblador.vectoricons.VectorIconsPackage;
 // @react-native-async-storage/async-storage
 import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;
+// react-native-gesture-handler
+import com.swmansion.gesturehandler.RNGestureHandlerPackage;
+// react-native-reanimated
+import com.swmansion.reanimated.ReanimatedPackage;
 
 public class PackageList {
   private Application application;
@@ -61,7 +65,9 @@ public class PackageList {
     return new ArrayList<>(Arrays.<ReactPackage>asList(
       new MainReactPackage(mConfig),
       new VectorIconsPackage(),
-      new AsyncStoragePackage()
+      new AsyncStoragePackage(),
+      new RNGestureHandlerPackage(),
+      new ReanimatedPackage()
     ));
   }
 }

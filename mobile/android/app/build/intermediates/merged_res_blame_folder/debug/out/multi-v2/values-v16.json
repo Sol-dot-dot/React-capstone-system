@@ -4,7 +4,7 @@
             "outputFile": "com.capstonemobile.app-mergeDebugResources-2:/values-v16/values-v16.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\aeccc6d471558e99810cf8041378f676\\transformed\\core-1.7.0\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\ec57d087d7be3ca91eb28eba80fceda7\\transformed\\core-1.10.1\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -14,7 +14,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\14015e196bbf85de63cb5d7d6316723c\\transformed\\appcompat-1.4.1\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\5b3fbb18410aa0ad55a5f8dfdf078efe\\transformed\\appcompat-1.4.1\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

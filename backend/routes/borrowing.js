@@ -381,6 +381,394 @@ router.post('/return', auth, async (req, res) => {
     }
 });
 
+// GET /api/borrowing/admin/search/:idNumber - Get student's borrowed books (admin only)
+router.get('/admin/search/:idNumber', auth, async (req, res) => {
+    try {
+        console.log('🔍 Admin search request for student:', req.params.idNumber);
+        console.log('🔍 User type:', req.user.type);
+        
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { idNumber } = req.params;
+
+        // Check if student exists
+        console.log('🔍 Checking if student exists:', idNumber);
+        const student = await checkStudentExists(idNumber);
+        console.log('🔍 Student lookup result:', student);
+        
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        // Get all borrowed books (including overdue)
+        console.log('🔍 Querying borrowed books for student:', idNumber);
+        const [borrowedBooks] = await pool.execute(
+            `SELECT 
+                bt.id,
+                bt.borrowed_at,
+                bt.due_date,
+                bt.returned_at,
+                bt.status,
+                b.title,
+                b.author,
+                b.number_code,
+                b.barcode,
+                b.id as book_id
+             FROM borrowing_transactions bt
+             JOIN books b ON bt.book_id = b.id
+             WHERE bt.student_id_number = ? 
+             AND bt.status IN ('borrowed', 'overdue', 'returned')
+             ORDER BY 
+                CASE 
+                    WHEN bt.status = 'borrowed' THEN 1
+                    WHEN bt.status = 'overdue' THEN 2
+                    WHEN bt.status = 'returned' THEN 3
+                END,
+                bt.due_date ASC`,
+            [idNumber]
+        );
+        console.log('🔍 Borrowed books query result:', borrowedBooks);
+
+        // Calculate due date status for each book
+        const booksWithStatus = borrowedBooks.map(book => {
+            const dueDate = new Date(book.due_date);
+            const today = new Date();
+            
+            // Reset time to compare only dates
+            today.setHours(0, 0, 0, 0);
+            dueDate.setHours(0, 0, 0, 0);
+            
+            let dueStatus = 'normal';
+            let daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+            let isOverdue = false;
+            
+            if (book.status === 'returned') {
+                dueStatus = 'returned';
+                daysUntilDue = 0;
+                isOverdue = false;
+            } else if (dueDate < today) {
+                dueStatus = 'overdue';
+                daysUntilDue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+                isOverdue = true;
+            } else if (dueDate.getTime() === today.getTime()) {
+                dueStatus = 'due_today';
+                daysUntilDue = 0;
+            }
+
+            return {
+                ...book,
+                dueStatus,
+                daysUntilDue,
+                isOverdue
+            };
+        });
+
+        res.json({
+            success: true,
+            data: {
+                student: {
+                    idNumber: student.id_number,
+                    email: student.email,
+                    isVerified: student.is_verified
+                },
+                borrowedBooks: booksWithStatus,
+                totalBorrowed: booksWithStatus.length,
+                overdueCount: booksWithStatus.filter(book => book.isOverdue).length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching student borrowed books:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch student borrowed books'
+        });
+    }
+});
+
+// POST /api/borrowing/admin/return - Process individual book return (admin only)
+router.post('/admin/return', auth, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { 
+            transactionId, 
+            returnCondition = 'good', 
+            conditionNotes = '', 
+            processingNotes = '' 
+        } = req.body;
+        const adminId = req.user.id;
+
+        if (!transactionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Transaction ID is required'
+            });
+        }
+
+        // Get transaction details
+        const [transactions] = await connection.execute(
+            `SELECT bt.*, b.title, b.author, b.number_code, u.id_number, u.email
+             FROM borrowing_transactions bt
+             JOIN books b ON bt.book_id = b.id
+             JOIN users u ON bt.student_id_number = u.id_number
+             WHERE bt.id = ? AND bt.status IN ('borrowed', 'overdue')`,
+            [transactionId]
+        );
+
+        if (transactions.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Transaction not found or already returned'
+            });
+        }
+
+        const transaction = transactions[0];
+
+        // Check if book is overdue
+        const dueDate = new Date(transaction.due_date);
+        const today = new Date();
+        const isOverdue = dueDate < today;
+        let fineApplied = 0;
+        let fineReason = '';
+
+        // If overdue, check if there are unpaid fines
+        if (isOverdue) {
+            const [unpaidFines] = await connection.execute(
+                `SELECT COUNT(*) as count FROM fines 
+                 WHERE student_id_number = ? AND status = 'unpaid'`,
+                [transaction.student_id_number]
+            );
+
+            if (unpaidFines[0].count > 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot return overdue book. Student has unpaid fines. Please process payment in Penalty Management first.',
+                    requiresPayment: true,
+                    studentId: transaction.student_id_number
+                });
+            }
+
+            // Calculate fine for overdue return
+            const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+            const [settings] = await connection.execute(
+                `SELECT setting_value FROM system_settings WHERE setting_key = 'fine_per_day'`
+            );
+            const finePerDay = settings.length > 0 ? parseFloat(settings[0].setting_value) : 5;
+            fineApplied = daysOverdue * finePerDay;
+            fineReason = `Overdue return: ${daysOverdue} days late`;
+        }
+
+        // Insert into return_transactions table
+        const [returnResult] = await connection.execute(
+            `INSERT INTO return_transactions (
+                return_request_id, 
+                active_borrowing_id, 
+                student_id_number, 
+                book_id, 
+                returned_at, 
+                returned_by_admin, 
+                return_condition, 
+                condition_notes, 
+                fine_applied, 
+                fine_reason, 
+                processing_notes, 
+                status
+            ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                null, // return_request_id (can be null for direct admin returns)
+                transactionId, // active_borrowing_id (using transaction ID)
+                transaction.student_id_number,
+                transaction.book_id,
+                adminId,
+                returnCondition,
+                conditionNotes,
+                fineApplied,
+                fineReason,
+                processingNotes,
+                fineApplied > 0 ? 'pending_fine' : 'completed'
+            ]
+        );
+
+        // Process the return
+        await connection.execute(
+            `UPDATE borrowing_transactions 
+             SET status = 'returned', 
+                 returned_at = NOW(),
+                 returned_by_admin = ?
+             WHERE id = ?`,
+            [adminId, transactionId]
+        );
+
+        // Update book status to available
+        await connection.execute(
+            `UPDATE books 
+             SET status = 'available'
+             WHERE id = ?`,
+            [transaction.book_id]
+        );
+
+        // If there's a fine, create a fine record
+        if (fineApplied > 0) {
+            await connection.execute(
+                `INSERT INTO fines (
+                    student_id_number, 
+                    transaction_id, 
+                    fine_amount, 
+                    days_overdue, 
+                    fine_date, 
+                    status
+                ) VALUES (?, ?, ?, ?, CURDATE(), 'unpaid')`,
+                [
+                    transaction.student_id_number,
+                    transactionId,
+                    fineApplied,
+                    Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24))
+                ]
+            );
+        }
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: `Book "${transaction.title}" by ${transaction.author} has been successfully returned by ${transaction.id_number}`,
+            data: {
+                returnTransactionId: returnResult.insertId,
+                transactionId,
+                bookTitle: transaction.title,
+                bookAuthor: transaction.author,
+                studentId: transaction.student_id_number,
+                returnedAt: new Date().toISOString(),
+                returnCondition,
+                fineApplied,
+                fineReason
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error processing book return:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process book return'
+        });
+    } finally {
+        connection.release();
+    }
+});
+
+// GET /api/borrowing/admin/returns - Get return transaction history (admin only)
+router.get('/admin/returns', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { page = 1, limit = 20, studentId, bookId, status, condition } = req.query;
+        const offset = (page - 1) * limit;
+
+        let whereConditions = [];
+        let queryParams = [];
+
+        if (studentId) {
+            whereConditions.push('rt.student_id_number = ?');
+            queryParams.push(studentId);
+        }
+
+        if (bookId) {
+            whereConditions.push('rt.book_id = ?');
+            queryParams.push(bookId);
+        }
+
+        if (status) {
+            whereConditions.push('rt.status = ?');
+            queryParams.push(status);
+        }
+
+        if (condition) {
+            whereConditions.push('rt.return_condition = ?');
+            queryParams.push(condition);
+        }
+
+        const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+
+        // Get return transactions with details
+        const [returns] = await pool.execute(
+            `SELECT 
+                rt.*,
+                u.email as student_email,
+                b.title as book_title,
+                b.author as book_author,
+                b.number_code as book_code,
+                a.username as processed_by_admin,
+                bt.borrowed_at,
+                bt.due_date,
+                DATEDIFF(rt.returned_at, bt.due_date) as days_late
+             FROM return_transactions rt
+             JOIN users u ON rt.student_id_number = u.id_number
+             JOIN books b ON rt.book_id = b.id
+             JOIN admins a ON rt.returned_by_admin = a.id
+             LEFT JOIN borrowing_transactions bt ON rt.active_borrowing_id = bt.id
+             ${whereClause}
+             ORDER BY rt.returned_at DESC
+             LIMIT ? OFFSET ?`,
+            [...queryParams, parseInt(limit), parseInt(offset)]
+        );
+
+        // Get total count
+        const [countResult] = await pool.execute(
+            `SELECT COUNT(*) as total 
+             FROM return_transactions rt
+             ${whereClause}`,
+            queryParams
+        );
+
+        const total = countResult[0].total;
+
+        res.json({
+            success: true,
+            data: {
+                returns,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / limit)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching return transactions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch return transactions'
+        });
+    }
+});
+
 // GET /api/borrowing/user/:idNumber - Get user's own borrowed books (for mobile app)
 router.get('/user/:idNumber', async (req, res) => {
     try {

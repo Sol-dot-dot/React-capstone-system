@@ -1,5 +1,6 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
+apply plugin: "kotlin-android"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -68,6 +69,13 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.core:core:1.10.1'
+        force 'androidx.core:core-ktx:1.10.1'
+    }
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -84,10 +92,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-    }
-    
-    buildFeatures {
-        buildConfig true
     }
     
     signingConfigs {
@@ -113,6 +117,10 @@ android {
 }
 
 dependencies {
+    // Force compatible AndroidX versions
+    implementation("androidx.core:core:1.10.1")
+    implementation("androidx.core:core-ktx:1.10.1")
+    
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

@@ -154,6 +154,200 @@ router.post('/recalculate-semester-counts', auth, async (req, res) => {
     }
 });
 
+// GET /api/penalty/students-with-fines - Get students with fines (admin only)
+router.get('/students-with-fines', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const [students] = await pool.execute(`
+            SELECT 
+                u.id_number,
+                u.email,
+                u.is_verified,
+                COUNT(f.id) as total_fines,
+                COUNT(CASE WHEN f.status = 'unpaid' THEN 1 END) as unpaid_fines,
+                COALESCE(SUM(f.fine_amount), 0) as total_amount,
+                COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount
+            FROM users u
+            LEFT JOIN fines f ON u.id_number = f.student_id_number
+            GROUP BY u.id_number, u.email, u.is_verified
+            HAVING total_fines > 0
+            ORDER BY unpaid_amount DESC
+        `);
+
+        res.json({
+            success: true,
+            data: students
+        });
+    } catch (error) {
+        console.error('Error fetching students with fines:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch students with fines'
+        });
+    }
+});
+
+// POST /api/penalty/mark-paid/:studentId - Mark all fines as paid and return books (admin only)
+router.post('/mark-paid/:studentId', auth, async (req, res) => {
+    const connection = await pool.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId } = req.params;
+        const adminId = req.user.id;
+
+        // 1. Get all unpaid fines for this student with their associated transactions
+        console.log('🔍 Processing payment for student:', studentId);
+        const [unpaidFines] = await connection.execute(
+            `SELECT f.*, bt.id as transaction_id, bt.book_id, bt.status as transaction_status
+             FROM fines f
+             LEFT JOIN borrowing_transactions bt ON f.transaction_id = bt.id
+             WHERE f.student_id_number = ? AND f.status = 'unpaid'`,
+            [studentId]
+        );
+        console.log('🔍 Unpaid fines found:', unpaidFines);
+
+        if (unpaidFines.length === 0) {
+            await connection.rollback();
+            return res.json({
+                success: true,
+                message: `No unpaid fines found for student ${studentId}`,
+                data: {
+                    studentId,
+                    finesUpdated: 0,
+                    booksReturned: 0
+                }
+            });
+        }
+
+        // 2. Mark all unpaid fines as paid
+        const [fineResult] = await connection.execute(
+            `UPDATE fines 
+             SET status = 'paid', 
+                 paid_amount = fine_amount,
+                 paid_date = NOW(),
+                 updated_at = NOW()
+             WHERE student_id_number = ? AND status = 'unpaid'`,
+            [studentId]
+        );
+
+        // 3. Return any borrowed books associated with these fines
+        let booksReturned = 0;
+        console.log('🔍 Processing book returns for fines:', unpaidFines.length);
+        
+        for (const fine of unpaidFines) {
+            console.log('🔍 Processing fine:', fine);
+            if (fine.transaction_id && (fine.transaction_status === 'borrowed' || fine.transaction_status === 'overdue')) {
+                console.log('🔍 Returning book for transaction:', fine.transaction_id, 'Status:', fine.transaction_status);
+                
+                // Return the book (handle both borrowed and overdue status)
+                await connection.execute(
+                    `UPDATE borrowing_transactions 
+                     SET status = 'returned', 
+                         returned_at = NOW(),
+                         returned_by_admin = ?
+                     WHERE id = ? AND status IN ('borrowed', 'overdue')`,
+                    [adminId, fine.transaction_id]
+                );
+
+                // Update book status to available
+                await connection.execute(
+                    `UPDATE books 
+                     SET status = 'available'
+                     WHERE id = ?`,
+                    [fine.book_id]
+                );
+
+                booksReturned++;
+                console.log('✅ Book returned successfully');
+            } else {
+                console.log('⚠️ Fine not linked to borrowed/overdue book or book already returned');
+            }
+        }
+
+        // 4. Return ALL remaining overdue books for this student (regardless of fines)
+        console.log('🔍 Checking for any remaining overdue books...');
+        const [overdueBooks] = await connection.execute(
+            `SELECT bt.id, bt.book_id, b.title
+             FROM borrowing_transactions bt
+             JOIN books b ON bt.book_id = b.id
+             WHERE bt.student_id_number = ? AND bt.status = 'overdue'`,
+            [studentId]
+        );
+        
+        console.log('🔍 Found remaining overdue books:', overdueBooks);
+        
+        for (const book of overdueBooks) {
+                // Return the overdue book
+                await connection.execute(
+                    `UPDATE borrowing_transactions 
+                     SET status = 'returned', 
+                         returned_at = NOW(),
+                         returned_by_admin = ?
+                     WHERE id = ?`,
+                    [adminId, book.id]
+                );
+
+            // Update book status to available
+            await connection.execute(
+                `UPDATE books 
+                 SET status = 'available'
+                 WHERE id = ?`,
+                [book.book_id]
+            );
+
+            booksReturned++;
+            console.log('✅ Overdue book returned:', book.title);
+        }
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: `Successfully processed payment for student ${studentId}. ${fineResult.affectedRows} fine(s) marked as paid and ${booksReturned} book(s) returned. Student can now borrow again.`,
+            data: {
+                studentId,
+                finesUpdated: fineResult.affectedRows,
+                booksReturned: booksReturned
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('❌ Error processing payment and book return:', error);
+        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Error details:', {
+            message: error.message,
+            code: error.code,
+            errno: error.errno,
+            sqlState: error.sqlState,
+            sqlMessage: error.sqlMessage
+        });
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process payment and book return',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 // GET /api/penalty/fines/:studentId - Get student's fines (admin only)
 router.get('/fines/:studentId', auth, async (req, res) => {
     try {
@@ -525,15 +719,15 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                     await connection.execute(`
                         UPDATE borrowing_transactions 
                         SET status = 'returned', 
-                            returned_at = CURRENT_TIMESTAMP
+                            returned_at = CURRENT_TIMESTAMP,
+                            returned_by_admin = ?
                         WHERE id = ?
-                    `, [fine.transaction_id]);
+                    `, [adminId, fine.transaction_id]);
 
                     // Update book status to available
                     await connection.execute(`
                         UPDATE books 
-                        SET status = 'available', 
-                            updated_at = CURRENT_TIMESTAMP
+                        SET status = 'available'
                         WHERE id = (
                             SELECT book_id FROM borrowing_transactions WHERE id = ?
                         )

@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -9,6 +10,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+// import { Provider as PaperProvider } from 'react-native-paper';
 import axios from 'axios';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
@@ -23,6 +25,9 @@ import ModernVerificationScreen from './screens/ModernVerificationScreen';
 import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
 import ModernForgotPasswordScreen from './screens/ModernForgotPasswordScreen';
 import ModernBottomNavigation from './components/ModernBottomNavigation';
+import SimpleLoginScreen from './screens/SimpleLoginScreen';
+import SimpleDashboardScreen from './screens/SimpleDashboardScreen';
+import SimpleModernBottomNavigation from './components/SimpleModernBottomNavigation';
 import NotificationService from './services/NotificationService';
 import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
@@ -1029,21 +1034,21 @@ const App = () => {
   if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
-        {currentScreen === 'dashboard' && (
-          <ModernDashboardScreen 
-            userData={userData} 
-            onNavigate={handleNavigate}
-            onLogout={handleLogout}
-          />
-        )}
+              {currentScreen === 'dashboard' && (
+                <SimpleDashboardScreen
+                  userData={userData}
+                  onNavigate={handleNavigate}
+                  onLogout={handleLogout}
+                />
+              )}
         {currentScreen === 'borrowedBooks' && (
-          <ModernBorrowedBooksScreen 
+          <BorrowedBooksScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
         )}
         {currentScreen === 'penalties' && (
-          <ModernPenaltyScreen 
+          <PenaltyScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
@@ -1057,19 +1062,19 @@ const App = () => {
           />
         )}
         
-        {/* Modern Bottom Navigation */}
-        <ModernBottomNavigation 
+        {/* Ultra Modern Bottom Navigation */}
+        <SimpleModernBottomNavigation
           activeTab={activeTab}
           onTabPress={handleTabPress}
         />
 
-        {/* Chatbot Widget */}
+        {/* Modern Chatbot Widget */}
         <ModernChatbotWidget 
           isVisible={isChatbotVisible} 
           onClose={() => setIsChatbotVisible(false)}
           userInfo={userData}
         />
-      </SafeAreaView>
+        </SafeAreaView>
     );
   }
 
@@ -1084,7 +1089,7 @@ const App = () => {
           />
         )}
         {currentScreen === 'login' && (
-          <ModernLoginScreen 
+          <SimpleLoginScreen
             onLogin={(user) => {
               setUserData(user);
               setCurrentScreen('dashboard');
@@ -1119,7 +1124,7 @@ const App = () => {
             onNavigate={setCurrentScreen}
           />
         )}
-      </SafeAreaView>
+        </SafeAreaView>
     );
   }
 
@@ -1153,7 +1158,7 @@ const App = () => {
         onClose={() => setIsChatbotVisible(false)}
         userInfo={userData}
       />
-    </SafeAreaView>
+      </SafeAreaView>
   );
 };
 
