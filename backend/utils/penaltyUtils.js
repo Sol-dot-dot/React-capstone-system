@@ -46,7 +46,7 @@ async function calculateFine(transactionId) {
                 bt.id,
                 bt.student_id_number,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 bt.status,
                 b.title,
                 b.number_code
@@ -177,11 +177,11 @@ async function getStudentFines(studentIdNumber, status = null, recalculate = tru
                 f.paid_amount,
                 f.days_overdue,
                 f.fine_date,
-                f.paid_date,
+                f.updated_at as paid_date,
                 f.status,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 b.title,
                 b.number_code,
                 b.author
@@ -286,7 +286,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
 
             await connection.execute(
                 `UPDATE fines 
-                 SET paid_amount = ?, status = ?, paid_date = CASE WHEN ? = 'paid' THEN NOW() ELSE paid_date END
+                 SET paid_amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ?`,
                 [newPaidAmount, newStatus, newStatus, fineId]
             );
@@ -345,13 +345,14 @@ async function checkAndUpdateStudentBorrowingStatus(studentIdNumber, connection 
         // Update or insert borrowing status
         await dbConnection.execute(
             `INSERT INTO student_borrowing_status 
-             (student_id_number, can_borrow, reason_blocked) 
-             VALUES (?, ?, ?) 
+             (student_id_number, can_borrow, reason, updated_by) 
+             VALUES (?, ?, ?, ?) 
              ON DUPLICATE KEY UPDATE 
              can_borrow = VALUES(can_borrow), 
-             reason_blocked = VALUES(reason_blocked), 
+             reason = VALUES(reason), 
+             updated_by = VALUES(updated_by),
              updated_at = CURRENT_TIMESTAMP`,
-            [studentIdNumber, canBorrow, reasonBlocked]
+            [studentIdNumber, canBorrow, reasonBlocked, 1]
         );
 
         return { canBorrow, reasonBlocked };
@@ -386,7 +387,7 @@ async function getSemesterTracking(studentIdNumber) {
 async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate, semesterEndDate) {
     try {
         const settings = await getSystemSettings();
-        const booksRequired = parseInt(settings.books_required_per_semester || 20);
+        const maxBooksAllowed = parseInt(settings.max_books_per_student || 5);
 
         // Check if active semester exists
         const [existingSemester] = await db.execute(
@@ -398,17 +399,17 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
             // Update existing semester
             await db.execute(
                 `UPDATE semester_tracking 
-                 SET semester_start_date = ?, semester_end_date = ?, books_required = ?
+                 SET semester_start_date = ?, semester_end_date = ?, max_books_allowed = ?
                  WHERE student_id_number = ? AND status = "active"`,
-                [semesterStartDate, semesterEndDate, booksRequired, studentIdNumber]
+                [semesterStartDate, semesterEndDate, maxBooksAllowed, studentIdNumber]
             );
         } else {
             // Create new semester
             await db.execute(
                 `INSERT INTO semester_tracking 
-                 (student_id_number, semester_start_date, semester_end_date, books_required) 
+                 (student_id_number, semester_start_date, semester_end_date, max_books_allowed) 
                  VALUES (?, ?, ?, ?)`,
-                [studentIdNumber, semesterStartDate, semesterEndDate, booksRequired]
+                [studentIdNumber, semesterStartDate, semesterEndDate, maxBooksAllowed]
             );
         }
 
@@ -438,32 +439,122 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1) {
     }
 }
 
-// Get all overdue books and calculate fines
+// Get all overdue books and calculate fines - FIXED VERSION
 async function processAllOverdueFines() {
     try {
-        const [overdueTransactions] = await db.execute(
-            `SELECT id FROM borrowing_transactions 
-             WHERE status = 'borrowed' AND due_date < NOW()`
-        );
-
-        const results = [];
-        for (const transaction of overdueTransactions) {
-            try {
-                const result = await createOrUpdateFine(transaction.id);
-                results.push({
-                    transactionId: transaction.id,
-                    ...result
-                });
-            } catch (error) {
-                console.error(`Error processing fine for transaction ${transaction.id}:`, error);
-                results.push({
-                    transactionId: transaction.id,
-                    error: error.message
-                });
+        const connection = await db.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+            
+            // Step 1: Update all borrowed books that are past due to overdue status
+            const [updateResult] = await connection.execute(
+                `UPDATE borrowing_transactions 
+                 SET status = 'overdue' 
+                 WHERE status = 'borrowed' 
+                 AND due_date < CURDATE()`
+            );
+            
+            console.log(`✅ Updated ${updateResult.affectedRows} books to overdue status`);
+            
+            // Step 2: Get all overdue transactions
+            const [overdueTransactions] = await connection.execute(
+                `SELECT bt.id, bt.student_id_number, bt.due_date
+                 FROM borrowing_transactions bt
+                 WHERE bt.status = 'overdue' 
+                 AND bt.due_date < CURDATE()`
+            );
+            
+            console.log(`🔍 Found ${overdueTransactions.length} overdue transactions`);
+            
+            // Step 3: Get fine per day setting
+            const [settings] = await connection.execute(
+                `SELECT setting_value FROM system_settings WHERE setting_key = 'fine_per_day'`
+            );
+            const finePerDay = settings.length > 0 ? parseFloat(settings[0].setting_value) : 5;
+            
+            const results = [];
+            let finesCreated = 0;
+            
+            // Step 4: Create fines for all overdue books that don't have fines
+            for (const transaction of overdueTransactions) {
+                try {
+                    // Check if fine already exists
+                    const [existingFines] = await connection.execute(
+                        `SELECT id FROM fines WHERE transaction_id = ?`,
+                        [transaction.id]
+                    );
+                    
+                    if (existingFines.length > 0) {
+                        // Fine already exists, just update it
+                        const daysOverdue = Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24));
+                        const fineAmount = daysOverdue * finePerDay;
+                        
+                        await connection.execute(
+                            `UPDATE fines 
+                             SET fine_amount = ?, days_overdue = ?, updated_at = CURRENT_TIMESTAMP
+                             WHERE transaction_id = ?`,
+                            [fineAmount, daysOverdue, transaction.id]
+                        );
+                        
+                        results.push({
+                            transactionId: transaction.id,
+                            action: 'updated',
+                            fineAmount,
+                            daysOverdue
+                        });
+                    } else {
+                        // Create new fine
+                        const daysOverdue = Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24));
+                        const fineAmount = daysOverdue * finePerDay;
+                        
+                        await connection.execute(
+                            `INSERT INTO fines (
+                                student_id_number, 
+                                transaction_id, 
+                                fine_amount, 
+                                days_overdue, 
+                                fine_date, 
+                                status
+                            ) VALUES (?, ?, ?, ?, CURDATE(), 'unpaid')`,
+                            [transaction.student_id_number, transaction.id, fineAmount, daysOverdue]
+                        );
+                        
+                        finesCreated++;
+                        results.push({
+                            transactionId: transaction.id,
+                            action: 'created',
+                            fineAmount,
+                            daysOverdue
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error processing fine for transaction ${transaction.id}:`, error);
+                    results.push({
+                        transactionId: transaction.id,
+                        error: error.message
+                    });
+                }
             }
+            
+            await connection.commit();
+            
+            console.log(`✅ Created ${finesCreated} new fines for overdue books`);
+            
+            return {
+                booksUpdatedToOverdue: updateResult.affectedRows,
+                finesCreated,
+                totalProcessed: results.length,
+                results
+            };
+            
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
         }
-
-        return results;
+        
     } catch (error) {
         console.error('Error processing all overdue fines:', error);
         throw error;
@@ -486,7 +577,7 @@ async function recalculateAllSemesterCounts() {
                     `SELECT COUNT(*) as total_borrowed 
                      FROM borrowing_transactions 
                      WHERE student_id_number = ? 
-                     AND borrowed_at >= ?`,
+                     AND borrowed_date >= ?`,
                     [semester.student_id_number, semester.semester_start_date]
                 );
 

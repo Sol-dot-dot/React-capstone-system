@@ -150,9 +150,9 @@ router.get('/student/:idNumber', auth, async (req, res) => {
             `SELECT 
                 bt.id,
                 bt.student_id_number,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 bt.status,
                 bt.notes,
                 b.title,
@@ -163,10 +163,10 @@ router.get('/student/:idNumber', auth, async (req, res) => {
                 a2.username as returned_by
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
-             JOIN admins a1 ON bt.borrowed_by_admin = a1.id
-             LEFT JOIN admins a2 ON bt.returned_by_admin = a2.id
+             JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
+             LEFT JOIN users a2 ON bt.returned_by_admin = a2.id AND a2.role = 'admin'
              WHERE bt.student_id_number = ?
-             ORDER BY bt.borrowed_at DESC
+             ORDER BY bt.borrowed_date DESC
              LIMIT ? OFFSET ?`,
             [idNumber, parseInt(limit), offset]
         );
@@ -226,9 +226,9 @@ router.get('/transactions', auth, async (req, res) => {
             `SELECT 
                 bt.id,
                 bt.student_id_number,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 bt.status,
                 bt.notes,
                 b.title,
@@ -239,10 +239,10 @@ router.get('/transactions', auth, async (req, res) => {
                 a2.username as returned_by
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
-             JOIN admins a1 ON bt.borrowed_by_admin = a1.id
-             LEFT JOIN admins a2 ON bt.returned_by_admin = a2.id
+             JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
+             LEFT JOIN users a2 ON bt.returned_by_admin = a2.id AND a2.role = 'admin'
              ${whereClause}
-             ORDER BY bt.borrowed_at DESC
+             ORDER BY bt.borrowed_date DESC
              LIMIT ? OFFSET ?`,
             [...params, parseInt(limit), offset]
         );
@@ -334,7 +334,7 @@ router.post('/return', auth, async (req, res) => {
                 // Update transaction status
                 await connection.execute(
                     `UPDATE borrowing_transactions 
-                     SET status = 'returned', returned_at = NOW(), returned_by_admin = ?
+                     SET status = 'returned', returned_date = CURDATE(), returned_by_admin = ?
                      WHERE id = ?`,
                     [adminId, transactionId]
                 );
@@ -413,14 +413,13 @@ router.get('/admin/search/:idNumber', auth, async (req, res) => {
         const [borrowedBooks] = await pool.execute(
             `SELECT 
                 bt.id,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 bt.status,
                 b.title,
                 b.author,
                 b.number_code,
-                b.barcode,
                 b.id as book_id
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
@@ -580,8 +579,7 @@ router.post('/admin/return', auth, async (req, res) => {
         // Insert into return_transactions table
         const [returnResult] = await connection.execute(
             `INSERT INTO return_transactions (
-                return_request_id, 
-                active_borrowing_id, 
+                transaction_id, 
                 student_id_number, 
                 book_id, 
                 returned_at, 
@@ -592,9 +590,8 @@ router.post('/admin/return', auth, async (req, res) => {
                 fine_reason, 
                 processing_notes, 
                 status
-            ) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
             [
-                null, // return_request_id (can be null for direct admin returns)
                 transactionId, // active_borrowing_id (using transaction ID)
                 transaction.student_id_number,
                 transaction.book_id,
@@ -612,7 +609,7 @@ router.post('/admin/return', auth, async (req, res) => {
         await connection.execute(
             `UPDATE borrowing_transactions 
              SET status = 'returned', 
-                 returned_at = NOW(),
+                 returned_date = CURDATE(),
                  returned_by_admin = ?
              WHERE id = ?`,
             [adminId, transactionId]
@@ -723,16 +720,16 @@ router.get('/admin/returns', auth, async (req, res) => {
                 b.author as book_author,
                 b.number_code as book_code,
                 a.username as processed_by_admin,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                DATEDIFF(rt.returned_at, bt.due_date) as days_late
+                DATEDIFF(rt.returned_date, bt.due_date) as days_late
              FROM return_transactions rt
              JOIN users u ON rt.student_id_number = u.id_number
              JOIN books b ON rt.book_id = b.id
-             JOIN admins a ON rt.returned_by_admin = a.id
+             JOIN users a ON rt.returned_by_admin = a.id AND a.role = 'admin'
              LEFT JOIN borrowing_transactions bt ON rt.active_borrowing_id = bt.id
              ${whereClause}
-             ORDER BY rt.returned_at DESC
+             ORDER BY rt.returned_date DESC
              LIMIT ? OFFSET ?`,
             [...queryParams, parseInt(limit), parseInt(offset)]
         );
@@ -787,7 +784,7 @@ router.get('/user/:idNumber', async (req, res) => {
         const [borrowedBooks] = await pool.execute(
             `SELECT 
                 bt.id,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
                 bt.status,
                 b.title,

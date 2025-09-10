@@ -169,7 +169,7 @@ router.get('/errors', auth, async (req, res) => {
         a.email as admin_email
       FROM error_logs el
       LEFT JOIN users u ON el.user_id = u.id
-      LEFT JOIN admins a ON el.user_id = a.id
+      LEFT JOIN users a ON el.user_id = a.id AND a.role = 'admin'
       WHERE el.resolved = ?
       ORDER BY el.created_at DESC
       LIMIT ?
@@ -241,7 +241,7 @@ router.get('/alerts', auth, async (req, res) => {
         sa.*,
         a.email as resolved_by_email
       FROM system_alerts sa
-      LEFT JOIN admins a ON sa.resolved_by = a.id
+      LEFT JOIN users a ON sa.resolved_by = a.id AND a.role = 'admin'
       WHERE sa.resolved = ?
     `;
     const params = [resolved === 'true'];

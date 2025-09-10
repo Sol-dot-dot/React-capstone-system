@@ -244,12 +244,12 @@ async function getBorrowingStats() {
 
         // Today's borrowings
         const [todayBorrowings] = await db.execute(
-            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE DATE(borrowed_at) = CURDATE()"
+            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE DATE(borrowed_date) = CURDATE()"
         );
 
         // Today's returns
         const [todayReturns] = await db.execute(
-            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE DATE(returned_at) = CURDATE()"
+            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE DATE(returned_date) = CURDATE()"
         );
 
         return {

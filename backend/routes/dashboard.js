@@ -56,25 +56,25 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     const [activityStats] = await connection.execute(`
       SELECT 
         COUNT(*) as totalLogs,
-        COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as todayLogins,
-        COUNT(CASE WHEN DATE(created_at) = CURDATE() AND action = 'login' THEN 1 END) as todayLogins,
+        COUNT(CASE WHEN DATE(login_time) = CURDATE() THEN 1 END) as todayLogins,
+        COUNT(CASE WHEN DATE(login_time) = CURDATE() THEN 1 END) as todayLogins,
         COUNT(DISTINCT user_id) as activeUsers,
-        COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as systemActivity
-      FROM activity_logs
+        COUNT(CASE WHEN DATE(login_time) = CURDATE() THEN 1 END) as systemActivity
+      FROM login_logs
     `);
 
     // Recent Activity
     const [recentActivity] = await connection.execute(`
       SELECT 
-        al.id,
-        al.created_at as time,
-        al.user_type,
-        al.user_id,
-        al.ip_address,
-        al.user_agent,
-        al.action
-      FROM activity_logs al
-      ORDER BY al.created_at DESC
+        ll.id,
+        ll.login_time as time,
+        ll.user_type,
+        ll.user_id,
+        ll.ip_address,
+        ll.user_agent,
+        'login' as action
+      FROM login_logs ll
+      ORDER BY ll.login_time DESC
       LIMIT 10
     `);
 

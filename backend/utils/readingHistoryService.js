@@ -20,24 +20,24 @@ class ReadingHistoryService {
       const [borrowingHistory] = await pool.execute(`
         SELECT 
           bt.id,
-          bt.borrowed_at,
-          bt.returned_at,
+          bt.borrowed_date,
+          bt.returned_date,
           bt.status,
           b.title,
           b.author,
-          b.genre,
+          b.category,
           b.description,
           b.publication_year,
           b.publisher,
-          DATEDIFF(COALESCE(bt.returned_at, NOW()), bt.borrowed_at) as days_kept,
+          DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.borrowed_date) as days_kept,
           CASE 
-            WHEN bt.returned_at IS NOT NULL THEN 1 
+            WHEN bt.returned_date IS NOT NULL THEN 1 
             ELSE 0 
           END as completed_reading
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
         WHERE bt.student_id_number = ?
-        ORDER BY bt.borrowed_at DESC
+        ORDER BY bt.borrowed_date DESC
       `, [studentIdNumber]);
 
       if (borrowingHistory.length === 0) {
@@ -54,7 +54,7 @@ class ReadingHistoryService {
         readingFrequency: this.calculateReadingFrequency(borrowingHistory),
         preferredBookLength: this.analyzeBookLengthPreferences(borrowingHistory),
         readingTrends: this.analyzeReadingTrends(borrowingHistory),
-        genreDiversity: this.calculateGenreDiversity(borrowingHistory),
+        categoryDiversity: this.calculateGenreDiversity(borrowingHistory),
         authorDiversity: this.calculateAuthorDiversity(borrowingHistory),
         recentInterests: this.extractRecentInterests(borrowingHistory.slice(0, 10)),
         readingVelocity: this.calculateReadingVelocity(borrowingHistory)
@@ -87,7 +87,7 @@ class ReadingHistoryService {
           b.id,
           b.title,
           b.author,
-          b.genre,
+          b.category,
           b.description,
           b.publication_year,
           b.publisher,
@@ -136,11 +136,11 @@ class ReadingHistoryService {
 
     // Genre preference (40% weight)
     if (userPreferences.favoriteGenres.length > 0) {
-      const genreMatch = userPreferences.favoriteGenres.find(
-        genre => genre.name.toLowerCase() === book.genre.toLowerCase()
+      const categoryMatch = userPreferences.favoriteGenres.find(
+        category => category.name.toLowerCase() === book.category.toLowerCase()
       );
-      if (genreMatch) {
-        score += (genreMatch.percentage / 100) * 40;
+      if (categoryMatch) {
+        score += (categoryMatch.percentage / 100) * 40;
       }
     }
 
@@ -171,10 +171,10 @@ class ReadingHistoryService {
     }
 
     // Diversity bonus (10% weight)
-    if (userPreferences.genreDiversity < 0.7) {
-      // User prefers diverse reading, give bonus to different genres
+    if (userPreferences.categoryDiversity < 0.7) {
+      // User prefers diverse reading, give bonus to different categorys
       const isNewGenre = !userPreferences.favoriteGenres.some(
-        genre => genre.name.toLowerCase() === book.genre.toLowerCase()
+        category => category.name.toLowerCase() === book.category.toLowerCase()
       );
       if (isNewGenre) {
         score += 10;
@@ -193,12 +193,12 @@ class ReadingHistoryService {
   generateRecommendationReason(book, userPreferences) {
     const reasons = [];
 
-    // Check genre match
-    const genreMatch = userPreferences.favoriteGenres.find(
-      genre => genre.name.toLowerCase() === book.genre.toLowerCase()
+    // Check category match
+    const categoryMatch = userPreferences.favoriteGenres.find(
+      category => category.name.toLowerCase() === book.category.toLowerCase()
     );
-    if (genreMatch) {
-      reasons.push(`matches your interest in ${genreMatch.name} (${genreMatch.percentage}% of your reading)`);
+    if (categoryMatch) {
+      reasons.push(`matches your interest in ${categoryMatch.name} (${categoryMatch.percentage}% of your reading)`);
     }
 
     // Check author match
@@ -226,23 +226,23 @@ class ReadingHistoryService {
   }
 
   /**
-   * Extract favorite genres from reading history
+   * Extract favorite categorys from reading history
    * @param {Array} borrowingHistory - User's borrowing history
-   * @returns {Array} Favorite genres with percentages
+   * @returns {Array} Favorite categorys with percentages
    */
   extractFavoriteGenres(borrowingHistory) {
-    const genreCount = {};
+    const categoryCount = {};
     const totalBooks = borrowingHistory.length;
 
     borrowingHistory.forEach(book => {
-      if (book.genre) {
-        genreCount[book.genre] = (genreCount[book.genre] || 0) + 1;
+      if (book.category) {
+        categoryCount[book.category] = (categoryCount[book.category] || 0) + 1;
       }
     });
 
-    return Object.entries(genreCount)
-      .map(([genre, count]) => ({
-        name: genre,
+    return Object.entries(categoryCount)
+      .map(([category, count]) => ({
+        name: category,
         count,
         percentage: Math.round((count / totalBooks) * 100)
       }))
@@ -296,8 +296,8 @@ class ReadingHistoryService {
   calculateReadingFrequency(borrowingHistory) {
     if (borrowingHistory.length < 2) return 0;
 
-    const firstBorrow = new Date(borrowingHistory[borrowingHistory.length - 1].borrowed_at);
-    const lastBorrow = new Date(borrowingHistory[0].borrowed_at);
+    const firstBorrow = new Date(borrowingHistory[borrowingHistory.length - 1].borrowed_date);
+    const lastBorrow = new Date(borrowingHistory[0].borrowed_date);
     const monthsDiff = (lastBorrow - firstBorrow) / (1000 * 60 * 60 * 24 * 30);
 
     return monthsDiff > 0 ? Math.round((borrowingHistory.length / monthsDiff) * 10) / 10 : 0;
@@ -340,7 +340,7 @@ class ReadingHistoryService {
    */
   analyzeReadingTrends(borrowingHistory) {
     const decadeCount = {};
-    const genreTrends = {};
+    const categoryTrends = {};
 
     borrowingHistory.forEach(book => {
       // Analyze by decade
@@ -349,12 +349,12 @@ class ReadingHistoryService {
         decadeCount[decade] = (decadeCount[decade] || 0) + 1;
       }
 
-      // Analyze genre trends over time
-      if (book.genre) {
-        if (!genreTrends[book.genre]) {
-          genreTrends[book.genre] = [];
+      // Analyze category trends over time
+      if (book.category) {
+        if (!categoryTrends[book.category]) {
+          categoryTrends[book.category] = [];
         }
-        genreTrends[book.genre].push(new Date(book.borrowed_at));
+        categoryTrends[book.category].push(new Date(book.borrowed_date));
       }
     });
 
@@ -364,19 +364,19 @@ class ReadingHistoryService {
     return {
       preferredDecade: preferredDecade ? parseInt(preferredDecade) : null,
       decadeDistribution: decadeCount,
-      genreTrends
+      categoryTrends
     };
   }
 
   /**
-   * Calculate genre diversity (0-1, higher = more diverse)
+   * Calculate category diversity (0-1, higher = more diverse)
    * @param {Array} borrowingHistory - User's borrowing history
    * @returns {number} Genre diversity score
    */
   calculateGenreDiversity(borrowingHistory) {
-    const genres = borrowingHistory.map(book => book.genre).filter(Boolean);
-    const uniqueGenres = new Set(genres).size;
-    const totalBooks = genres.length;
+    const categorys = borrowingHistory.map(book => book.category).filter(Boolean);
+    const uniqueGenres = new Set(categorys).size;
+    const totalBooks = categorys.length;
 
     if (totalBooks === 0) return 0;
     return uniqueGenres / totalBooks;
@@ -407,9 +407,9 @@ class ReadingHistoryService {
     const recentThemes = {};
 
     recentBooks.forEach(book => {
-      // Count recent genres
-      if (book.genre) {
-        recentGenres[book.genre] = (recentGenres[book.genre] || 0) + 1;
+      // Count recent categorys
+      if (book.category) {
+        recentGenres[book.category] = (recentGenres[book.category] || 0) + 1;
       }
 
       // Count recent authors
@@ -427,10 +427,10 @@ class ReadingHistoryService {
     });
 
     return {
-      genres: Object.entries(recentGenres)
+      categorys: Object.entries(recentGenres)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
-        .map(([genre, count]) => ({ genre, count })),
+        .map(([category, count]) => ({ category, count })),
       authors: Object.entries(recentAuthors)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
@@ -467,8 +467,8 @@ class ReadingHistoryService {
     const recentBooks = borrowingHistory.slice(0, 10);
     if (recentBooks.length < 2) return 0;
 
-    const firstRecent = new Date(recentBooks[recentBooks.length - 1].borrowed_at);
-    const lastRecent = new Date(recentBooks[0].borrowed_at);
+    const firstRecent = new Date(recentBooks[recentBooks.length - 1].borrowed_date);
+    const lastRecent = new Date(recentBooks[0].borrowed_date);
     const monthsDiff = (lastRecent - firstRecent) / (1000 * 60 * 60 * 24 * 30);
 
     return monthsDiff > 0 ? Math.round((recentBooks.length / monthsDiff) * 10) / 10 : 0;
@@ -488,9 +488,9 @@ class ReadingHistoryService {
       readingFrequency: 0,
       preferredBookLength: 300,
       readingTrends: { preferredDecade: null },
-      genreDiversity: 0,
+      categoryDiversity: 0,
       authorDiversity: 0,
-      recentInterests: { genres: [], authors: [], themes: [] },
+      recentInterests: { categorys: [], authors: [], themes: [] },
       readingVelocity: 0
     };
   }
@@ -508,21 +508,21 @@ class ReadingHistoryService {
         SELECT 
           COUNT(*) as total_borrows,
           COUNT(DISTINCT student_id_number) as active_readers,
-          COUNT(CASE WHEN returned_at IS NOT NULL THEN 1 END) as completed_reads,
-          AVG(DATEDIFF(COALESCE(returned_at, NOW()), borrowed_at)) as avg_days_kept
+          COUNT(CASE WHEN returned_date IS NOT NULL THEN 1 END) as completed_reads,
+          AVG(DATEDIFF(COALESCE(returned_date, NOW()), borrowed_date)) as avg_days_kept
         FROM borrowing_transactions
       `);
 
-      // Get popular genres
+      // Get popular categorys
       const [popularGenres] = await pool.execute(`
         SELECT 
-          b.genre,
+          b.category,
           COUNT(*) as borrow_count,
           COUNT(DISTINCT bt.student_id_number) as unique_readers
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
-        WHERE b.genre IS NOT NULL
-        GROUP BY b.genre
+        WHERE b.category IS NOT NULL
+        GROUP BY b.category
         ORDER BY borrow_count DESC
         LIMIT 10
       `);
@@ -543,12 +543,12 @@ class ReadingHistoryService {
       // Get reading trends by month
       const [monthlyTrends] = await pool.execute(`
         SELECT 
-          DATE_FORMAT(borrowed_at, '%Y-%m') as month,
+          DATE_FORMAT(borrowed_date, '%Y-%m') as month,
           COUNT(*) as borrows,
           COUNT(DISTINCT student_id_number) as unique_readers
         FROM borrowing_transactions
-        WHERE borrowed_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-        GROUP BY DATE_FORMAT(borrowed_at, '%Y-%m')
+        WHERE borrowed_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        GROUP BY DATE_FORMAT(borrowed_date, '%Y-%m')
         ORDER BY month DESC
       `);
 

@@ -152,7 +152,7 @@ router.post('/recommend', async (req, res) => {
     }
     
     // Check if message is asking for book recommendations
-    const isBookRequest = /book|recommend|suggest|find|search|read|novel|story|author|genre/i.test(message);
+    const isBookRequest = /book|recommend|suggest|find|search|read|novel|story|author|category/i.test(message);
     
     let response;
     let books = [];
@@ -167,12 +167,12 @@ router.post('/recommend', async (req, res) => {
           response = await chatbotService.generateRecommendation(message, books, studentIdNumber);
         } else {
           // No books found, get general response
-          response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific genre, author, or describe the type of story you want to read.";
+          response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
         }
       } catch (searchError) {
         console.error('❌ Error in book search:', searchError.message);
         // Graceful fallback for RAG failures
-        response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific genre, author, or describe the type of story you want to read.";
+        response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
         books = [];
       }
     } else {

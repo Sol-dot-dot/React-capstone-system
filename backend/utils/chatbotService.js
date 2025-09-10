@@ -69,7 +69,7 @@ class ChatbotService {
       // Create detailed book context for RAG
       const bookContext = bookResults.map((book, index) => 
         `${index + 1}. **${book.title}** by ${book.author}
-   Genre: ${book.genre}
+   Category: ${book.category}
    Description: ${book.description}
    Availability: ${book.status}
    Relevance Score: ${(book.similarity * 100).toFixed(1)}%`
@@ -82,11 +82,11 @@ class ChatbotService {
 
 User's Reading Profile:
 - Total books borrowed: ${userPreferences.totalBooksBorrowed}
-- Favorite genres: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
+- Favorite categorys: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
 - Favorite authors: ${userPreferences.favoriteAuthors.slice(0, 3).map(a => a.name).join(', ')}
 - Reading frequency: ${userPreferences.readingFrequency} books/month
 - Average reading time: ${userPreferences.averageDaysKept} days per book
-- Genre diversity: ${(userPreferences.genreDiversity * 100).toFixed(0)}% diverse
+- Genre diversity: ${(userPreferences.categoryDiversity * 100).toFixed(0)}% diverse
 
 Use this information to make more personalized recommendations that align with their reading patterns.`;
       }
@@ -100,7 +100,7 @@ Please provide a natural, conversational response that:
 1. Acknowledges the user's request
 2. Recommends specific books from the retrieved context
 3. Explains why each recommended book matches their interests
-4. Mentions the genre and key appeal of each book
+4. Mentions the category and key appeal of each book
 5. ${userPreferences ? 'References their reading history and preferences when relevant' : 'Keeps the tone friendly and encouraging'}
 6. Suggests how the books relate to their reading patterns (if user has history)
 
@@ -147,7 +147,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
     const isThemeRequest = this.containsThemeKeywords(queryTokens);
     
     if (bookResults.length === 0) {
-      return `I couldn't find specific books matching "${userQuery}". Could you please provide more details about what you're looking for? For example, you could mention a specific genre, author, or theme you're interested in.`;
+      return `I couldn't find specific books matching "${userQuery}". Could you please provide more details about what you're looking for? For example, you could mention a specific category, author, or theme you're interested in.`;
     }
     
     // Generate contextual response
@@ -155,16 +155,16 @@ If the retrieved books don't match well, politely explain this and suggest alter
     
     bookResults.forEach((book, index) => {
       response += `${index + 1}. **${book.title}** by ${book.author}\n`;
-      response += `   Genre: ${book.genre}\n`;
+      response += `   Category: ${book.category}\n`;
       response += `   ${book.description}\n\n`;
     });
     
     // Add personalized suggestion based on user preferences
     if (userPreferences && userPreferences.totalBooksBorrowed > 0) {
-      // Check if any recommended books match user's favorite genres
+      // Check if any recommended books match user's favorite categorys
       const matchingGenres = bookResults.filter(book => 
-        userPreferences.favoriteGenres.some(genre => 
-          genre.name.toLowerCase() === book.genre.toLowerCase()
+        userPreferences.favoriteGenres.some(category => 
+          category.name.toLowerCase() === book.category.toLowerCase()
         )
       );
       
@@ -196,8 +196,8 @@ If the retrieved books don't match well, politely explain this and suggest alter
   }
 
   containsGenreKeywords(tokens) {
-    const genreKeywords = ['fiction', 'mystery', 'romance', 'sci-fi', 'fantasy', 'thriller', 'biography', 'history', 'poetry'];
-    return tokens.some(token => genreKeywords.includes(token));
+    const categoryKeywords = ['fiction', 'mystery', 'romance', 'sci-fi', 'fantasy', 'thriller', 'biography', 'history', 'poetry'];
+    return tokens.some(token => categoryKeywords.includes(token));
   }
 
   containsAuthorKeywords(tokens) {
@@ -211,9 +211,9 @@ If the retrieved books don't match well, politely explain this and suggest alter
   }
 
   extractGenre(tokens) {
-    const genreKeywords = ['fiction', 'mystery', 'romance', 'sci-fi', 'fantasy', 'thriller', 'biography', 'history', 'poetry'];
+    const categoryKeywords = ['fiction', 'mystery', 'romance', 'sci-fi', 'fantasy', 'thriller', 'biography', 'history', 'poetry'];
     for (const token of tokens) {
-      if (genreKeywords.includes(token)) {
+      if (categoryKeywords.includes(token)) {
         return token;
       }
     }
@@ -263,7 +263,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
     }
     
     if (this.containsHelp(queryTokens)) {
-      return "I can help you find books by genre, author, theme, or description using my AI intelligence. Just tell me what you're interested in, and I'll recommend some great reads!";
+      return "I can help you find books by category, author, theme, or description using my AI intelligence. Just tell me what you're interested in, and I'll recommend some great reads!";
     }
     
     if (this.containsThanks(queryTokens)) {
@@ -271,7 +271,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
     }
     
     // Default helpful response
-    return "I'd be happy to help you find the perfect book using my AI intelligence! Could you tell me more about what you're looking for? For example, you could mention a genre you enjoy, an author you like, or describe the type of story you want to read.";
+    return "I'd be happy to help you find the perfect book using my AI intelligence! Could you tell me more about what you're looking for? For example, you could mention a category you enjoy, an author you like, or describe the type of story you want to read.";
   }
 
   containsGreeting(tokens) {
@@ -316,7 +316,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
       // Generate AI explanation for the recommendations
       const bookContext = recommendations.map((book, index) => 
         `${index + 1}. **${book.title}** by ${book.author}
-   Genre: ${book.genre}
+   Category: ${book.category}
    Description: ${book.description}
    Personalization Score: ${book.personalizationScore.toFixed(1)}%
    Reason: ${book.recommendationReason}`
@@ -326,7 +326,7 @@ If the retrieved books don't match well, politely explain this and suggest alter
 
 User's Reading Profile:
 - Total books borrowed: ${userPreferences.totalBooksBorrowed}
-- Favorite genres: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
+- Favorite categorys: ${userPreferences.favoriteGenres.slice(0, 3).map(g => `${g.name} (${g.percentage}%)`).join(', ')}
 - Favorite authors: ${userPreferences.favoriteAuthors.slice(0, 3).map(a => a.name).join(', ')}
 - Reading frequency: ${userPreferences.readingFrequency} books/month
 - Average reading time: ${userPreferences.averageDaysKept} days per book
@@ -408,7 +408,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
     
     recommendations.forEach((book, index) => {
       response += `${index + 1}. **${book.title}** by ${book.author}\n`;
-      response += `   Genre: ${book.genre}\n`;
+      response += `   Category: ${book.category}\n`;
       response += `   ${book.description}\n`;
       response += `   Why I recommend it: ${book.recommendationReason}\n\n`;
     });

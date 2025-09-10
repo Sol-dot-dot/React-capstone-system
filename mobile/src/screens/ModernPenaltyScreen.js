@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
 // Fallback icon component in case vector icons don't load
@@ -56,7 +57,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
   const loadPenaltyData = async () => {
     try {
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/penalty/user/${userData.idNumber}`
+        buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))
       );
 
       if (response.data.success) {

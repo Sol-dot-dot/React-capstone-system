@@ -77,7 +77,7 @@ function formatBookData(book) {
         title: book.title.trim(),
         author: book.author.trim(),
         publisher: book.publisher ? book.publisher.trim() : null,
-        genre: book.genre ? book.genre.trim() : null,
+        category: book.category ? book.category.trim() : null,
         description: book.description ? book.description.trim() : null,
         location: book.location ? book.location.trim() : null
     };

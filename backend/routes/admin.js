@@ -155,18 +155,18 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
         const [borrowingHistory] = await pool.execute(`
             SELECT 
                 bt.id,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 bt.status,
                 b.title,
                 b.author,
                 b.number_code,
-                DATEDIFF(COALESCE(bt.returned_at, NOW()), bt.due_date) as days_overdue
+                DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.due_date) as days_overdue
             FROM borrowing_transactions bt
             JOIN books b ON bt.book_id = b.id
             WHERE bt.student_id_number = ?
-            ORDER BY bt.borrowed_at DESC
+            ORDER BY bt.borrowed_date DESC
             LIMIT 50
         `, [idNumber]);
 
@@ -178,11 +178,11 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
                 f.paid_amount,
                 f.days_overdue,
                 f.fine_date,
-                f.paid_date,
+                f.updated_at as paid_date,
                 f.status,
                 b.title,
                 b.number_code,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date
             FROM fines f
             JOIN borrowing_transactions bt ON f.transaction_id = bt.id
@@ -198,7 +198,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
                 semester_start_date,
                 semester_end_date,
                 books_borrowed_count,
-                books_required,
+                max_books_allowed,
                 status
             FROM semester_tracking
             WHERE student_id_number = ?
@@ -209,8 +209,8 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
         const [borrowingStatus] = await pool.execute(`
             SELECT 
                 can_borrow,
-                reason_blocked,
-                blocked_until
+                reason,
+                updated_at
             FROM student_borrowing_status
             WHERE student_id_number = ?
         `, [idNumber]);

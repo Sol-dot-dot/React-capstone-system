@@ -52,19 +52,23 @@ router.put('/settings', auth, async (req, res) => {
             });
         }
 
-        const { settings } = req.body;
+        const { settings, setting_key, setting_value } = req.body;
         const adminId = req.user.id;
 
-        if (!settings || typeof settings !== 'object') {
+        // Handle both formats: individual setting or settings object
+        if (setting_key && setting_value !== undefined) {
+            // Individual setting update
+            await updateSystemSetting(setting_key, setting_value.toString(), adminId);
+        } else if (settings && typeof settings === 'object') {
+            // Multiple settings update
+            for (const [key, value] of Object.entries(settings)) {
+                await updateSystemSetting(key, value.toString(), adminId);
+            }
+        } else {
             return res.status(400).json({
                 success: false,
-                message: 'Settings object is required'
+                message: 'Either settings object or setting_key/setting_value is required'
             });
-        }
-
-        // Update each setting
-        for (const [key, value] of Object.entries(settings)) {
-            await updateSystemSetting(key, value.toString(), adminId);
         }
 
         res.json({
@@ -239,7 +243,7 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
             `UPDATE fines 
              SET status = 'paid', 
                  paid_amount = fine_amount,
-                 paid_date = NOW(),
+                 updated_at = CURRENT_TIMESTAMP,
                  updated_at = NOW()
              WHERE student_id_number = ? AND status = 'unpaid'`,
             [studentId]
@@ -258,7 +262,7 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
                 await connection.execute(
                     `UPDATE borrowing_transactions 
                      SET status = 'returned', 
-                         returned_at = NOW(),
+                         returned_date = CURDATE(),
                          returned_by_admin = ?
                      WHERE id = ? AND status IN ('borrowed', 'overdue')`,
                     [adminId, fine.transaction_id]
@@ -296,7 +300,7 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
                 await connection.execute(
                     `UPDATE borrowing_transactions 
                      SET status = 'returned', 
-                         returned_at = NOW(),
+                         returned_date = CURDATE(),
                          returned_by_admin = ?
                      WHERE id = ?`,
                     [adminId, book.id]
@@ -531,11 +535,11 @@ router.get('/all-fines', auth, async (req, res) => {
                 f.paid_amount,
                 f.days_overdue,
                 f.fine_date,
-                f.paid_date,
+                f.updated_at as paid_date,
                 f.status,
-                bt.borrowed_at,
+                bt.borrowed_date,
                 bt.due_date,
-                bt.returned_at,
+                bt.returned_date,
                 b.title,
                 b.number_code,
                 b.author,
@@ -703,7 +707,7 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                         UPDATE fines 
                         SET paid_amount = fine_amount, 
                             status = 'paid', 
-                            paid_date = NOW(),
+                            updated_at = CURRENT_TIMESTAMP,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     `, [fine.id]);
@@ -719,7 +723,7 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                     await connection.execute(`
                         UPDATE borrowing_transactions 
                         SET status = 'returned', 
-                            returned_at = CURRENT_TIMESTAMP,
+                            returned_date = CURDATE(),
                             returned_by_admin = ?
                         WHERE id = ?
                     `, [adminId, fine.transaction_id]);
@@ -765,6 +769,293 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to process payment for all fines'
+        });
+    }
+});
+
+// GET /api/penalty/overdue-books - Get all overdue books (admin only)
+router.get('/overdue-books', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { page = 1, limit = 50, search } = req.query;
+        const offset = (page - 1) * limit;
+
+        let whereClause = '';
+        let params = [];
+
+        if (search) {
+            whereClause = `WHERE (student_id_number LIKE ? OR title LIKE ? OR number_code LIKE ? OR email LIKE ?)`;
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        // Get all overdue books using the view
+        const [overdueBooks] = await pool.execute(
+            `SELECT * FROM overdue_books_with_fines
+             ${whereClause}
+             LIMIT ? OFFSET ?`,
+            [...params, parseInt(limit), offset]
+        );
+
+        // Get total count
+        const [totalRows] = await pool.execute(
+            `SELECT COUNT(*) as count FROM overdue_books_with_fines ${whereClause}`,
+            params
+        );
+
+        // Group by student for better organization
+        const studentMap = new Map();
+        
+        overdueBooks.forEach(book => {
+            const studentId = book.student_id_number;
+            if (!studentMap.has(studentId)) {
+                studentMap.set(studentId, {
+                    studentId,
+                    email: book.email,
+                    totalOverdueBooks: 0,
+                    totalUnpaidFines: 0,
+                    totalUnpaidAmount: 0,
+                    overdueBooks: []
+                });
+            }
+            
+            const student = studentMap.get(studentId);
+            student.overdueBooks.push(book);
+            student.totalOverdueBooks++;
+            
+            if (book.fine_id && book.fine_status === 'unpaid') {
+                student.totalUnpaidFines++;
+                student.totalUnpaidAmount += (book.fine_amount - book.paid_amount);
+            }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                students: Array.from(studentMap.values()),
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: totalRows[0].count,
+                    pages: Math.ceil(totalRows[0].count / limit)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching overdue books:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch overdue books'
+        });
+    }
+});
+
+// POST /api/penalty/fix-overdue-fines - Fix missing fines for overdue books
+router.post('/fix-overdue-fines', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        console.log('🔧 Admin requested to fix overdue fines...');
+        const results = await processAllOverdueFines();
+        
+        res.json({
+            success: true,
+            message: 'Overdue fines fixed successfully',
+            data: results
+        });
+    } catch (error) {
+        console.error('Error fixing overdue fines:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fix overdue fines'
+        });
+    }
+});
+
+// POST /api/penalty/return-paid-overdue - Return paid overdue books and store history
+router.post('/return-paid-overdue', auth, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId, transactionIds } = req.body;
+        const adminId = req.user.id;
+
+        if (!studentId || !transactionIds || !Array.isArray(transactionIds)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Student ID and transaction IDs are required'
+            });
+        }
+
+        let returnedBooks = 0;
+        let historyRecords = [];
+
+        for (const transactionId of transactionIds) {
+            // Get transaction details
+            const [transactions] = await connection.execute(
+                `SELECT bt.*, b.title, b.author, b.number_code, f.fine_amount, f.paid_amount
+                 FROM borrowing_transactions bt
+                 JOIN books b ON bt.book_id = b.id
+                 LEFT JOIN fines f ON bt.id = f.transaction_id
+                 WHERE bt.id = ? AND bt.student_id_number = ? AND bt.status = 'overdue'`,
+                [transactionId, studentId]
+            );
+
+            if (transactions.length === 0) continue;
+
+            const transaction = transactions[0];
+
+            // Check if all fines are paid for this transaction
+            const [unpaidFines] = await connection.execute(
+                `SELECT COUNT(*) as count FROM fines 
+                 WHERE transaction_id = ? AND status = 'unpaid'`,
+                [transactionId]
+            );
+
+            if (unpaidFines[0].count > 0) {
+                continue; // Skip if there are unpaid fines
+            }
+
+            // Return the book
+            await connection.execute(
+                `UPDATE borrowing_transactions 
+                 SET status = 'returned', 
+                     returned_date = CURDATE(),
+                     returned_by_admin = ?
+                 WHERE id = ?`,
+                [adminId, transactionId]
+            );
+
+            // Update book status
+            await connection.execute(
+                `UPDATE books 
+                 SET status = 'available'
+                 WHERE id = ?`,
+                [transaction.book_id]
+            );
+
+            // Store in overdue history
+            await connection.execute(
+                `INSERT INTO overdue_history 
+                 (student_id_number, transaction_id, book_title, book_author, book_code,
+                  borrowed_date, due_date, returned_date, days_overdue, fine_amount, paid_amount,
+                  returned_by_admin, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, NOW())`,
+                [
+                    studentId,
+                    transactionId,
+                    transaction.title,
+                    transaction.author,
+                    transaction.number_code,
+                    transaction.borrowed_date,
+                    transaction.due_date,
+                    Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24)),
+                    transaction.fine_amount || 0,
+                    transaction.paid_amount || 0,
+                    adminId
+                ]
+            );
+
+            historyRecords.push({
+                transactionId,
+                bookTitle: transaction.title,
+                daysOverdue: Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24)),
+                fineAmount: transaction.fine_amount || 0,
+                paidAmount: transaction.paid_amount || 0
+            });
+
+            returnedBooks++;
+        }
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: `Successfully returned ${returnedBooks} paid overdue books`,
+            data: {
+                returnedBooks,
+                historyRecords
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error returning paid overdue books:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to return paid overdue books'
+        });
+    } finally {
+        connection.release();
+    }
+});
+
+// GET /api/penalty/overdue-history/:studentId - Get student's overdue history
+router.get('/overdue-history/:studentId', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId } = req.params;
+        const { page = 1, limit = 20 } = req.query;
+        const offset = (page - 1) * limit;
+
+        const [history] = await pool.execute(
+            `SELECT oh.*, a.email as returned_by_admin_name
+             FROM overdue_history oh
+             JOIN users a ON oh.returned_by_admin = a.id AND a.role = 'admin'
+             WHERE oh.student_id_number = ?
+             ORDER BY oh.returned_date DESC
+             LIMIT ? OFFSET ?`,
+            [studentId, parseInt(limit), offset]
+        );
+
+        const [totalRows] = await pool.execute(
+            `SELECT COUNT(*) as count FROM overdue_history WHERE student_id_number = ?`,
+            [studentId]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                history,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: totalRows[0].count,
+                    pages: Math.ceil(totalRows[0].count / limit)
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching overdue history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch overdue history'
         });
     }
 });

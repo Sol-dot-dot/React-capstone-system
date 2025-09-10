@@ -17,7 +17,7 @@ router.get('/', auth, async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const search = req.query.search || '';
         const status = req.query.status || '';
-        const genre = req.query.genre || '';
+        const category = req.query.category || '';
         
         const offset = (page - 1) * limit;
         
@@ -25,9 +25,9 @@ router.get('/', auth, async (req, res) => {
         let params = [];
         
         if (search) {
-            whereClause += ' AND (title LIKE ? OR author LIKE ? OR isbn LIKE ? OR barcode LIKE ? OR number_code LIKE ?)';
+            whereClause += ' AND (title LIKE ? OR author LIKE ? OR isbn LIKE ? OR number_code LIKE ?)';
             const searchParam = `%${search}%`;
-            params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
+            params.push(searchParam, searchParam, searchParam, searchParam);
         }
         
         if (status) {
@@ -35,9 +35,9 @@ router.get('/', auth, async (req, res) => {
             params.push(status);
         }
         
-        if (genre) {
-            whereClause += ' AND genre = ?';
-            params.push(genre);
+        if (category) {
+            whereClause += ' AND category = ?';
+            params.push(category);
         }
         
         // Get total count
@@ -47,9 +47,8 @@ router.get('/', auth, async (req, res) => {
         
         // Get books with pagination
         const query = `
-            SELECT b.*, a.username as added_by_name 
+            SELECT b.*, 'System' as added_by_name 
             FROM books b 
-            LEFT JOIN admins a ON b.added_by = a.id 
             ${whereClause}
             ORDER BY b.created_at DESC 
             LIMIT ? OFFSET ?
@@ -58,8 +57,8 @@ router.get('/', auth, async (req, res) => {
         params.push(limit, offset);
         const [books] = await db.execute(query, params);
         
-        // Get unique genres for filter
-        const [genres] = await db.execute('SELECT DISTINCT genre FROM books WHERE genre IS NOT NULL AND genre != ""');
+        // Get unique categorys for filter
+        const [categorys] = await db.execute('SELECT DISTINCT category FROM books WHERE category IS NOT NULL AND category != ""');
         
         res.json({
             success: true,
@@ -72,7 +71,7 @@ router.get('/', auth, async (req, res) => {
                     totalPages: Math.ceil(totalBooks / limit)
                 },
                 filters: {
-                    genres: genres.map(g => g.genre)
+                    categorys: categorys.map(g => g.category)
                 }
             }
         });
@@ -88,9 +87,8 @@ router.get('/:id', auth, async (req, res) => {
         const { id } = req.params;
         
         const query = `
-            SELECT b.*, a.username as added_by_name 
+            SELECT b.*, 'System' as added_by_name 
             FROM books b 
-            LEFT JOIN admins a ON b.added_by = a.id 
             WHERE b.id = ?
         `;
         
@@ -125,20 +123,19 @@ router.post('/', auth, async (req, res) => {
             });
         }
         
-        // Generate unique barcode and number code
-        let barcode, numberCode;
+        // Generate unique number code
+        let numberCode;
         let attempts = 0;
         const maxAttempts = 10;
         
         do {
-            barcode = generateBarcode();
             numberCode = generateNumberCode();
             attempts++;
             
-            // Check if barcode or number code already exists
+            // Check if number code already exists
             const [existing] = await db.execute(
-                'SELECT id FROM books WHERE barcode = ? OR number_code = ?',
-                [barcode, numberCode]
+                'SELECT id FROM books WHERE number_code = ?',
+                [numberCode]
             );
             
             if (existing.length === 0) break;
@@ -160,9 +157,9 @@ router.post('/', auth, async (req, res) => {
         const query = `
             INSERT INTO books (
                 title, author, isbn, publisher, publication_year, 
-                genre, description, barcode, number_code, 
-                status, location, added_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                category, description, number_code, 
+                status, pages
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         
         const values = [
@@ -171,13 +168,11 @@ router.post('/', auth, async (req, res) => {
             bookData.isbn,
             bookData.publisher || null,
             bookData.publication_year || null,
-            bookData.genre || null,
+            bookData.category || null,
             bookData.description || null,
-            barcode,
             numberCode,
             bookData.status || 'available',
-            bookData.location || null,
-            req.user.id
+            bookData.pages || null
         ];
         
         const [result] = await db.execute(query, values);
@@ -225,8 +220,8 @@ router.put('/:id', auth, async (req, res) => {
         const query = `
             UPDATE books SET 
                 title = ?, author = ?, isbn = ?, publisher = ?, 
-                publication_year = ?, genre = ?, description = ?, 
-                status = ?, location = ?, updated_at = CURRENT_TIMESTAMP
+                publication_year = ?, category = ?, description = ?, 
+                status = ?, pages = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `;
         
@@ -236,10 +231,10 @@ router.put('/:id', auth, async (req, res) => {
             bookData.isbn || null,
             bookData.publisher || null,
             bookData.publication_year || null,
-            bookData.genre || null,
+            bookData.category || null,
             bookData.description || null,
             bookData.status || existingBook[0].status,
-            bookData.location || null,
+            bookData.pages || null,
             id
         ];
         
@@ -296,12 +291,12 @@ router.get('/stats/overview', auth, async (req, res) => {
             GROUP BY status
         `);
         
-        // Books by genre
-        const [genreStats] = await db.execute(`
-            SELECT genre, COUNT(*) as count 
+        // Books by category
+        const [categoryStats] = await db.execute(`
+            SELECT category, COUNT(*) as count 
             FROM books 
-            WHERE genre IS NOT NULL AND genre != ''
-            GROUP BY genre 
+            WHERE category IS NOT NULL AND category != ''
+            GROUP BY category 
             ORDER BY count DESC 
             LIMIT 10
         `);
@@ -319,7 +314,7 @@ router.get('/stats/overview', auth, async (req, res) => {
             data: {
                 totalBooks: totalBooks[0].total,
                 statusStats,
-                genreStats,
+                categoryStats,
                 monthlyAdded: monthlyStats[0].count
             }
         });

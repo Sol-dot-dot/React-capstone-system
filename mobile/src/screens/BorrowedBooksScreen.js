@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
 import NotificationService from '../services/NotificationService';
 
 const BorrowedBooksScreen = ({ userData, onBack }) => {
@@ -26,7 +27,7 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}`
+        buildApiUrl(getEndpoint('BORROWING', 'GET_USER_BORROWED_BOOKS', userData.idNumber))
       );
 
       if (response.data.success) {

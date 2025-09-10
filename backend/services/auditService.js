@@ -226,7 +226,7 @@ class AuditService {
           a.email as admin_email
         FROM audit_logs al
         LEFT JOIN users u ON al.user_id = u.id
-        LEFT JOIN admins a ON al.user_id = a.id
+        LEFT JOIN users a ON al.user_id = a.id AND a.role = 'admin'
         WHERE 1=1
       `;
       

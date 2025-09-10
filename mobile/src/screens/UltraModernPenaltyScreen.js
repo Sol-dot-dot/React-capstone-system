@@ -6,6 +6,7 @@ import {
   ScrollView,
   Dimensions,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import {
   Card,
@@ -36,46 +37,16 @@ import {
   MaterialIcons,
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
+import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
 const UltraModernPenaltyScreen = ({ userData, onBack }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const [penalties, setPenalties] = useState([
-    {
-      id: 1,
-      bookTitle: 'The Great Gatsby',
-      bookAuthor: 'F. Scott Fitzgerald',
-      penaltyType: 'overdue',
-      amount: 15.00,
-      dueDate: '2024-02-15',
-      status: 'pending',
-      daysOverdue: 5,
-      description: 'Late return penalty',
-    },
-    {
-      id: 2,
-      bookTitle: '1984',
-      bookAuthor: 'George Orwell',
-      penaltyType: 'overdue',
-      amount: 25.00,
-      dueDate: '2024-02-10',
-      status: 'pending',
-      daysOverdue: 10,
-      description: 'Late return penalty',
-    },
-    {
-      id: 3,
-      bookTitle: 'To Kill a Mockingbird',
-      bookAuthor: 'Harper Lee',
-      penaltyType: 'damage',
-      amount: 50.00,
-      dueDate: '2024-02-20',
-      status: 'paid',
-      daysOverdue: 0,
-      description: 'Book damage penalty',
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [penalties, setPenalties] = useState([]);
+  const [penaltyData, setPenaltyData] = useState(null);
 
   // Animation values
   const fadeAnim = useSharedValue(0);
@@ -87,14 +58,49 @@ const UltraModernPenaltyScreen = ({ userData, onBack }) => {
     fadeAnim.value = withTiming(1, { duration: 800 });
     slideAnim.value = withSpring(0, { damping: 15, stiffness: 150 });
     scaleAnim.value = withSpring(1, { damping: 12, stiffness: 100 });
+    
+    // Load penalty data
+    loadPenaltyData();
   }, []);
 
-  const onRefresh = React.useCallback(() => {
+  const loadPenaltyData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))
+      );
+
+      if (response.data.success) {
+        const data = response.data.data;
+        setPenaltyData(data);
+        
+        // Transform fines data to match the UI format
+        const transformedPenalties = data.fines.map(fine => ({
+          id: fine.id,
+          bookTitle: fine.title,
+          bookAuthor: fine.author,
+          penaltyType: 'overdue',
+          amount: fine.fine_amount - fine.paid_amount,
+          dueDate: fine.due_date,
+          status: fine.status === 'unpaid' ? 'pending' : 'paid',
+          daysOverdue: fine.days_overdue,
+          description: 'Late return penalty',
+        }));
+        
+        setPenalties(transformedPenalties);
+      }
+    } catch (error) {
+      console.error('Error loading penalty data:', error);
+      Alert.alert('Error', 'Failed to load penalty information');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    await loadPenaltyData();
+    setRefreshing(false);
   }, []);
 
   const getStatusColor = (status) => {
@@ -143,7 +149,7 @@ const UltraModernPenaltyScreen = ({ userData, onBack }) => {
   };
 
   const formatCurrency = (amount) => {
-    return `$${amount.toFixed(2)}`;
+    return `₱${amount.toFixed(2)}`;
   };
 
   const animatedHeaderStyle = useAnimatedStyle(() => {
@@ -268,10 +274,8 @@ const UltraModernPenaltyScreen = ({ userData, onBack }) => {
   const SummaryCard = () => {
     const totalPenalties = penalties.length;
     const pendingPenalties = penalties.filter(p => p.status === 'pending').length;
-    const totalAmount = penalties.reduce((sum, p) => sum + p.amount, 0);
-    const pendingAmount = penalties
-      .filter(p => p.status === 'pending')
-      .reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = penaltyData?.totalUnpaidAmount || 0;
+    const pendingAmount = penaltyData?.totalUnpaidAmount || 0;
 
     return (
       <Animated.View style={[animatedHeaderStyle, styles.summaryContainer]}>

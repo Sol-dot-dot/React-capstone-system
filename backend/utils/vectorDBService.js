@@ -19,7 +19,7 @@ class VectorDBService {
       
       // Get ALL books from database (not just available ones)
       const [books] = await db.execute(`
-        SELECT id, title, author, genre, description, status
+        SELECT id, title, author, category, description, status
         FROM books
       `);
 
@@ -34,7 +34,7 @@ class VectorDBService {
       // Store books for similarity search
       this.books = books.map(book => ({
         ...book,
-        searchText: `${book.title} ${book.author} ${book.genre} ${book.description}`.toLowerCase()
+        searchText: `${book.title} ${book.author} ${book.category} ${book.description}`.toLowerCase()
       }));
 
       // Check which books need embeddings
@@ -61,7 +61,7 @@ class VectorDBService {
             const book = booksNeedingEmbeddings[i];
             console.log(`📚 Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
             
-            const text = `${book.title} ${book.author} ${book.genre} ${book.description}`;
+            const text = `${book.title} ${book.author} ${book.category} ${book.description}`;
             const embedding = await chatbotService.generateEmbedding(text);
             
             if (embedding && Array.isArray(embedding) && embedding.length === 1536) {
@@ -69,7 +69,7 @@ class VectorDBService {
               await vectorStorage.saveEmbedding(book.id, embedding, {
                 title: book.title,
                 author: book.author,
-                genre: book.genre,
+                category: book.category,
                 status: book.status
               });
               
@@ -142,7 +142,7 @@ class VectorDBService {
           id: this.books[result.index].id,
           title: this.books[result.index].title,
           author: this.books[result.index].author,
-          genre: this.books[result.index].genre,
+          category: this.books[result.index].category,
           description: this.books[result.index].description,
           status: this.books[result.index].status,
           similarity: result.similarity
@@ -197,7 +197,7 @@ class VectorDBService {
   async getBookById(bookId) {
     try {
       const [books] = await db.execute(`
-        SELECT id, title, author, genre, description, status
+        SELECT id, title, author, category, description, status
         FROM books 
         WHERE id = ?
       `, [bookId]);
