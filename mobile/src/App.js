@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 // import { Provider as PaperProvider } from 'react-native-paper';
 import axios from 'axios';
+import API_CONFIG, { buildApiUrl, getEndpoint } from './config/api';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
@@ -64,7 +65,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_LOGIN')), {
         idNumber,
         password,
       });
@@ -100,9 +101,9 @@ const App = () => {
     setLoading(true);
     try {
       console.log('Making password reset request for email:', email);
-      console.log('API URL:', 'http://10.0.2.2:5000/api/auth/user/request-password-reset');
+      console.log('API URL:', buildApiUrl(getEndpoint('AUTH', 'USER_REQUEST_PASSWORD_RESET')));
       
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/request-password-reset', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_REQUEST_PASSWORD_RESET')), {
         email,
       });
       
@@ -159,7 +160,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/reset-password', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')), {
         email,
         resetCode,
         newPassword,
@@ -201,7 +202,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-id', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_CHECK_ID')), {
         idNumber,
       });
 
@@ -231,7 +232,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_CHECK_EMAIL')), {
         idNumber,
         email,
       });
@@ -264,7 +265,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/verify-code', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_VERIFY_CODE')), {
         idNumber,
         email,
         verificationCode,
@@ -301,7 +302,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/complete-registration', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_COMPLETE_REGISTRATION')), {
         userId,
         password,
       });
@@ -336,7 +337,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`http://10.0.2.2:5000/api/user/profile/${userData.idNumber}`);
+      const response = await axios.get(buildApiUrl(getEndpoint('USER', 'GET_PROFILE', userData.idNumber)));
       
       if (response.data.success) {
         setProfileEmail(response.data.user.email);
@@ -370,7 +371,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.put(`http://10.0.2.2:5000/api/user/profile/${userData.idNumber}`, {
+      const response = await axios.put(buildApiUrl(getEndpoint('USER', 'UPDATE_PROFILE', userData.idNumber)), {
         email: profileEmail,
       });
 
@@ -422,7 +423,7 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.put(`http://10.0.2.2:5000/api/user/change-password/${userData.idNumber}`, {
+      const response = await axios.put(buildApiUrl(getEndpoint('USER', 'CHANGE_PASSWORD', userData.idNumber)), {
         currentPassword,
         newPassword,
       });
@@ -459,7 +460,7 @@ const App = () => {
     
     try {
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}`
+        buildApiUrl(getEndpoint('BORROWING', 'GET_USER_BORROWED_BOOKS', userData.idNumber))
       );
 
       if (response.data.success) {

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -65,7 +66,7 @@ const SimpleLoginScreen = ({ onLogin, onNavigate, onBack }) => {
     setErrors({});
 
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_LOGIN')), {
         idNumber: idNumber.trim(),
         password: password.trim(),
       });

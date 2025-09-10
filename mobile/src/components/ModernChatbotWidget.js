@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 // Fallback icon component in case vector icons don't load
 const FallbackIcon = ({ name, size, color }) => {
@@ -126,11 +127,11 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
 
       let response;
       try {
-        response = await axios.post('http://10.0.2.2:5000/api/chatbot/recommend', requestData);
+        response = await axios.post(buildApiUrl('/api/chatbot/recommend'), requestData);
       } catch (mainError) {
         console.log('🔄 Main chatbot failed, trying simple endpoint...');
         // Try simple endpoint as fallback
-        response = await axios.post('http://10.0.2.2:5000/api/chatbot/simple', { message: inputText.trim() });
+        response = await axios.post(buildApiUrl('/api/chatbot/simple'), { message: inputText.trim() });
       }
 
       if (response.data.success) {
@@ -198,7 +199,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     setIsTyping(true);
 
     try {
-      const response = await axios.post('http://10.0.2.2:5000/api/chatbot/personalized', {
+      const response = await axios.post(buildApiUrl('/api/chatbot/personalized'), {
         studentIdNumber: userInfo.id_number,
         limit: 5
       });
