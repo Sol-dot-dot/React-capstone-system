@@ -193,8 +193,8 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
             // Create borrowing transaction
             await connection.execute(
                 `INSERT INTO borrowing_transactions 
-                 (student_id_number, book_id, borrowed_by_admin, due_date) 
-                 VALUES (?, ?, ?, ?)`,
+                 (student_id_number, book_id, borrowed_date, borrowed_by_admin, due_date) 
+                 VALUES (?, ?, CURDATE(), ?, ?)`,
                 [studentIdNumber, book.id, adminId, actualDueDate]
             );
 
@@ -264,6 +264,77 @@ async function getBorrowingStats() {
     }
 }
 
+// Create return transaction record
+async function createReturnTransaction(transactionId, adminId, returnCondition = 'good', conditionNotes = null, processingNotes = null) {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        // Get the borrowing transaction details
+        const [transactionRows] = await connection.execute(
+            `SELECT bt.*, b.title as book_title, b.author as book_author, b.number_code as book_code
+             FROM borrowing_transactions bt
+             JOIN books b ON bt.book_id = b.id
+             WHERE bt.id = ?`,
+            [transactionId]
+        );
+
+        if (transactionRows.length === 0) {
+            throw new Error(`Borrowing transaction ${transactionId} not found`);
+        }
+
+        const transaction = transactionRows[0];
+
+        // Check if return transaction already exists
+        const [existingReturns] = await connection.execute(
+            'SELECT id FROM return_transactions WHERE transaction_id = ?',
+            [transactionId]
+        );
+
+        if (existingReturns.length > 0) {
+            console.log(`Return transaction already exists for borrowing transaction ${transactionId}`);
+            return { created: false, returnId: existingReturns[0].id };
+        }
+
+        // Create return transaction record
+        const [returnResult] = await connection.execute(
+            `INSERT INTO return_transactions 
+             (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
+              return_condition, condition_notes, processing_notes, status) 
+             VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, 'completed')`,
+            [
+                transactionId,
+                transaction.student_id_number,
+                transaction.book_id,
+                adminId,
+                returnCondition,
+                conditionNotes,
+                processingNotes
+            ]
+        );
+
+        await connection.commit();
+
+        console.log(`✅ Created return transaction record for borrowing transaction ${transactionId}`);
+        
+        return {
+            created: true,
+            returnId: returnResult.insertId,
+            transactionId: transactionId,
+            studentIdNumber: transaction.student_id_number,
+            bookTitle: transaction.book_title
+        };
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error creating return transaction:', error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
 module.exports = {
     calculateDueDate,
     validateStudentId,
@@ -272,6 +343,7 @@ module.exports = {
     getStudentBorrowedCount,
     validateBorrowingRequest,
     processBorrowing,
-    getBorrowingStats
+    getBorrowingStats,
+    createReturnTransaction
 };
 

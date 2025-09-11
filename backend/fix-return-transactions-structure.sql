@@ -32,3 +32,8 @@ CREATE TABLE return_transactions (
 
 -- Show the new table structure
 DESCRIBE return_transactions;
+
+
+
+
+

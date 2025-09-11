@@ -146,3 +146,8 @@ SELECT COUNT(*) as overdue_books_count FROM overdue_books_with_fines;
 
 -- Test active borrowing status view
 SELECT COUNT(*) as active_students_count FROM active_borrowing_status;
+
+
+
+
+

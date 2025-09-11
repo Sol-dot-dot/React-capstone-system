@@ -31,3 +31,8 @@ CREATE TABLE IF NOT EXISTS return_transactions (
 
 -- Show table structure
 DESCRIBE return_transactions;
+
+
+
+
+

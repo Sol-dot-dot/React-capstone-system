@@ -16,6 +16,7 @@ const {
     getPenaltyStats,
     calculateFine
 } = require('../utils/penaltyUtils');
+const { createReturnTransaction } = require('../utils/borrowingUtils');
 const pool = require('../config/database');
 
 // GET /api/penalty/settings - Get system settings (admin only)
@@ -313,6 +314,21 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
                  WHERE id = ?`,
                 [book.book_id]
             );
+
+            // Create return transaction record
+            try {
+                await createReturnTransaction(
+                    book.id, 
+                    adminId, 
+                    'good', 
+                    null, 
+                    'Book returned after fine payment - overdue book processed'
+                );
+                console.log('✅ Return transaction record created for book:', book.title);
+            } catch (returnError) {
+                console.error('❌ Error creating return transaction record:', returnError);
+                // Continue processing even if return transaction creation fails
+            }
 
             booksReturned++;
             console.log('✅ Overdue book returned:', book.title);
@@ -736,6 +752,21 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                             SELECT book_id FROM borrowing_transactions WHERE id = ?
                         )
                     `, [fine.transaction_id]);
+
+                    // Create return transaction record
+                    try {
+                        await createReturnTransaction(
+                            fine.transaction_id, 
+                            adminId, 
+                            'good', 
+                            null, 
+                            'Book returned after fine payment - all fines paid at once'
+                        );
+                        console.log('✅ Return transaction record created for transaction:', fine.transaction_id);
+                    } catch (returnError) {
+                        console.error('❌ Error creating return transaction record:', returnError);
+                        // Continue processing even if return transaction creation fails
+                    }
 
                     paidFinesCount++;
                     returnedBooksCount++;

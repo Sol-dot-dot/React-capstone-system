@@ -16,3 +16,8 @@ SELECT id, email, role, password_hash FROM users WHERE email = 'admin@library.co
 -- Test login credentials:
 -- Email: admin@library.com
 -- Password: password1
+
+
+
+
+

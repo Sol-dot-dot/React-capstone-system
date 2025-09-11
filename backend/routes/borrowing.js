@@ -6,7 +6,8 @@ const {
     processBorrowing, 
     getBorrowingStats,
     checkStudentExists,
-    getStudentBorrowedCount
+    getStudentBorrowedCount,
+    createReturnTransaction
 } = require('../utils/borrowingUtils');
 const { createOrUpdateFine, updateSemesterBooksCount } = require('../utils/penaltyUtils');
 const pool = require('../config/database');
@@ -154,16 +155,14 @@ router.get('/student/:idNumber', auth, async (req, res) => {
                 bt.due_date,
                 bt.returned_date,
                 bt.status,
-                bt.notes,
                 b.title,
                 b.author,
                 b.number_code,
-                b.barcode,
-                a1.username as borrowed_by,
-                a2.username as returned_by
+                COALESCE(a1.email, 'Unknown Admin') as borrowed_by,
+                COALESCE(a2.email, NULL) as returned_by
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
-             JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
+             LEFT JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
              LEFT JOIN users a2 ON bt.returned_by_admin = a2.id AND a2.role = 'admin'
              WHERE bt.student_id_number = ?
              ORDER BY bt.borrowed_date DESC
@@ -230,16 +229,14 @@ router.get('/transactions', auth, async (req, res) => {
                 bt.due_date,
                 bt.returned_date,
                 bt.status,
-                bt.notes,
                 b.title,
                 b.author,
                 b.number_code,
-                b.barcode,
-                a1.username as borrowed_by,
-                a2.username as returned_by
+                COALESCE(a1.email, 'Unknown Admin') as borrowed_by,
+                COALESCE(a2.email, NULL) as returned_by
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
-             JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
+             LEFT JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
              LEFT JOIN users a2 ON bt.returned_by_admin = a2.id AND a2.role = 'admin'
              ${whereClause}
              ORDER BY bt.borrowed_date DESC
@@ -251,6 +248,8 @@ router.get('/transactions', auth, async (req, res) => {
         const [totalRows] = await pool.execute(
             `SELECT COUNT(*) as count FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
+             LEFT JOIN users a1 ON bt.borrowed_by_admin = a1.id AND a1.role = 'admin'
+             LEFT JOIN users a2 ON bt.returned_by_admin = a2.id AND a2.role = 'admin'
              ${whereClause}`,
             params
         );
@@ -344,6 +343,21 @@ router.post('/return', auth, async (req, res) => {
                     'UPDATE books SET status = "available" WHERE id = ?',
                     [transaction.book_id]
                 );
+
+                // Create return transaction record
+                try {
+                    await createReturnTransaction(
+                        transactionId, 
+                        adminId, 
+                        'good', 
+                        null, 
+                        transaction.status === 'overdue' ? 'Overdue book returned' : 'Book returned on time'
+                    );
+                    console.log('✅ Return transaction record created for transaction:', transactionId);
+                } catch (returnError) {
+                    console.error('❌ Error creating return transaction record:', returnError);
+                    // Continue processing even if return transaction creation fails
+                }
 
                 returnedBooks.push({
                     transactionId,
@@ -727,7 +741,7 @@ router.get('/admin/returns', auth, async (req, res) => {
              JOIN users u ON rt.student_id_number = u.id_number
              JOIN books b ON rt.book_id = b.id
              JOIN users a ON rt.returned_by_admin = a.id AND a.role = 'admin'
-             LEFT JOIN borrowing_transactions bt ON rt.active_borrowing_id = bt.id
+             LEFT JOIN borrowing_transactions bt ON rt.transaction_id = bt.id
              ${whereClause}
              ORDER BY rt.returned_date DESC
              LIMIT ? OFFSET ?`,
@@ -789,8 +803,7 @@ router.get('/user/:idNumber', async (req, res) => {
                 bt.status,
                 b.title,
                 b.author,
-                b.number_code,
-                b.barcode
+                b.number_code
              FROM borrowing_transactions bt
              JOIN books b ON bt.book_id = b.id
              WHERE bt.student_id_number = ? 

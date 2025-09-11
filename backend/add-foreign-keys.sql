@@ -39,3 +39,8 @@ FROM information_schema.KEY_COLUMN_USAGE
 WHERE TABLE_SCHEMA = 'capstone_system' 
 AND TABLE_NAME = 'return_transactions' 
 AND REFERENCED_TABLE_NAME IS NOT NULL;
+
+
+
+
+

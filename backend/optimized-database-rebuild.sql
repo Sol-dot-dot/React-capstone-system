@@ -398,3 +398,8 @@ UNION ALL
 SELECT 'login_logs', COUNT(*) FROM login_logs
 UNION ALL
 SELECT 'audit_logs', COUNT(*) FROM audit_logs;
+
+
+
+
+

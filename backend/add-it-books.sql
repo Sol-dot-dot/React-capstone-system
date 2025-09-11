@@ -132,3 +132,8 @@ SELECT
 FROM books 
 WHERE category IN ('Programming', 'Web Development', 'Database', 'Mobile Development', 'Cybersecurity', 'Cloud Computing', 'Data Science', 'Machine Learning', 'Artificial Intelligence', 'Software Engineering', 'Networking', 'System Administration', 'DevOps', 'Game Development', 'Blockchain', 'Project Management', 'IT Ethics', 'IT Law', 'IoT', 'AR/VR')
 ORDER BY category, number_code;
+
+
+
+
+
