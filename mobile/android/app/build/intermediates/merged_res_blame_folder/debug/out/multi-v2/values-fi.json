@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.capstonemobile.app-mergeDebugResources-2:/values-fi/values-fi.xml",
+            "outputFile": "com.capstonemobile.app-mergeDebugResources-23:/values-fi/values-fi.xml",
             "map": [
                 {
                     "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\ec57d087d7be3ca91eb28eba80fceda7\\transformed\\core-1.10.1\\res\\values-fi\\values-fi.xml",
