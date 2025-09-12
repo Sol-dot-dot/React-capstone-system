@@ -3,12 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
-  RefreshControl,
 } from 'react-native';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { ModernTheme } from '../styles/ModernTheme';
+import UniversalPageTemplate from '../components/UniversalPageTemplate';
 
 const PenaltyScreen = ({ userData, onBack }) => {
   const [penaltyData, setPenaltyData] = useState(null);
@@ -65,38 +66,34 @@ const PenaltyScreen = ({ userData, onBack }) => {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Penalty Information</Text>
-        </View>
+      <UniversalPageTemplate
+        title="Penalty Information"
+        userData={userData}
+        onBack={onBack}
+        showUserInfo={false}
+      >
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading penalty information...</Text>
         </View>
-      </View>
+      </UniversalPageTemplate>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Penalty Information</Text>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+    <UniversalPageTemplate
+      title="Penalty Information"
+      userData={userData}
+      onBack={onBack}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      showUserInfo={false}
+    >
         {/* Borrowing Status Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📚 Borrowing Status</Text>
+          <View style={styles.cardTitleContainer}>
+            <Icon name="library-outline" size={20} color="#2c3e50" />
+            <Text style={styles.cardTitle}>Borrowing Status</Text>
+          </View>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Can Borrow Books:</Text>
             <Text
@@ -109,9 +106,12 @@ const PenaltyScreen = ({ userData, onBack }) => {
             </Text>
           </View>
           {!penaltyData?.borrowingStatus?.canBorrow && (
-            <Text style={styles.warningText}>
-              ⚠️ {penaltyData?.borrowingStatus?.reasonBlocked}
-            </Text>
+            <View style={styles.warningContainer}>
+              <Icon name="warning-outline" size={16} color="#dc3545" />
+              <Text style={styles.warningText}>
+                {penaltyData?.borrowingStatus?.reasonBlocked}
+              </Text>
+            </View>
           )}
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Currently Borrowed:</Text>
@@ -124,7 +124,10 @@ const PenaltyScreen = ({ userData, onBack }) => {
         {/* Semester Progress Card */}
         {penaltyData?.semesterTracking && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Semester Progress</Text>
+            <View style={styles.cardTitleContainer}>
+              <Icon name="calendar-outline" size={20} color="#2c3e50" />
+              <Text style={styles.cardTitle}>Semester Progress</Text>
+            </View>
             <View style={styles.statusRow}>
               <Text style={styles.statusLabel}>Books Borrowed This Semester:</Text>
               <Text style={styles.statusValue}>
@@ -154,7 +157,10 @@ const PenaltyScreen = ({ userData, onBack }) => {
 
         {/* Fines Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Fines</Text>
+          <View style={styles.cardTitleContainer}>
+            <Icon name="card-outline" size={20} color="#2c3e50" />
+            <Text style={styles.cardTitle}>Fines</Text>
+          </View>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Total Unpaid Fines:</Text>
             <Text style={[styles.statusValue, { color: '#dc3545' }]}>
@@ -195,13 +201,19 @@ const PenaltyScreen = ({ userData, onBack }) => {
               ))}
             </View>
           ) : (
-            <Text style={styles.noFinesText}>✅ No unpaid fines</Text>
+            <View style={styles.noFinesContainer}>
+              <Icon name="checkmark-circle-outline" size={20} color="#28a745" />
+              <Text style={styles.noFinesText}>No unpaid fines</Text>
+            </View>
           )}
         </View>
 
         {/* Important Notes */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Important Notes</Text>
+        {/* <View style={styles.card}>
+          <View style={styles.cardTitleContainer}>
+            <Icon name="clipboard-outline" size={20} color="#2c3e50" />
+            <Text style={styles.cardTitle}>Important Notes</Text>
+          </View>
           <Text style={styles.noteText}>
             • You can borrow up to 3 books at a time
           </Text>
@@ -217,41 +229,16 @@ const PenaltyScreen = ({ userData, onBack }) => {
           <Text style={styles.noteText}>
             • You cannot borrow new books if you have unpaid fines or overdue books
           </Text>
-        </View>
-      </ScrollView>
-    </View>
+        </View> */}
+    </UniversalPageTemplate>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
+  cardTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007bff',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
+    marginBottom: 15,
   },
   loadingContainer: {
     flex: 1,
@@ -280,7 +267,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginBottom: 15,
+    marginLeft: 8,
   },
   statusRow: {
     flexDirection: 'row',
@@ -298,13 +285,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2c3e50',
   },
-  warningText: {
-    fontSize: 14,
-    color: '#dc3545',
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f8d7da',
     padding: 10,
     borderRadius: 5,
     marginTop: 10,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#dc3545',
+    marginLeft: 8,
+    flex: 1,
   },
   progressBar: {
     height: 8,
@@ -389,11 +382,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6c757d',
   },
+  noFinesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
   noFinesText: {
     fontSize: 16,
     color: '#28a745',
-    textAlign: 'center',
-    marginTop: 10,
+    marginLeft: 8,
   },
   noteText: {
     fontSize: 14,

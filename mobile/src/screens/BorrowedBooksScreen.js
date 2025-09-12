@@ -3,15 +3,15 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
-  RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 import NotificationService from '../services/NotificationService';
+import { ModernTheme } from '../styles/ModernTheme';
+import UniversalPageTemplate from '../components/UniversalPageTemplate';
 
 const BorrowedBooksScreen = ({ userData, onBack }) => {
   const [borrowedBooks, setBorrowedBooks] = useState([]);
@@ -160,28 +160,29 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading borrowed books...</Text>
-      </View>
+      <UniversalPageTemplate
+        title="My Borrowed Books"
+        userData={userData}
+        onBack={onBack}
+        showUserInfo={false}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={ModernTheme.colors.primary} />
+          <Text style={styles.loadingText}>Loading borrowed books...</Text>
+        </View>
+      </UniversalPageTemplate>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Borrowed Books</Text>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+    <UniversalPageTemplate
+      title="My Borrowed Books"
+      userData={userData}
+      onBack={onBack}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      showUserInfo={false}
+    >
         {notifications.length > 0 && (
           <View style={styles.notificationsSection}>
             <Text style={styles.sectionTitle}>Notifications</Text>
@@ -206,50 +207,21 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
             borrowedBooks.map(renderBookCard)
           )}
         </View>
-      </ScrollView>
-    </View>
+    </UniversalPageTemplate>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    paddingVertical: ModernTheme.spacing.xl,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  backButtonText: {
-    fontSize: 18,
-    color: '#007bff',
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  scrollView: {
-    flex: 1,
+    marginTop: ModernTheme.spacing.md,
+    ...ModernTheme.typography.body,
+    color: ModernTheme.colors.textSecondary,
   },
   notificationsSection: {
     margin: 15,

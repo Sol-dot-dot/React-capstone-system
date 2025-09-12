@@ -4,12 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import UniversalPageTemplate from '../components/UniversalPageTemplate';
 
 // Fallback icon component in case vector icons don't load
 const FallbackIcon = ({ name, size, color }) => {
@@ -17,11 +16,6 @@ const FallbackIcon = ({ name, size, color }) => {
     'arrow-left': '←',
     'refresh-cw': '↻',
     'settings': '⚙️',
-    'bell': '🔔',
-    'file-text': '📄',
-    'headphones': '🎧',
-    'users': '👥',
-    'clipboard': '📋',
     'log-out': '🚪',
   };
   
@@ -92,94 +86,19 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     return profileData?.semesterTracking?.books_borrowed_count || 0;
   };
 
-  const profileOptions = [
-    {
-      id: 'settings',
-      title: 'Settings',
-      icon: 'settings',
-      color: ModernTheme.colors.purple,
-    },
-    {
-      id: 'notifications',
-      title: 'Notifications',
-      icon: 'bell',
-      color: ModernTheme.colors.green,
-      badge: 7, // Mock notification count
-    },
-    {
-      id: 'verification',
-      title: 'Verification',
-      icon: 'file-text',
-      color: ModernTheme.colors.orange,
-    },
-    {
-      id: 'support',
-      title: 'Support',
-      icon: 'headphones',
-      color: ModernTheme.colors.blue,
-    },
-    {
-      id: 'referral',
-      title: 'Referral',
-      icon: 'users',
-      color: ModernTheme.colors.pink,
-    },
-    {
-      id: 'legal',
-      title: 'Legal',
-      icon: 'clipboard',
-      color: ModernTheme.colors.purple,
-    },
-    {
-      id: 'logout',
-      title: 'Logout',
-      icon: 'log-out',
-      color: ModernTheme.colors.error,
-    },
-  ];
-
-  const handleOptionPress = (optionId) => {
-    switch (optionId) {
-      case 'settings':
-        onNavigate('notificationSettings');
-        break;
-      case 'notifications':
-        onNavigate('notificationSettings');
-        break;
-      case 'verification':
-        // Handle verification
-        break;
-      case 'support':
-        // Handle support
-        break;
-      case 'referral':
-        // Handle referral
-        break;
-      case 'legal':
-        // Handle legal
-        break;
-      case 'logout':
-        onLogout();
-        break;
-      default:
-        break;
-    }
-  };
 
   return (
-    <View style={ModernStyles.container}>
-      {/* Header */}
-      <View style={ModernStyles.header}>
-        <TouchableOpacity style={ModernStyles.headerButton} onPress={onBack}>
-          <Icon name="arrow-left" size={20} color={ModernTheme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={ModernStyles.headerTitle}>ID {userData?.idNumber || 'N/A'}</Text>
-        <TouchableOpacity style={ModernStyles.headerButton}>
+    <UniversalPageTemplate
+      title={`ID ${userData?.idNumber || 'N/A'}`}
+      userData={userData}
+      onBack={onBack}
+      showUserInfo={false}
+      headerActions={
+        <TouchableOpacity style={styles.refreshButton}>
           <Icon name="refresh-cw" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.scrollContainer}>
+      }
+    >
         {/* Profile Section */}
         <View style={ModernStyles.profileContainer}>
           <View style={[ModernStyles.profileImage, styles.profileImageContainer]}>
@@ -195,27 +114,23 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
           </Text>
         </View>
 
-        {/* Options Grid */}
-        <View style={styles.optionsGrid}>
-          {profileOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[styles.optionItem, { backgroundColor: option.color + '15' }]}
-              onPress={() => handleOptionPress(option.id)}
-            >
-              <View style={styles.optionIconContainer}>
-                <Icon name={option.icon} size={24} color={option.color} />
-                {option.badge && (
-                  <View style={[ModernStyles.badge, styles.optionBadge]}>
-                    <Text style={ModernStyles.badgeText}>{option.badge}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[ModernStyles.buttonText, styles.optionTitle]}>
-                {option.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Simple Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={[ModernStyles.primaryButton, styles.actionButton]}
+            onPress={() => onNavigate('notificationSettings')}
+          >
+            <Icon name="settings" size={20} color={ModernTheme.colors.textInverse} />
+            <Text style={[ModernStyles.buttonText, styles.actionButtonText]}>Settings</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[ModernStyles.secondaryButton, styles.actionButton]}
+            onPress={onLogout}
+          >
+            <Icon name="log-out" size={20} color={ModernTheme.colors.error} />
+            <Text style={[ModernStyles.buttonText, styles.actionButtonText, { color: ModernTheme.colors.error }]}>Logout</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Additional Info */}
@@ -247,14 +162,16 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
             </>
           )}
         </View>
-      </ScrollView>
-    </View>
+    </UniversalPageTemplate>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
+  refreshButton: {
+    paddingHorizontal: ModernTheme.spacing.md,
+    paddingVertical: ModernTheme.spacing.sm,
+    borderRadius: ModernTheme.borderRadius.md,
+    backgroundColor: ModernTheme.colors.surface,
   },
   profileImageContainer: {
     alignItems: 'center',
@@ -265,42 +182,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: ModernTheme.colors.primary,
   },
-  optionIconContainer: {
-    position: 'relative',
-    marginBottom: ModernTheme.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionIcon: {
-    fontSize: 24,
-  },
-  optionBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    minWidth: 20,
-    height: 20,
-  },
-  optionTitle: {
-    textAlign: 'center',
-    fontSize: 12,
-  },
-  optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  actionButtonsContainer: {
     paddingHorizontal: ModernTheme.spacing.lg,
+    marginVertical: ModernTheme.spacing.lg,
+    gap: ModernTheme.spacing.md,
   },
-  optionItem: {
-    width: '30%',
-    backgroundColor: ModernTheme.colors.surface,
-    borderRadius: ModernTheme.borderRadius.lg,
-    padding: ModernTheme.spacing.lg,
-    marginBottom: ModernTheme.spacing.md,
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 100,
     justifyContent: 'center',
-    ...ModernTheme.shadows.card,
+    paddingVertical: ModernTheme.spacing.lg,
+    paddingHorizontal: ModernTheme.spacing.xl,
+  },
+  actionButtonText: {
+    marginLeft: ModernTheme.spacing.sm,
   },
   additionalInfo: {
     marginHorizontal: ModernTheme.spacing.lg,

@@ -16,17 +16,19 @@ import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 // Fallback icon component in case vector icons don't load
 const FallbackIcon = ({ name, size, color }) => {
   const iconMap = {
+    'arrow-back': '←',
     'arrow-left': '←',
-    'dollar-sign': '💰',
-    'book': '📚',
-    'check-circle': '✅',
-    'calendar': '📅',
-    'clipboard': '📋',
-    'book-open': '📖',
-    'alert-circle': '⚠️',
-    'clock': '⏰',
-    'target': '🎯',
-    'x-circle': '🚫',
+    'card-outline': '💰',
+    'library-outline': '📚',
+    'checkmark-circle-outline': '✅',
+    'calendar-outline': '📅',
+    'clipboard-outline': '📋',
+    'book-outline': '📖',
+    'warning-outline': '⚠️',
+    'time-outline': '⏰',
+    'flag-outline': '🎯',
+    'close-circle-outline': '🚫',
+    'bar-chart-outline': '📊',
   };
   
   return (
@@ -39,7 +41,7 @@ const FallbackIcon = ({ name, size, color }) => {
 // Try to import vector icons, fallback to emoji if not available
 let Icon;
 try {
-  Icon = require('react-native-vector-icons/Feather').default;
+  Icon = require('react-native-vector-icons/Ionicons').default;
 } catch (error) {
   console.warn('Vector icons not available, using fallback icons');
   Icon = FallbackIcon;
@@ -115,21 +117,21 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
       title: 'Unpaid Fines',
       count: getUnpaidFinesCount(),
       amount: getTotalFines(),
-      icon: 'dollar-sign',
+      icon: 'card-outline',
       color: ModernTheme.colors.error,
     },
     {
       title: 'Overdue Books',
       count: getOverdueBooksCount(),
       amount: 0,
-      icon: 'book',
+      icon: 'library-outline',
       color: ModernTheme.colors.warning,
     },
     {
       title: 'Can Borrow',
       count: penaltyData?.borrowingStatus?.canBorrow ? 1 : 0,
       amount: 0,
-      icon: 'check-circle',
+      icon: 'checkmark-circle-outline',
       color: ModernTheme.colors.success,
     },
   ];
@@ -138,9 +140,9 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
     return (
       <View style={ModernStyles.container}>
         <View style={ModernStyles.header}>
-          <TouchableOpacity style={ModernStyles.headerButton} onPress={onBack}>
-            <Text style={ModernStyles.buttonText}>←</Text>
-          </TouchableOpacity>
+        <TouchableOpacity style={ModernStyles.headerButton} onPress={onBack}>
+          <Icon name="arrow-back" size={20} color={ModernTheme.colors.textPrimary} />
+        </TouchableOpacity>
           <Text style={ModernStyles.headerTitle}>Fines & Penalties</Text>
           <View style={ModernStyles.headerButton} />
         </View>
@@ -161,7 +163,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
         </TouchableOpacity>
         <Text style={ModernStyles.headerTitle}>Fines & Penalties</Text>
         <TouchableOpacity style={ModernStyles.headerButton}>
-          <Icon name="dollar-sign" size={20} color={ModernTheme.colors.textPrimary} />
+          <Icon name="card-outline" size={20} color={ModernTheme.colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -183,7 +185,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
         <View style={styles.categoriesHeader}>
           <Text style={ModernTheme.typography.h3}>Summary</Text>
           <TouchableOpacity>
-            <Icon name="bar-chart-2" size={20} color={ModernTheme.colors.textMuted} />
+            <Icon name="bar-chart-outline" size={20} color={ModernTheme.colors.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -209,7 +211,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
         {/* Borrowing Status Card */}
         <View style={[ModernStyles.card, styles.statusCard]}>
           <View style={styles.cardHeader}>
-            <Icon name="book" size={24} color={ModernTheme.colors.primary} />
+            <Icon name="library-outline" size={24} color={ModernTheme.colors.primary} />
             <Text style={ModernTheme.typography.h3}>Borrowing Status</Text>
           </View>
           
@@ -224,7 +226,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
 
           {!penaltyData?.borrowingStatus?.canBorrow && (
             <View style={styles.warningCard}>
-              <Icon name="alert-circle" size={16} color={ModernTheme.colors.error} />
+              <Icon name="warning-outline" size={16} color={ModernTheme.colors.error} />
               <Text style={[ModernTheme.typography.caption, { color: ModernTheme.colors.error }]}>
                 {penaltyData?.borrowingStatus?.reasonBlocked}
               </Text>
@@ -243,7 +245,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
         {penaltyData?.semesterTracking && (
           <View style={[ModernStyles.card, styles.progressCard]}>
             <View style={styles.cardHeader}>
-              <Icon name="calendar" size={24} color={ModernTheme.colors.primary} />
+              <Icon name="calendar-outline" size={24} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.h3}>Semester Progress</Text>
             </View>
             
@@ -284,7 +286,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
             penaltyData.fines.map((fine, index) => (
               <View key={index} style={[ModernStyles.listItem, styles.fineItem]}>
                 <View style={[ModernStyles.listItemIcon, { backgroundColor: getStatusColor(fine.status) + '20' }]}>
-                  <Icon name="book-open" size={20} color={getStatusColor(fine.status)} />
+                  <Icon name="book-outline" size={20} color={getStatusColor(fine.status)} />
                 </View>
                 <View style={ModernStyles.listItemContent}>
                   <Text style={ModernStyles.listItemTitle}>{fine.title}</Text>
@@ -312,7 +314,7 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="check-circle" size={48} color={ModernTheme.colors.success} />
+              <Icon name="checkmark-circle-outline" size={48} color={ModernTheme.colors.success} />
               <Text style={ModernTheme.typography.body}>No unpaid fines</Text>
               <Text style={ModernTheme.typography.caption}>
                 You're all caught up!
@@ -324,29 +326,29 @@ const ModernPenaltyScreen = ({ userData, onBack }) => {
         {/* Important Notes */}
         <View style={[ModernStyles.card, styles.notesCard]}>
           <View style={styles.cardHeader}>
-            <Icon name="clipboard" size={24} color={ModernTheme.colors.primary} />
+            <Icon name="clipboard-outline" size={24} color={ModernTheme.colors.primary} />
             <Text style={ModernTheme.typography.h3}>Important Notes</Text>
           </View>
           
           <View style={styles.notesList}>
             <View style={styles.noteItem}>
-              <Icon name="book" size={16} color={ModernTheme.colors.primary} />
+              <Icon name="library-outline" size={16} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>You can borrow up to 3 books at a time</Text>
             </View>
             <View style={styles.noteItem}>
-              <Icon name="clock" size={16} color={ModernTheme.colors.primary} />
+              <Icon name="time-outline" size={16} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>Books must be returned within 7 days</Text>
             </View>
             <View style={styles.noteItem}>
-              <Icon name="dollar-sign" size={16} color={ModernTheme.colors.primary} />
+              <Icon name="card-outline" size={16} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>Overdue books incur a fine of ₱5.00 per day</Text>
             </View>
             <View style={styles.noteItem}>
-              <Icon name="target" size={16} color={ModernTheme.colors.primary} />
+              <Icon name="flag-outline" size={16} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>You must borrow at least 20 books during the semester</Text>
             </View>
             <View style={styles.noteItem}>
-              <Icon name="x-circle" size={16} color={ModernTheme.colors.primary} />
+              <Icon name="close-circle-outline" size={16} color={ModernTheme.colors.primary} />
               <Text style={ModernTheme.typography.caption}>You cannot borrow new books if you have unpaid fines</Text>
             </View>
           </View>

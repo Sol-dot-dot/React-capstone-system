@@ -198,6 +198,26 @@ export const ModernStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: ModernTheme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  
   // Card styles
   card: {
     backgroundColor: ModernTheme.colors.surface,

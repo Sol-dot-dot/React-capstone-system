@@ -27,8 +27,12 @@ const UltraModernWelcomeScreen = ({ onNavigate }) => {
         {/* Logo Section */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <View style={styles.logoPlaceholder}>
-              <Text style={styles.logoText}>SMC</Text>
+            <View style={styles.logoImageWrapper}>
+              <Image 
+                source={require('../assets/smc-logo.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
           </View>
           
@@ -113,13 +117,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: ModernTheme.spacing.xl,
   },
-  logoPlaceholder: {
+  logoImageWrapper: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: ModernTheme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: ModernTheme.colors.primary,
     shadowOffset: {
       width: 0,
@@ -129,10 +130,10 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: ModernTheme.colors.textInverse,
+  logoImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   title: {
     ...ModernTheme.typography.h1,

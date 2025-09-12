@@ -10,10 +10,11 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 // import { LinearGradient } from 'expo-linear-gradient';
-import { ModernTheme } from '../styles/ModernTheme';
+import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
 const UltraModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
   const [idNumber, setIdNumber] = useState('');
@@ -63,13 +64,17 @@ const UltraModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <TouchableOpacity style={ModernStyles.backButton} onPress={onBack}>
               <Icon name="arrow-back" size={20} color={ModernTheme.colors.textPrimary} />
             </TouchableOpacity>
             
             <View style={styles.logoContainer}>
-              <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoText}>SMC</Text>
+              <View style={styles.logoImageWrapper}>
+                <Image 
+                  source={require('../assets/smc-logo.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
             </View>
             
@@ -162,35 +167,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: ModernTheme.spacing.xl,
   },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: ModernTheme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   logoContainer: {
     marginBottom: ModernTheme.spacing.lg,
   },
-  logoPlaceholder: {
+  logoImageWrapper: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: ModernTheme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: ModernTheme.colors.primary,
     shadowOffset: {
       width: 0,
@@ -200,10 +183,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: ModernTheme.colors.textInverse,
+  logoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   title: {
     ...ModernTheme.typography.h2,
