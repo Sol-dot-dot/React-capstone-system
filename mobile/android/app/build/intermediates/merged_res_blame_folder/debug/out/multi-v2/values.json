@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.capstonemobile.app-mergeDebugResources-2:/values/values.xml",
+            "outputFile": "com.capstonemobile.app-mergeDebugResources-23:/values/values.xml",
             "map": [
                 {
                     "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\6b422db6f2c255c8ce41ea0a58fba297\\transformed\\jetified-startup-runtime-1.0.0\\res\\values\\values.xml",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\styles.xml",
+                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\styles.xml",
                     "from": {
                         "startLines": "3",
                         "startColumns": "4",
@@ -37,6 +37,23 @@
                         "endLines": "410",
                         "endColumns": "12",
                         "endOffsets": "28340"
+                    }
+                },
+                {
+                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "17",
+                        "endColumns": "51",
+                        "endOffsets": "64"
+                    },
+                    "to": {
+                        "startLines": "330",
+                        "startColumns": "4",
+                        "startOffsets": "21140",
+                        "endColumns": "51",
+                        "endOffsets": "21187"
                     }
                 },
                 {
@@ -92,23 +109,6 @@
                         "endLines": "2171,2177,2187,3389,3393",
                         "endColumns": "24,24,24,24,24",
                         "endOffsets": "141569,141747,142031,180375,180502"
-                    }
-                },
-                {
-                    "source": "C:\\React-capstone-system\\mobile\\android\\app\\build\\generated\\res\\resValues\\debug\\values\\gradleResValues.xml",
-                    "from": {
-                        "startLines": "6,8",
-                        "startColumns": "4,4",
-                        "startOffsets": "159,265",
-                        "endColumns": "63,68",
-                        "endOffsets": "218,329"
-                    },
-                    "to": {
-                        "startLines": "298,299",
-                        "startColumns": "4,4",
-                        "startOffsets": "18915,18979",
-                        "endColumns": "63,68",
-                        "endOffsets": "18974,19043"
                     }
                 },
                 {
@@ -275,20 +275,20 @@
                     }
                 },
                 {
-                    "source": "C:\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\strings.xml",
+                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\build\\generated\\res\\resValues\\debug\\values\\gradleResValues.xml",
                     "from": {
-                        "startLines": "1",
-                        "startColumns": "4",
-                        "startOffsets": "17",
-                        "endColumns": "51",
-                        "endOffsets": "64"
+                        "startLines": "6,8",
+                        "startColumns": "4,4",
+                        "startOffsets": "159,265",
+                        "endColumns": "63,68",
+                        "endOffsets": "218,329"
                     },
                     "to": {
-                        "startLines": "330",
-                        "startColumns": "4",
-                        "startOffsets": "21140",
-                        "endColumns": "51",
-                        "endOffsets": "21187"
+                        "startLines": "298,299",
+                        "startColumns": "4,4",
+                        "startOffsets": "18915,18979",
+                        "endColumns": "63,68",
+                        "endOffsets": "18974,19043"
                     }
                 }
             ]

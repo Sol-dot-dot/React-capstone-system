@@ -29,6 +29,10 @@ import ModernBottomNavigation from './components/ModernBottomNavigation';
 import SimpleLoginScreen from './screens/SimpleLoginScreen';
 import SimpleDashboardScreen from './screens/SimpleDashboardScreen';
 import SimpleModernBottomNavigation from './components/SimpleModernBottomNavigation';
+import UltraModernWelcomeScreen from './screens/UltraModernWelcomeScreen';
+import UltraModernLoginScreen from './screens/UltraModernLoginScreen';
+import UltraModernDashboardScreen from './screens/UltraModernDashboardScreen';
+import UltraModernBottomNavigation from './components/UltraModernBottomNavigation';
 import NotificationService from './services/NotificationService';
 import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
@@ -510,7 +514,7 @@ const App = () => {
     <View style={styles.welcomeContainer}>
       <View style={styles.welcomeContent}>
         <View style={styles.welcomeLogo}>
-          <Text style={styles.welcomeLogoIcon}>📚</Text>
+          <Text style={styles.welcomeLogoIcon}>SMC</Text>
         </View>
         <Text style={styles.welcomeTitle}>Library Management</Text>
         <Text style={styles.welcomeSubtitle}>Your digital library companion</Text>
@@ -881,11 +885,11 @@ const App = () => {
 
          <View style={styles.dashboardActions}>
            <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('borrowedBooks')}>
-             <Text style={styles.actionButtonText}>📚 My Borrowed Books</Text>
+             <Text style={styles.actionButtonText}>My Borrowed Books</Text>
            </TouchableOpacity>
            
            <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('penalties')}>
-             <Text style={styles.actionButtonText}>💰 Penalty Information</Text>
+             <Text style={styles.actionButtonText}>Penalty Information</Text>
            </TouchableOpacity>
            
            <TouchableOpacity style={styles.actionButton} onPress={handleGetProfile}>
@@ -897,11 +901,11 @@ const App = () => {
            </TouchableOpacity>
            
            <TouchableOpacity style={styles.actionButton} onPress={() => setIsChatbotVisible(true)}>
-             <Text style={styles.actionButtonText}>🤖 Ask AI Assistant</Text>
+             <Text style={styles.actionButtonText}>Ask AI Assistant</Text>
            </TouchableOpacity>
            
            <TouchableOpacity style={styles.actionButton} onPress={() => setCurrentScreen('notificationSettings')}>
-             <Text style={styles.actionButtonText}>🔔 Notification Settings</Text>
+             <Text style={styles.actionButtonText}>Notification Settings</Text>
            </TouchableOpacity>
          </View>
 
@@ -1031,12 +1035,12 @@ const App = () => {
      }
    };
 
-  // Show modern screens when user is logged in
+  // Show ultra-modern screens when user is logged in
   if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
               {currentScreen === 'dashboard' && (
-                <SimpleDashboardScreen
+                <UltraModernDashboardScreen
                   userData={userData}
                   onNavigate={handleNavigate}
                   onLogout={handleLogout}
@@ -1064,7 +1068,7 @@ const App = () => {
         )}
         
         {/* Ultra Modern Bottom Navigation */}
-        <SimpleModernBottomNavigation
+        <UltraModernBottomNavigation
           activeTab={activeTab}
           onTabPress={handleTabPress}
         />
@@ -1079,18 +1083,18 @@ const App = () => {
     );
   }
 
-  // Show modern auth screens fullscreen
+  // Show ultra-modern auth screens fullscreen
   if (['welcome', 'login', 'register', 'verify', 'forgotPassword'].includes(currentScreen)) {
-    console.log('Rendering modern auth screen:', currentScreen);
+    console.log('Rendering ultra-modern auth screen:', currentScreen);
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
         {currentScreen === 'welcome' && (
-          <ModernWelcomeScreen 
+          <UltraModernWelcomeScreen 
             onNavigate={setCurrentScreen}
           />
         )}
         {currentScreen === 'login' && (
-          <SimpleLoginScreen
+          <UltraModernLoginScreen
             onLogin={(user) => {
               setUserData(user);
               setCurrentScreen('dashboard');

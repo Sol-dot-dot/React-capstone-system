@@ -29,6 +29,11 @@ dist/
 */build/
 */dist/
 
+# Ignore cache folders
+.cache/
+*/.cache/
+
+
 # Ignore IDE files
 .vscode/
 .idea/

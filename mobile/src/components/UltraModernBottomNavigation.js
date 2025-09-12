@@ -1,204 +1,200 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { BottomNavigation, Surface, Text } from 'react-native-paper';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  interpolate,
-  Extrapolate,
-} from 'react-native-reanimated';
 import {
-  MaterialIcons,
-  MaterialCommunityIcons,
-} from '@expo/vector-icons';
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+// import { LinearGradient } from 'expo-linear-gradient';
+import { ModernTheme } from '../styles/ModernTheme';
 
 const { width } = Dimensions.get('window');
 
 const UltraModernBottomNavigation = ({ activeTab, onTabPress }) => {
-  const [index, setIndex] = React.useState(0);
-  const [routes] = React.useState([
+  const tabs = [
     {
-      key: 'dashboard',
-      title: 'Dashboard',
-      focusedIcon: 'view-dashboard',
-      unfocusedIcon: 'view-dashboard-outline',
+      id: 'dashboard',
+      label: 'Home',
+      icon: 'home-outline',
+      activeIcon: 'home',
     },
     {
-      key: 'borrowedBooks',
-      title: 'My Books',
-      focusedIcon: 'book-open-page-variant',
-      unfocusedIcon: 'book-open-page-variant-outline',
+      id: 'borrowedBooks',
+      label: 'Books',
+      icon: 'library-outline',
+      activeIcon: 'library',
     },
     {
-      key: 'penalties',
-      title: 'Penalties',
-      focusedIcon: 'cash-multiple',
-      unfocusedIcon: 'cash-multiple',
+      id: 'penalties',
+      label: 'Penalties',
+      icon: 'card-outline',
+      activeIcon: 'card',
     },
     {
-      key: 'profile',
-      title: 'Profile',
-      focusedIcon: 'account',
-      unfocusedIcon: 'account-outline',
+      id: 'profile',
+      label: 'Profile',
+      icon: 'person-outline',
+      activeIcon: 'person',
     },
     {
-      key: 'chatbot',
-      title: 'AI Assistant',
-      focusedIcon: 'robot',
-      unfocusedIcon: 'robot-outline',
+      id: 'chatbot',
+      label: 'AI',
+      icon: 'chatbubble-outline',
+      activeIcon: 'chatbubble',
+      isSpecial: true,
     },
-  ]);
-
-  const tabAnimations = routes.map(() => useSharedValue(0));
-
-  React.useEffect(() => {
-    // Reset all animations
-    tabAnimations.forEach(anim => {
-      anim.value = 0;
-    });
-    
-    // Animate active tab
-    if (index < tabAnimations.length) {
-      tabAnimations[index].value = withSpring(1, {
-        damping: 15,
-        stiffness: 150,
-      });
-    }
-  }, [index]);
-
-  const renderScene = ({ route, jumpTo }) => {
-    // This is handled by the parent component
-    return null;
-  };
-
-  const renderIcon = ({ route, focused, color }) => {
-    const routeIndex = routes.findIndex(r => r.key === route.key);
-    const animation = tabAnimations[routeIndex];
-
-    const animatedStyle = useAnimatedStyle(() => {
-      const scale = interpolate(
-        animation.value,
-        [0, 1],
-        [1, 1.2],
-        Extrapolate.CLAMP
-      );
-      
-      const translateY = interpolate(
-        animation.value,
-        [0, 1],
-        [0, -4],
-        Extrapolate.CLAMP
-      );
-
-      return {
-        transform: [
-          { scale },
-          { translateY },
-        ],
-      };
-    });
-
-    const getIconName = () => {
-      if (route.key === 'dashboard') {
-        return focused ? 'view-dashboard' : 'view-dashboard-outline';
-      } else if (route.key === 'borrowedBooks') {
-        return focused ? 'book-open-page-variant' : 'book-open-page-variant-outline';
-      } else if (route.key === 'penalties') {
-        return focused ? 'cash-multiple' : 'cash-multiple';
-      } else if (route.key === 'profile') {
-        return focused ? 'account' : 'account-outline';
-      } else if (route.key === 'chatbot') {
-        return focused ? 'robot' : 'robot-outline';
-      }
-      return 'circle';
-    };
-
-    return (
-      <Animated.View style={animatedStyle}>
-        <MaterialCommunityIcons
-          name={getIconName()}
-          size={24}
-          color={focused ? '#1E40AF' : '#6B7280'}
-        />
-      </Animated.View>
-    );
-  };
-
-  const renderLabel = ({ route, focused, color }) => {
-    const routeIndex = routes.findIndex(r => r.key === route.key);
-    const animation = tabAnimations[routeIndex];
-
-    const animatedLabelStyle = useAnimatedStyle(() => {
-      const opacity = interpolate(
-        animation.value,
-        [0, 1],
-        [0.7, 1],
-        Extrapolate.CLAMP
-      );
-
-      return {
-        opacity,
-      };
-    });
-
-    return (
-      <Animated.Text
-        style={[
-          styles.label,
-          animatedLabelStyle,
-          { color: focused ? '#1E40AF' : '#6B7280' },
-        ]}
-      >
-        {route.title}
-      </Animated.Text>
-    );
-  };
-
-  const handleTabPress = (route) => {
-    const routeIndex = routes.findIndex(r => r.key === route.key);
-    setIndex(routeIndex);
-    onTabPress(route.key);
-  };
+  ];
 
   return (
-    <Surface style={styles.container} elevation={8}>
-      <BottomNavigation
-        navigationState={{ index, routes }}
-        onIndexChange={setIndex}
-        renderScene={renderScene}
-        renderIcon={renderIcon}
-        renderLabel={renderLabel}
-        onTabPress={({ route }) => handleTabPress(route)}
-        activeColor="#1E40AF"
-        inactiveColor="#6B7280"
-        barStyle={styles.barStyle}
-        labeled={true}
-        shifting={false}
-        sceneAnimationEnabled={true}
-        sceneAnimationType="shifting"
-      />
-    </Surface>
+    <View style={styles.container}>
+      {/* Background Gradient */}
+      <View style={styles.backgroundGradient} />
+      
+      {/* Navigation Items */}
+      <View style={styles.navigation}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const isSpecial = tab.isSpecial;
+          
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[
+                styles.tab,
+                isSpecial && styles.specialTab,
+                isActive && styles.activeTab,
+              ]}
+              onPress={() => onTabPress(tab.id)}
+              activeOpacity={0.7}
+            >
+              {/* Special Chatbot Button */}
+              {isSpecial ? (
+                <View style={styles.specialButtonContainer}>
+                  <View style={[
+                    styles.specialButton,
+                    isActive && styles.specialButtonActive,
+                  ]}>
+                    <Icon 
+                      name={isActive ? tab.activeIcon : tab.icon}
+                      size={24}
+                      color={isActive ? ModernTheme.colors.textInverse : ModernTheme.colors.textTertiary}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <View style={[
+                    styles.iconContainer,
+                    isActive && styles.iconContainerActive,
+                  ]}>
+                    <Icon 
+                      name={isActive ? tab.activeIcon : tab.icon}
+                      size={20}
+                      color={isActive ? ModernTheme.colors.primary : ModernTheme.colors.textTertiary}
+                    />
+                  </View>
+                  
+                  <Text style={[
+                    styles.label,
+                    isActive && styles.labelActive,
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 8,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+    paddingBottom: 20, // Account for home indicator
   },
-  barStyle: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 8,
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: ModernTheme.colors.surfaceElevated,
+  },
+  navigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: ModernTheme.spacing.md,
+    paddingTop: ModernTheme.spacing.md,
+    height: '100%',
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ModernTheme.spacing.sm,
+  },
+  specialTab: {
+    flex: 0,
+    width: 60,
+  },
+  activeTab: {
+    // Active state styling handled by individual elements
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: ModernTheme.spacing.xs,
+  },
+  iconContainerActive: {
+    backgroundColor: ModernTheme.colors.primary + '20',
   },
   label: {
-    fontSize: 12,
+    ...ModernTheme.typography.small,
+    color: ModernTheme.colors.textTertiary,
+    textAlign: 'center',
+  },
+  labelActive: {
+    color: ModernTheme.colors.primary,
     fontWeight: '600',
-    marginTop: 4,
+  },
+  specialButtonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  specialButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: ModernTheme.colors.gray[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  specialButtonActive: {
+    backgroundColor: ModernTheme.colors.primary,
+    shadowColor: ModernTheme.colors.primary,
+    shadowOpacity: 0.3,
+    elevation: 4,
   },
 });
 

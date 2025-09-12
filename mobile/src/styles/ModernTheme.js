@@ -2,36 +2,52 @@ import { StyleSheet } from 'react-native';
 
 export const ModernTheme = {
   colors: {
-    // Light theme colors - modern and clean
+    // Match web design system colors
     background: '#ffffff',
     surface: '#f8fafc',
     surfaceElevated: '#ffffff',
-    primary: '#0ea5e9',
+    primary: '#0284c7', // Primary blue from web
     secondary: '#64748b',
-    accent: '#3b82f6',
+    accent: '#0ea5e9', // Accent blue
     success: '#10b981',
     warning: '#f59e0b',
     error: '#ef4444',
+    info: '#3b82f6',
     
-    // Accent colors for cards
+    // Accent colors for cards - matching web
     purple: '#8b5cf6',
     green: '#10b981',
     orange: '#f59e0b',
     blue: '#3b82f6',
     pink: '#ec4899',
     
-    // Background gradient
+    // Background gradient - matching web
     backgroundGradient: ['#f0f9ff', '#e0f2fe'],
     
-    // Text colors
+    // Text colors - matching web design system
     textPrimary: '#0f172a',
     textSecondary: '#475569',
     textTertiary: '#64748b',
     textMuted: '#94a3b8',
+    textInverse: '#ffffff',
     
-    // Border colors
+    // Border colors - matching web
     border: '#e2e8f0',
     borderLight: '#f1f5f9',
+    
+    // Additional colors for better UI
+    gray: {
+      50: '#f9fafb',
+      100: '#f3f4f6',
+      200: '#e5e7eb',
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+      700: '#374151',
+      800: '#1f2937',
+      900: '#111827',
+    },
   },
   borderRadius: {
     sm: 12,
@@ -61,30 +77,63 @@ export const ModernTheme = {
   typography: {
     h1: {
       fontSize: 32,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: '#0f172a',
+      lineHeight: 40,
     },
     h2: {
       fontSize: 24,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: '#0f172a',
+      lineHeight: 32,
     },
     h3: {
       fontSize: 20,
       fontWeight: '600',
       color: '#0f172a',
+      lineHeight: 28,
+    },
+    h4: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#0f172a',
+      lineHeight: 24,
     },
     body: {
       fontSize: 16,
+      fontWeight: '400',
       color: '#0f172a',
+      lineHeight: 24,
+    },
+    bodyMedium: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: '#0f172a',
+      lineHeight: 24,
     },
     caption: {
       fontSize: 14,
+      fontWeight: '400',
       color: '#475569',
+      lineHeight: 20,
+    },
+    captionMedium: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: '#475569',
+      lineHeight: 20,
     },
     small: {
       fontSize: 12,
+      fontWeight: '400',
       color: '#64748b',
+      lineHeight: 16,
+    },
+    smallMedium: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#64748b',
+      lineHeight: 16,
     },
   },
   
