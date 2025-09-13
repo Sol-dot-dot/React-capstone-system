@@ -13,6 +13,7 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import axios from 'axios';
 // import { LinearGradient } from 'expo-linear-gradient';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
@@ -29,19 +30,19 @@ const UltraModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
-      const mockUser = {
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
         idNumber,
-        email: `${idNumber.toLowerCase()}@my.smciligan.edu.ph`,
-        name: `User ${idNumber}`,
-      };
-      
-      onLogin(mockUser);
+        password,
+      });
+
+      if (response.data.success) {
+        onLogin(response.data.user);
+      } else {
+        Alert.alert('Login Failed', response.data.message || 'Invalid credentials');
+      }
     } catch (error) {
-      Alert.alert('Login Failed', 'Invalid credentials. Please try again.');
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', error.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }

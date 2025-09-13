@@ -77,7 +77,7 @@ const SimpleModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
     setErrors({});
 
     try {
-      const response = await axios.post('http://10.0.2.2:3000/api/auth/login', {
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
         idNumber: idNumber.trim(),
         password: password.trim(),
       });

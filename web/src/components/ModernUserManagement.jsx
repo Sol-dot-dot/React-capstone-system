@@ -94,17 +94,6 @@ const ModernUserManagement = ({ user }) => {
             : u
         )
       );
-      
-      // Update stats
-      setStats(prevStats => ({
-        ...prevStats,
-        verifiedUsers: isVerified 
-          ? prevStats.verifiedUsers + 1 
-          : prevStats.verifiedUsers - 1,
-        unverifiedUsers: isVerified 
-          ? prevStats.unverifiedUsers - 1 
-          : prevStats.unverifiedUsers + 1
-      }));
     } catch (err) {
       console.error('Verification update error:', err);
       alert(err.response?.data?.message || 'Failed to update user verification');
