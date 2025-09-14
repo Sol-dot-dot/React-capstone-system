@@ -1330,6 +1330,132 @@ router.post('/fix-return-records/:studentId', auth, async (req, res) => {
     }
 });
 
+// POST /api/penalty/reset-semester - Reset semester and clear all borrowing counts (admin only)
+router.post('/reset-semester', auth, async (req, res) => {
+    const connection = await pool.getConnection();
+    
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        await connection.beginTransaction();
+
+        // Get semester duration from settings
+        const [durationSetting] = await connection.execute(
+            'SELECT setting_value FROM system_settings WHERE setting_key = ?',
+            ['semester_duration_months']
+        );
+        
+        const semesterDurationMonths = durationSetting.length > 0 ? 
+            parseInt(durationSetting[0].setting_value) : 5; // Default to 5 months
+
+        // Calculate new semester dates
+        const currentDate = new Date();
+        const semesterStartDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        const semesterEndDate = new Date(currentDate);
+        semesterEndDate.setMonth(semesterEndDate.getMonth() + semesterDurationMonths);
+        const semesterEndDateStr = semesterEndDate.toISOString().split('T')[0];
+
+        console.log(`🔄 Resetting semester: ${semesterStartDate} to ${semesterEndDateStr} (${semesterDurationMonths} months)`);
+
+        // Get all active students
+        const [activeStudents] = await connection.execute(
+            'SELECT id_number FROM users WHERE type = "student" AND is_verified = 1'
+        );
+
+        console.log(`📊 Found ${activeStudents.length} active students to reset`);
+
+        let resetCount = 0;
+        let createdCount = 0;
+
+        // Reset or create semester tracking for each student
+        for (const student of activeStudents) {
+            // Check if student has existing semester tracking
+            const [existingTracking] = await connection.execute(
+                'SELECT id FROM semester_tracking WHERE student_id_number = ? AND status = "active"',
+                [student.id_number]
+            );
+
+            if (existingTracking.length > 0) {
+                // Update existing tracking - reset counts and update dates
+                await connection.execute(
+                    `UPDATE semester_tracking 
+                     SET books_borrowed_count = 0,
+                         semester_start_date = ?,
+                         semester_end_date = ?,
+                         updated_at = CURRENT_TIMESTAMP
+                     WHERE student_id_number = ? AND status = "active"`,
+                    [semesterStartDate, semesterEndDateStr, student.id_number]
+                );
+                resetCount++;
+                console.log(`✅ Reset semester tracking for student: ${student.id_number}`);
+            } else {
+                // Create new semester tracking
+                await connection.execute(
+                    `INSERT INTO semester_tracking 
+                     (student_id_number, semester_start_date, semester_end_date, books_borrowed_count, max_books_allowed, status) 
+                     VALUES (?, ?, ?, 0, 5, 'active')`,
+                    [student.id_number, semesterStartDate, semesterEndDateStr]
+                );
+                createdCount++;
+                console.log(`✅ Created new semester tracking for student: ${student.id_number}`);
+            }
+        }
+
+        // Update system settings with new semester start date
+        await connection.execute(
+            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at) 
+             VALUES ('current_semester_start', ?, 'Current semester start date', CURRENT_TIMESTAMP)
+             ON DUPLICATE KEY UPDATE 
+             setting_value = VALUES(setting_value), 
+             updated_at = CURRENT_TIMESTAMP`,
+            [semesterStartDate]
+        );
+
+        await connection.execute(
+            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at) 
+             VALUES ('current_semester_end', ?, 'Current semester end date', CURRENT_TIMESTAMP)
+             ON DUPLICATE KEY UPDATE 
+             setting_value = VALUES(setting_value), 
+             updated_at = CURRENT_TIMESTAMP`,
+            [semesterEndDateStr]
+        );
+
+        await connection.commit();
+
+        console.log(`🎉 Semester reset completed successfully!`);
+        console.log(`📊 Reset: ${resetCount} students, Created: ${createdCount} students`);
+
+        res.json({
+            success: true,
+            message: 'Semester reset successfully! All student borrowing counts have been reset to 0.',
+            data: {
+                semesterStartDate,
+                semesterEndDate: semesterEndDateStr,
+                semesterDurationMonths,
+                studentsReset: resetCount,
+                studentsCreated: createdCount,
+                totalStudents: activeStudents.length
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error resetting semester:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reset semester'
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 // GET /api/penalty/clearance-requirements - Get student clearance requirements (admin only)
 router.get('/clearance-requirements', auth, async (req, res) => {
     try {

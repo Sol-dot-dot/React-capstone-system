@@ -155,6 +155,31 @@ const ModernPenaltyManagement = ({ user }) => {
     }
   };
 
+  const resetSemester = async () => {
+    if (!window.confirm('Are you sure you want to reset the semester? This will reset ALL student borrowing counts to 0 and set new semester dates. This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/penalty/reset-semester', {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        const data = response.data.data;
+        setMessage(`Semester reset successfully! Reset ${data.studentsReset} students, created ${data.studentsCreated} new records. New semester: ${data.semesterStartDate} to ${data.semesterEndDate}`);
+        await loadData(); // Reload all data
+      }
+    } catch (error) {
+      console.error('Error resetting semester:', error);
+      setMessage('Error resetting semester');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleMarkAsPaid = async (studentIdNumber) => {
     if (!window.confirm(`Are you sure you want to process payment for student ${studentIdNumber}?\n\nThis will:\n• Mark all fines as paid\n• Return any borrowed books\n• Allow the student to borrow again`)) return;
 
@@ -598,6 +623,35 @@ const ModernPenaltyManagement = ({ user }) => {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Semester Management Section */}
+                  <div className="border-t border-slate-200 pt-6">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Semester Management
+                    </h3>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800 mb-1">Reset Semester</h4>
+                          <p className="text-sm text-yellow-700">
+                            This will reset ALL student borrowing counts to 0 and set new semester dates based on current date and duration settings. 
+                            This action cannot be undone and will affect all students.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={resetSemester}
+                      disabled={loading}
+                      variant="outline"
+                      className="border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      {loading ? 'Resetting...' : 'Reset Semester'}
+                    </Button>
                   </div>
                   
                   <div className="flex gap-3 pt-4">
