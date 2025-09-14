@@ -1330,4 +1330,251 @@ router.post('/fix-return-records/:studentId', auth, async (req, res) => {
     }
 });
 
+// GET /api/penalty/clearance-requirements - Get student clearance requirements (admin only)
+router.get('/clearance-requirements', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { search, semester, status } = req.query;
+        let whereClause = '';
+        let params = [];
+
+        console.log('🔍 Clearance Requirements Query:', { search, semester, status });
+
+        if (search) {
+            whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        if (semester) {
+            const semesterWhere = whereClause ? 'AND' : 'WHERE';
+            whereClause += `${semesterWhere} st.semester = ?`;
+            params.push(semester);
+        }
+
+        // Get students with their semester tracking and clearance status
+        const [students] = await pool.execute(`
+            SELECT 
+                u.id_number,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.is_verified,
+                u.email_verified,
+                u.created_at as registration_date,
+                st.semester_start_date,
+                st.semester_end_date,
+                st.books_borrowed_count,
+                st.max_books_allowed,
+                st.status as semester_status,
+                st.created_at as semester_created,
+                st.updated_at as semester_updated,
+                CASE 
+                    WHEN st.books_borrowed_count >= 20 THEN 'completed'
+                    WHEN st.books_borrowed_count >= 15 THEN 'near_completion'
+                    WHEN st.books_borrowed_count >= 10 THEN 'in_progress'
+                    ELSE 'needs_improvement'
+                END as clearance_status,
+                CASE 
+                    WHEN st.books_borrowed_count >= 20 THEN 'Eligible for Clearance'
+                    WHEN st.books_borrowed_count >= 15 THEN CONCAT('Near Completion (', (20 - st.books_borrowed_count), ' books remaining)')
+                    WHEN st.books_borrowed_count >= 10 THEN CONCAT('In Progress (', (20 - st.books_borrowed_count), ' books remaining)')
+                    ELSE CONCAT('Needs Improvement (', (20 - st.books_borrowed_count), ' books remaining)')
+                END as clearance_message,
+                (20 - st.books_borrowed_count) as books_remaining,
+                COALESCE(f.unpaid_fines, 0) as unpaid_fines_count,
+                COALESCE(f.unpaid_amount, 0) as unpaid_fines_amount
+            FROM users u
+            LEFT JOIN semester_tracking st ON u.id_number = st.student_id_number
+            LEFT JOIN (
+                SELECT 
+                    student_id_number,
+                    COUNT(*) as unpaid_fines,
+                    SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount
+                FROM fines 
+                WHERE status = 'unpaid'
+                GROUP BY student_id_number
+            ) f ON u.id_number = f.student_id_number
+            ${whereClause}
+            ORDER BY 
+                CASE 
+                    WHEN st.books_borrowed_count >= 20 THEN 1
+                    WHEN st.books_borrowed_count >= 15 THEN 2
+                    WHEN st.books_borrowed_count >= 10 THEN 3
+                    ELSE 4
+                END,
+                st.books_borrowed_count DESC,
+                u.last_name ASC
+        `, params);
+
+        console.log('📊 Found students:', students.length);
+
+        // Filter by status if provided
+        let filteredStudents = students;
+        if (status) {
+            filteredStudents = students.filter(student => student.clearance_status === status);
+        }
+
+        console.log('📊 Filtered students:', filteredStudents.length);
+
+        // Get summary statistics
+        const totalStudents = filteredStudents.length;
+        const completedStudents = filteredStudents.filter(s => s.clearance_status === 'completed').length;
+        const nearCompletionStudents = filteredStudents.filter(s => s.clearance_status === 'near_completion').length;
+        const inProgressStudents = filteredStudents.filter(s => s.clearance_status === 'in_progress').length;
+        const needsImprovementStudents = filteredStudents.filter(s => s.clearance_status === 'needs_improvement').length;
+
+        res.json({
+            success: true,
+            data: {
+                students: filteredStudents,
+                summary: {
+                    total: totalStudents,
+                    completed: completedStudents,
+                    near_completion: nearCompletionStudents,
+                    in_progress: inProgressStudents,
+                    needs_improvement: needsImprovementStudents,
+                    completion_rate: totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0
+                }
+            },
+            lastUpdated: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('Error fetching clearance requirements:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch clearance requirements'
+        });
+    }
+});
+
+// GET /api/penalty/clearance-requirements/:studentId - Get specific student's clearance details (admin only)
+router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId } = req.params;
+
+        // Get student details
+        const [studentInfo] = await pool.execute(`
+            SELECT 
+                u.id_number,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.is_verified,
+                u.email_verified,
+                u.created_at as registration_date,
+                u.last_login
+            FROM users u
+            WHERE u.id_number = ?
+        `, [studentId]);
+
+        if (studentInfo.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        // Get semester tracking
+        const [semesterTracking] = await pool.execute(`
+            SELECT 
+                semester_start_date,
+                semester_end_date,
+                books_borrowed_count,
+                max_books_allowed,
+                status as semester_status,
+                created_at as semester_created,
+                updated_at as semester_updated
+            FROM semester_tracking
+            WHERE student_id_number = ?
+            ORDER BY created_at DESC
+        `, [studentId]);
+
+        // Get current semester books
+        const [currentSemesterBooks] = await pool.execute(`
+            SELECT 
+                bt.id as transaction_id,
+                bt.borrowed_date,
+                bt.due_date,
+                bt.returned_date,
+                bt.status,
+                b.title,
+                b.author,
+                b.number_code,
+                b.category,
+                CASE 
+                    WHEN bt.status = 'returned' THEN 'Returned'
+                    WHEN bt.status = 'overdue' THEN 'Overdue'
+                    WHEN bt.due_date < CURDATE() AND bt.status = 'borrowed' THEN 'Overdue'
+                    ELSE 'Borrowed'
+                END as current_status
+            FROM borrowing_transactions bt
+            JOIN books b ON bt.book_id = b.id
+            WHERE bt.student_id_number = ?
+            AND bt.borrowed_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+            ORDER BY bt.borrowed_date DESC
+        `, [studentId]);
+
+        // Get fines information
+        const [finesInfo] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total_fines,
+                SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount,
+                COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_fines
+            FROM fines
+            WHERE student_id_number = ?
+        `, [studentId]);
+
+        const student = studentInfo[0];
+        const currentSemester = semesterTracking[0] || {
+            semester_start_date: null,
+            semester_end_date: null,
+            books_borrowed_count: 0,
+            max_books_allowed: 5,
+            semester_status: 'inactive',
+            semester_created: null,
+            semester_updated: null
+        };
+
+        const clearanceStatus = currentSemester.books_borrowed_count >= 20 ? 'completed' : 
+                               currentSemester.books_borrowed_count >= 15 ? 'near_completion' :
+                               currentSemester.books_borrowed_count >= 10 ? 'in_progress' : 'needs_improvement';
+
+        res.json({
+            success: true,
+            data: {
+                student: student,
+                semesterTracking: currentSemester,
+                currentSemesterBooks: currentSemesterBooks,
+                finesInfo: finesInfo[0] || { total_fines: 0, unpaid_amount: 0, unpaid_fines: 0 },
+                clearanceStatus: clearanceStatus,
+                booksRemaining: Math.max(0, 20 - currentSemester.books_borrowed_count),
+                clearanceMessage: currentSemester.books_borrowed_count >= 20 ? 
+                    'Eligible for Clearance' : 
+                    `${20 - currentSemester.books_borrowed_count} books remaining to complete clearance requirements`
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching student clearance details:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch student clearance details'
+        });
+    }
+});
+
 module.exports = router;

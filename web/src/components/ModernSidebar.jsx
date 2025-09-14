@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
-  Search
+  Search,
+  GraduationCap
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -31,6 +32,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
     { icon: ClipboardList, label: 'Borrowing Management', path: '/borrowings' },
     { icon: ArrowLeft, label: 'Returning Management', path: '/returning' },
     { icon: DollarSign, label: 'Penalty Management', path: '/penalties' },
+    { icon: GraduationCap, label: 'Clearance Requirements', path: '/clearance-requirements' },
     { icon: FileText, label: 'Activity Logs', path: '/activity-logs' },
   ];
 

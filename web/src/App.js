@@ -15,6 +15,7 @@ import ModernReturningManagement from './components/ModernReturningManagement';
 import PenaltyManagement from './components/PenaltyManagement';
 import ModernPenaltyManagement from './components/ModernPenaltyManagement';
 import MonitoringDashboard from './components/MonitoringDashboard';
+import ClearanceRequirements from './components/ClearanceRequirements';
 import ChatbotWidget from './components/ChatbotWidget';
 import ModernChatbotWidget from './components/ModernChatbotWidget';
 import Sidebar from './components/Sidebar';
@@ -179,6 +180,14 @@ function App() {
               element={
                 isAuthenticated ? 
                 <ModernPenaltyManagement user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/clearance-requirements" 
+              element={
+                isAuthenticated ? 
+                <ClearanceRequirements user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
