@@ -18,6 +18,7 @@ const API_CONFIG = {
       USER_VERIFY_CODE: '/api/auth/user/verify-code',
       USER_COMPLETE_REGISTRATION: '/api/auth/user/complete-registration',
       USER_REQUEST_PASSWORD_RESET: '/api/auth/user/request-password-reset',
+      USER_VERIFY_RESET_CODE: '/api/auth/user/verify-reset-code',
       USER_RESET_PASSWORD: '/api/auth/user/reset-password',
     },
 

@@ -144,8 +144,8 @@ router.post('/user/check-email', [
             const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
             await pool.execute(
-                'UPDATE users SET email = ? WHERE id = ?',
-                [email, userId]
+                'UPDATE users SET email = ?, verification_code = ?, verification_expires = ? WHERE id = ?',
+                [email, verificationCode, verificationExpires, userId]
             );
         } else {
             // Create new incomplete registration
@@ -153,8 +153,8 @@ router.post('/user/check-email', [
             const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
             const [result] = await pool.execute(
-                'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified) VALUES (?, ?, ?, ?, ?, FALSE)',
-                [idNumber, email, 'temp_password', 'Temp', 'User']
+                'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified, verification_code, verification_expires) VALUES (?, ?, ?, ?, ?, FALSE, ?, ?)',
+                [idNumber, email, 'temp_password', 'Temp', 'User', verificationCode, verificationExpires]
             );
             userId = result.insertId;
         }
@@ -205,9 +205,19 @@ router.post('/user/verify-code', [
 
         const user = users[0];
 
-        // Mark user as verified
+        // Check if verification code exists and matches
+        if (!user.verification_code || user.verification_code !== verificationCode) {
+            return res.status(400).json({ message: 'Invalid verification code' });
+        }
+
+        // Check if verification code has expired
+        if (!user.verification_expires || new Date() > new Date(user.verification_expires)) {
+            return res.status(400).json({ message: 'Verification code has expired' });
+        }
+
+        // Mark user as verified and clear verification code
         await pool.execute(
-            'UPDATE users SET is_verified = TRUE, email_verified = TRUE WHERE id = ?',
+            'UPDATE users SET is_verified = TRUE, email_verified = TRUE, verification_code = NULL, verification_expires = NULL WHERE id = ?',
             [user.id]
         );
 
@@ -302,10 +312,10 @@ router.post('/user/register', [
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert user
+        // Insert user with verification code
         const [result] = await pool.execute(
-            'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified, email_verified) VALUES (?, ?, ?, ?, ?, TRUE, TRUE)',
-            [idNumber, email, hashedPassword, 'Student', 'User']
+            'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified, email_verified, verification_code, verification_expires) VALUES (?, ?, ?, ?, ?, TRUE, TRUE, ?, ?)',
+            [idNumber, email, hashedPassword, 'Student', 'User', verificationCode, verificationExpires]
         );
 
         res.json({
@@ -341,9 +351,21 @@ router.post('/user/verify', [
             return res.status(400).json({ message: 'User not found' });
         }
 
-        // Mark user as verified
+        const user = users[0];
+
+        // Check if verification code exists and matches
+        if (!user.verification_code || user.verification_code !== verificationCode) {
+            return res.status(400).json({ message: 'Invalid verification code' });
+        }
+
+        // Check if verification code has expired
+        if (!user.verification_expires || new Date() > new Date(user.verification_expires)) {
+            return res.status(400).json({ message: 'Verification code has expired' });
+        }
+
+        // Mark user as verified and clear verification code
         await pool.execute(
-            'UPDATE users SET is_verified = TRUE, email_verified = TRUE WHERE id = ?',
+            'UPDATE users SET is_verified = TRUE, email_verified = TRUE, verification_code = NULL, verification_expires = NULL WHERE id = ?',
             [userId]
         );
 
@@ -444,6 +466,13 @@ router.post('/user/request-password-reset', [
 
         // Generate reset code
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const resetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+        // Store reset code and expiration in database
+        await pool.execute(
+            'UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?',
+            [resetCode, resetExpires, email]
+        );
 
         // Send reset email
         const emailSent = await sendPasswordResetEmail(email, resetCode);
@@ -454,8 +483,7 @@ router.post('/user/request-password-reset', [
 
         res.json({
             success: true,
-            message: 'Password reset code sent to your email',
-            resetCode: resetCode // For testing purposes only
+            message: 'Password reset code sent to your email'
         });
     } catch (error) {
         console.error('Password reset request error:', error);
@@ -488,6 +516,18 @@ router.post('/user/verify-reset-code', [
             return res.status(400).json({ message: 'User not found' });
         }
 
+        const user = users[0];
+
+        // Check if reset code exists and matches
+        if (!user.reset_code || user.reset_code !== resetCode) {
+            return res.status(400).json({ message: 'Invalid reset code' });
+        }
+
+        // Check if reset code has expired
+        if (!user.reset_expires || new Date() > new Date(user.reset_expires)) {
+            return res.status(400).json({ message: 'Reset code has expired' });
+        }
+
         res.json({
             success: true,
             message: 'Reset code verified successfully'
@@ -515,7 +555,7 @@ router.post('/user/reset-password', [
 
         const { email, resetCode, newPassword } = req.body;
 
-        // Verify reset code
+        // Verify reset code and get user
         const [users] = await pool.execute(
             'SELECT * FROM users WHERE email = ?',
             [email]
@@ -525,10 +565,22 @@ router.post('/user/reset-password', [
             return res.status(400).json({ message: 'User not found' });
         }
 
-        // Hash new password and update user
+        const user = users[0];
+
+        // Check if reset code exists and matches
+        if (!user.reset_code || user.reset_code !== resetCode) {
+            return res.status(400).json({ message: 'Invalid reset code' });
+        }
+
+        // Check if reset code has expired
+        if (!user.reset_expires || new Date() > new Date(user.reset_expires)) {
+            return res.status(400).json({ message: 'Reset code has expired' });
+        }
+
+        // Hash new password and update user, clear reset code
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await pool.execute(
-            'UPDATE users SET password_hash = ? WHERE email = ?',
+            'UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?',
             [hashedPassword, email]
         );
 

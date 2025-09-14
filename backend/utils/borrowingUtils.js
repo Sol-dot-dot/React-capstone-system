@@ -271,6 +271,8 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
     try {
         await connection.beginTransaction();
 
+        console.log(`🔄 Creating return transaction for borrowing transaction ID: ${transactionId}`);
+
         // Get the borrowing transaction details
         const [transactionRows] = await connection.execute(
             `SELECT bt.*, b.title as book_title, b.author as book_author, b.number_code as book_code
@@ -316,7 +318,8 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
 
         await connection.commit();
 
-        console.log(`✅ Created return transaction record for borrowing transaction ${transactionId}`);
+        console.log(`✅ Return transaction created successfully! ID: ${returnResult.insertId}`);
+        console.log(`📊 Book: ${transaction.book_title}, Student: ${transaction.student_id_number}`);
         
         return {
             created: true,
@@ -335,6 +338,72 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
     }
 }
 
+// Ensure all returned books have return transaction records
+async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        console.log(`🔍 Checking for missing return transaction records for student: ${studentIdNumber}`);
+
+        // Find all returned books that don't have return transaction records
+        const [missingReturns] = await connection.execute(`
+            SELECT bt.id as transaction_id, bt.student_id_number, bt.book_id, bt.returned_date, bt.due_date,
+                   b.title as book_title, b.author as book_author, b.number_code as book_code
+            FROM borrowing_transactions bt
+            JOIN books b ON bt.book_id = b.id
+            LEFT JOIN return_transactions rt ON bt.id = rt.transaction_id
+            WHERE bt.student_id_number = ? 
+            AND bt.status = 'returned' 
+            AND rt.id IS NULL
+        `, [studentIdNumber]);
+
+        console.log(`📊 Found ${missingReturns.length} returned books without return transaction records`);
+
+        let createdCount = 0;
+        for (const book of missingReturns) {
+            try {
+                const wasOverdue = book.returned_date && book.due_date && new Date(book.returned_date) > new Date(book.due_date);
+                
+                await connection.execute(
+                    `INSERT INTO return_transactions 
+                     (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
+                      return_condition, condition_notes, processing_notes, status) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
+                    [
+                        book.transaction_id,
+                        book.student_id_number,
+                        book.book_id,
+                        book.returned_date || new Date(),
+                        adminId,
+                        'good',
+                        wasOverdue ? 'Overdue book returned (retroactive record)' : 'Book returned on time (retroactive record)',
+                        wasOverdue ? 'Overdue book processed - retroactive record creation' : 'Normal return - retroactive record creation'
+                    ]
+                );
+
+                createdCount++;
+                console.log(`✅ Created retroactive return transaction for book: ${book.book_title}`);
+            } catch (error) {
+                console.error(`❌ Error creating retroactive return transaction for book ${book.book_title}:`, error);
+            }
+        }
+
+        await connection.commit();
+        
+        console.log(`✅ Created ${createdCount} retroactive return transaction records for student ${studentIdNumber}`);
+        return { created: createdCount, total: missingReturns.length };
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error ensuring return transaction records:', error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
 module.exports = {
     calculateDueDate,
     validateStudentId,
@@ -344,6 +413,7 @@ module.exports = {
     validateBorrowingRequest,
     processBorrowing,
     getBorrowingStats,
-    createReturnTransaction
+    createReturnTransaction,
+    ensureReturnTransactionRecords
 };
 

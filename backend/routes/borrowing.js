@@ -9,7 +9,7 @@ const {
     getStudentBorrowedCount,
     createReturnTransaction
 } = require('../utils/borrowingUtils');
-const { createOrUpdateFine, updateSemesterBooksCount } = require('../utils/penaltyUtils');
+const { createOrUpdateFine, updateSemesterBooksCount, calculateOverdueDays } = require('../utils/penaltyUtils');
 const pool = require('../config/database');
 
 // GET /api/borrowing/stats - Get borrowing statistics
@@ -345,19 +345,14 @@ router.post('/return', auth, async (req, res) => {
                 );
 
                 // Create return transaction record
-                try {
-                    await createReturnTransaction(
-                        transactionId, 
-                        adminId, 
-                        'good', 
-                        null, 
-                        transaction.status === 'overdue' ? 'Overdue book returned' : 'Book returned on time'
-                    );
-                    console.log('✅ Return transaction record created for transaction:', transactionId);
-                } catch (returnError) {
-                    console.error('❌ Error creating return transaction record:', returnError);
-                    // Continue processing even if return transaction creation fails
-                }
+                await createReturnTransaction(
+                    transactionId, 
+                    adminId, 
+                    'good', 
+                    transaction.status === 'overdue' ? 'Overdue book returned' : 'Book returned on time', 
+                    transaction.status === 'overdue' ? 'Overdue book processed' : 'Normal return processed'
+                );
+                console.log('✅ Return transaction record created for transaction:', transactionId);
 
                 returnedBooks.push({
                     transactionId,
@@ -581,7 +576,7 @@ router.post('/admin/return', auth, async (req, res) => {
             }
 
             // Calculate fine for overdue return
-            const daysOverdue = Math.ceil((today - dueDate) / (1000 * 60 * 60 * 24));
+            const daysOverdue = calculateOverdueDays(transaction.due_date);
             const [settings] = await connection.execute(
                 `SELECT setting_value FROM system_settings WHERE setting_key = 'fine_per_day'`
             );

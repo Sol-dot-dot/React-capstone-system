@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
@@ -197,9 +198,11 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
         >
           {/* Logo/Icon Section */}
           <View style={styles.logoSection}>
-            <View style={styles.logoContainer}>
-              <Icon name="library" size={32} color="#3b82f6" />
-            </View>
+            <Image 
+              source={require('../assets/smc-logo.png')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.welcomeTitle}>Join Our Library</Text>
             <Text style={styles.welcomeSubtitle}>Create your account to get started</Text>
           </View>
@@ -472,14 +475,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+  logoImage: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
   },
   welcomeTitle: {
     fontSize: 24,

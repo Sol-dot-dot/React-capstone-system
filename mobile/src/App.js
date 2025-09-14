@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -38,9 +38,20 @@ import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
 
 const App = () => {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, resetPassword, profile, changePassword, borrowedBooks, penalties
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, verifyResetCode, resetPassword, profile, changePassword, borrowedBooks, penalties
   const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [resetEmail, setResetEmail] = useState(''); // Store email for password reset
+  
+  // Debug email state changes
+  useEffect(() => {
+    console.log('Email state changed to:', email);
+  }, [email]);
+  
+  // Debug resetEmail state changes
+  useEffect(() => {
+    console.log('ResetEmail state changed to:', resetEmail);
+  }, [resetEmail]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -112,15 +123,21 @@ const App = () => {
       });
       
       console.log('Password reset response:', response.data);
+      console.log('Current email state when response received:', email);
 
       if (response.data.success) {
+        console.log('Password reset successful, storing email:', email);
+        setResetEmail(email); // Store email immediately when response is received
         Alert.alert(
           'Reset Code Sent',
           'A password reset code has been sent to your email address.',
           [
             {
               text: 'OK',
-              onPress: () => setCurrentScreen('resetPassword'),
+              onPress: () => {
+                console.log('Navigating to verify reset code with email:', email);
+                setCurrentScreen('verifyResetCode');
+              },
             },
           ]
         );
@@ -146,9 +163,82 @@ const App = () => {
     }
   };
 
+  const handleVerifyResetCode = async () => {
+    if (!resetCode) {
+      Alert.alert('Error', 'Please enter the reset code');
+      return;
+    }
+
+    if (resetCode.length !== 6) {
+      Alert.alert('Error', 'Reset code must be 6 digits');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_VERIFY_RESET_CODE')), {
+        email: resetEmail,
+        resetCode,
+      });
+
+      console.log('Reset code verification response:', response.data);
+
+      if (response.data.success) {
+        Alert.alert(
+          'Code Verified',
+          'Reset code is valid. You can now set your new password.',
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                console.log('Navigating to reset password with email:', resetEmail);
+                setCurrentScreen('resetPassword');
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Reset code verification error:', error);
+      
+      let errorMessage = 'Failed to verify reset code. Please try again.';
+      
+      if (error.response && error.response.data) {
+        if (error.response.data.errors && error.response.data.errors.length > 0) {
+          const validationErrors = error.response.data.errors.map(err => err.msg).join('\n');
+          errorMessage = `Validation failed:\n${validationErrors}`;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetPassword = async () => {
+    console.log('Reset password attempt - Current state:', {
+      email,
+      resetEmail,
+      resetCode,
+      newPassword: newPassword ? '***' : 'empty',
+      confirmNewPassword: confirmNewPassword ? '***' : 'empty'
+    });
+
     if (!resetCode || !newPassword || !confirmNewPassword) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!resetEmail) {
+      Alert.alert('Error', 'Email is missing. Please go back and request a new reset code.');
+      return;
+    }
+
+    if (!resetCode) {
+      Alert.alert('Error', 'Reset code is missing. Please go back and verify your code.');
       return;
     }
 
@@ -164,11 +254,18 @@ const App = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')), {
-        email,
+      const requestData = {
+        email: resetEmail,
         resetCode,
         newPassword,
+      };
+      
+      console.log('Sending password reset request:', {
+        url: buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')),
+        data: requestData
       });
+
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')), requestData);
 
       if (response.data.success) {
         Alert.alert(
@@ -183,10 +280,21 @@ const App = () => {
         );
       }
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'An error occurred while resetting password'
-      );
+      console.error('Password reset error:', error);
+      
+      let errorMessage = 'An error occurred while resetting password';
+      
+      if (error.response && error.response.data) {
+        if (error.response.data.errors && error.response.data.errors.length > 0) {
+          // Show specific validation errors
+          const validationErrors = error.response.data.errors.map(err => err.msg).join('\n');
+          errorMessage = `Validation failed:\n${validationErrors}`;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -484,6 +592,7 @@ const App = () => {
     setUserData(null);
     setIdNumber('');
     setEmail('');
+    setResetEmail('');
     setPassword('');
     setConfirmPassword('');
     setVerificationCode('');
@@ -809,24 +918,55 @@ const App = () => {
     </View>
   );
 
-  const renderResetPasswordScreen = () => (
-    <View style={styles.form}>
-      <Text style={styles.title}>Reset Password</Text>
-      <Text style={styles.subtitle}>
-        Enter the reset code sent to your email and your new password
-      </Text>
+  const renderVerifyResetCodeScreen = () => {
+    console.log('Rendering verify reset code screen with resetEmail:', resetEmail);
+    return (
+      <View style={styles.form}>
+        <Text style={styles.title}>Verify Reset Code</Text>
+        <Text style={styles.subtitle}>
+          Enter the 6-digit reset code sent to {resetEmail}
+        </Text>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Reset Code</Text>
-        <TextInput
-          style={styles.input}
-          value={resetCode}
-          onChangeText={setResetCode}
-          placeholder="Enter 6-digit reset code"
-          keyboardType="numeric"
-          maxLength={6}
-        />
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Reset Code</Text>
+          <TextInput
+            style={styles.input}
+            value={resetCode}
+            onChangeText={setResetCode}
+            placeholder="Enter 6-digit reset code"
+            keyboardType="numeric"
+            maxLength={6}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleVerifyResetCode}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Verifying...' : 'Verify Code'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Back to </Text>
+          <TouchableOpacity onPress={() => setCurrentScreen('forgotPassword')}>
+            <Text style={styles.linkText}>Forgot Password</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    );
+  };
+
+  const renderResetPasswordScreen = () => {
+    console.log('Rendering reset password screen with email:', email, 'resetEmail:', resetEmail);
+    return (
+      <View style={styles.form}>
+        <Text style={styles.title}>Set New Password</Text>
+        <Text style={styles.subtitle}>
+          Enter your new password for {resetEmail}
+        </Text>
 
       <View style={styles.inputContainer}>
         <Text style={styles.label}>New Password</Text>
@@ -867,7 +1007,8 @@ const App = () => {
         </TouchableOpacity>
       </View>
     </View>
-  );
+    );
+  };
 
      const renderDashboardScreen = () => (
      <View style={styles.dashboardContainer}>
@@ -1025,7 +1166,8 @@ const App = () => {
        case 'verify': return 'Register';
        case 'password': return 'Register';
        case 'forgotPassword': return 'Forgot Password';
-       case 'resetPassword': return 'Reset Password';
+       case 'verifyResetCode': return 'Verify Reset Code';
+       case 'resetPassword': return 'Set New Password';
        case 'dashboard': return 'Dashboard';
        case 'profile': return 'Profile';
        case 'changePassword': return 'Change Password';
@@ -1127,6 +1269,10 @@ const App = () => {
           <ModernForgotPasswordScreen 
             onBack={() => setCurrentScreen('login')}
             onNavigate={setCurrentScreen}
+            onEmailSubmit={(email) => {
+              console.log('Email submitted from ModernForgotPasswordScreen:', email);
+              setResetEmail(email);
+            }}
           />
         )}
         </SafeAreaView>
@@ -1144,6 +1290,7 @@ const App = () => {
           {currentScreen === 'email' && renderEmailScreen()}
           {currentScreen === 'verify' && renderVerifyScreen()}
           {currentScreen === 'password' && renderPasswordScreen()}
+          {currentScreen === 'verifyResetCode' && renderVerifyResetCodeScreen()}
           {currentScreen === 'resetPassword' && renderResetPasswordScreen()}
           {currentScreen === 'dashboard' && renderDashboardScreen()}
           {currentScreen === 'profile' && renderProfileScreen()}

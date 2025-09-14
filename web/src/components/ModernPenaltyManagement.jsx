@@ -69,8 +69,12 @@ const ModernPenaltyManagement = ({ user }) => {
   const loadStudentsWithFines = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/penalty/students-with-fines', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await axios.get('/api/penalty/students-detailed', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: {
+          search: searchTerm || undefined,
+          status: 'unpaid'
+        }
       });
       
       if (response.data.success) {
@@ -191,10 +195,20 @@ const ModernPenaltyManagement = ({ user }) => {
     setExpandedStudents(newExpanded);
   };
 
-  const filteredStudents = students.filter(student =>
-    student.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearch = (e) => {
+    e.preventDefault();
+    loadStudentsWithFines();
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    // Auto-search as user types (with debounce)
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+      loadStudentsWithFines();
+    }, 500);
+  };
+
 
 
   const containerVariants = {
@@ -309,9 +323,10 @@ const ModernPenaltyManagement = ({ user }) => {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                       <Input
-                        placeholder="Search by Student ID or Email..."
+                        placeholder="Search by Student ID, Email, or Book Title..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={handleSearchChange}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
                         className="pl-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -343,8 +358,8 @@ const ModernPenaltyManagement = ({ user }) => {
                       <RefreshCw className="h-8 w-8 text-slate-400 mx-auto mb-4 animate-spin" />
                       <p className="text-slate-600">Loading student fines...</p>
                     </div>
-                  ) : filteredStudents.length > 0 ? (
-                    filteredStudents.map((student, index) => (
+                  ) : students.length > 0 ? (
+                    students.map((student, index) => (
                       <motion.div
                         key={student.id_number}
                         initial={{ opacity: 0, y: 20 }}
@@ -427,13 +442,17 @@ const ModernPenaltyManagement = ({ user }) => {
                               transition={{ duration: 0.3 }}
                               className="mt-4 pt-4 border-t border-slate-200"
                             >
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div className="space-y-2">
                                   <h4 className="font-medium text-slate-900">Student Information</h4>
                                   <div className="text-sm text-slate-600">
                                     <p><strong>ID:</strong> {student.id_number}</p>
+                                    <p><strong>Name:</strong> {student.first_name} {student.last_name}</p>
                                     <p><strong>Email:</strong> {student.email}</p>
                                     <p><strong>Status:</strong> {student.is_verified ? 'Verified' : 'Unverified'}</p>
+                                    <p><strong>Email Verified:</strong> {student.email_verified ? 'Yes' : 'No'}</p>
+                                    <p><strong>Last Login:</strong> {student.last_login ? new Date(student.last_login).toLocaleDateString() : 'Never'}</p>
+                                    <p><strong>Registered:</strong> {new Date(student.registration_date).toLocaleDateString()}</p>
                                   </div>
                                 </div>
                                 <div className="space-y-2">
@@ -441,11 +460,51 @@ const ModernPenaltyManagement = ({ user }) => {
                                   <div className="text-sm text-slate-600">
                                     <p><strong>Total Fines:</strong> {student.total_fines || 0}</p>
                                     <p><strong>Unpaid Fines:</strong> {student.unpaid_fines || 0}</p>
+                                    <p><strong>Paid Fines:</strong> {student.paid_fines || 0}</p>
                                     <p><strong>Total Amount:</strong> ₱{student.total_amount || 0}</p>
                                     <p><strong>Unpaid Amount:</strong> ₱{student.unpaid_amount || 0}</p>
+                                    <p><strong>Paid Amount:</strong> ₱{student.paid_amount || 0}</p>
                                   </div>
                                 </div>
                               </div>
+
+                              {/* Overdue Books Section */}
+                              {student.overdue_books && student.overdue_books.length > 0 && (
+                                <div className="mt-4">
+                                  <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
+                                    <Book className="h-4 w-4" />
+                                    Overdue Books ({student.overdue_books.length})
+                                  </h4>
+                                  <div className="space-y-3">
+                                    {student.overdue_books.map((book, bookIndex) => (
+                                      <div key={bookIndex} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <h5 className="font-medium text-slate-900">{book.title}</h5>
+                                            <p className="text-sm text-slate-600">by {book.author}</p>
+                                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
+                                              <span><strong>Code:</strong> {book.number_code}</span>
+                                              <span><strong>Category:</strong> {book.category}</span>
+                                              <span><strong>Borrowed:</strong> {new Date(book.borrowed_date).toLocaleDateString()}</span>
+                                              <span><strong>Due:</strong> {new Date(book.due_date).toLocaleDateString()}</span>
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <Badge variant="destructive" className="mb-1">
+                                              {book.days_past_due} days overdue
+                                            </Badge>
+                                            <div className="text-sm">
+                                              <p><strong>Fine:</strong> ₱{book.fine_amount || 0}</p>
+                                              <p><strong>Paid:</strong> ₱{book.paid_amount || 0}</p>
+                                              <p><strong>Remaining:</strong> ₱{(book.fine_amount || 0) - (book.paid_amount || 0)}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </motion.div>
                           )}
                         </AnimatePresence>

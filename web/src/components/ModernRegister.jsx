@@ -170,13 +170,21 @@ const ModernRegister = ({ onRegister, onNavigate, onBack }) => {
                 Back
               </Button>
               <div className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-blue-600" />
+                <img 
+                  src="/smc-logo.png" 
+                  alt="SMC Logo" 
+                  className="w-8 h-8 object-contain"
+                />
                 <span className="text-sm font-medium text-slate-600">SMC Library</span>
               </div>
             </div>
             
-            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <UserPlus className="h-8 w-8 text-blue-600" />
+            <div className="mx-auto mb-6">
+              <img 
+                src="/smc-logo.png" 
+                alt="SMC Logo" 
+                className="w-20 h-20 object-contain mx-auto"
+              />
             </div>
             
             <CardTitle className="text-2xl font-bold text-slate-900 mb-2">

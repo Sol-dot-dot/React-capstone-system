@@ -11,7 +11,7 @@ import {
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
-const ModernForgotPasswordScreen = ({ onBack, onNavigate }) => {
+const ModernForgotPasswordScreen = ({ onBack, onNavigate, onEmailSubmit }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,25 +29,37 @@ const ModernForgotPasswordScreen = ({ onBack, onNavigate }) => {
       return;
     }
 
+    // Check if email is from the required domain
+    if (!email.endsWith('@my.smciligan.edu.ph')) {
+      Alert.alert('Error', 'Email must be from @my.smciligan.edu.ph domain');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/forgot-password', {
+      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/request-password-reset', {
         email,
       });
 
       if (response.data.success) {
+        // Pass email to parent component
+        if (onEmailSubmit) {
+          onEmailSubmit(email);
+        }
+        
         Alert.alert(
           'Reset Code Sent',
           'Please check your email for the reset code.',
-          [{ text: 'OK', onPress: () => onNavigate('resetPassword') }]
+          [{ text: 'OK', onPress: () => onNavigate('verifyResetCode') }]
         );
-        setEmail('');
+        // Don't clear email - it needs to be passed to the next screen
       } else {
         Alert.alert('Error', response.data.message || 'Failed to send reset code');
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      Alert.alert('Error', 'Failed to send reset code. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to send reset code. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -74,13 +86,14 @@ const ModernForgotPasswordScreen = ({ onBack, onNavigate }) => {
             <Text style={styles.inputLabel}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your email"
+              placeholder="yourname@my.smciligan.edu.ph"
               placeholderTextColor="#b0b0b0"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
+            <Text style={styles.inputHint}>Must be from @my.smciligan.edu.ph domain</Text>
           </View>
 
           {/* Send Reset Code Button */}
@@ -170,6 +183,11 @@ const styles = StyleSheet.create({
     paddingVertical: ModernTheme.spacing.md,
     fontSize: 16,
     color: '#2c3e50',
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 4,
   },
   primaryButton: {
     backgroundColor: '#3498db',

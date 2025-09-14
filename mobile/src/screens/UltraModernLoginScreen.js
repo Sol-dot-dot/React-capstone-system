@@ -28,12 +28,23 @@ const UltraModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
       return;
     }
 
+    // Validate ID Number format
+    const idNumberRegex = /^[A-Z]\d{2}-\d{3,4}$/;
+    if (!idNumberRegex.test(idNumber)) {
+      Alert.alert('Error', 'ID Number must be in format XXX-XXX or XXX-XXXX (e.g., C22-004)');
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log('Attempting login with:', { idNumber, password: '***' });
+      
       const response = await axios.post('http://10.0.2.2:5000/api/auth/user/login', {
         idNumber,
         password,
       });
+
+      console.log('Login response:', response.data);
 
       if (response.data.success) {
         onLogin(response.data.user);
@@ -42,7 +53,17 @@ const UltraModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', error.response?.data?.message || 'Invalid credentials. Please try again.');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      let errorMessage = 'Invalid credentials. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        errorMessage = error.response.data.errors.map(err => err.msg).join(', ');
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }

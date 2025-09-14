@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const {
+    calculateOverdueDays,
     getSystemSettings,
     updateSystemSetting,
     getStudentFines,
@@ -13,9 +14,11 @@ const {
     updateSemesterBooksCount,
     recalculateAllSemesterCounts,
     processAllOverdueFines,
+    cleanupDuplicateFines,
     getPenaltyStats,
     calculateFine
 } = require('../utils/penaltyUtils');
+const { ensureReturnTransactionRecords } = require('../utils/borrowingUtils');
 const { createReturnTransaction } = require('../utils/borrowingUtils');
 const pool = require('../config/database');
 
@@ -198,6 +201,107 @@ router.get('/students-with-fines', auth, async (req, res) => {
     }
 });
 
+// GET /api/penalty/students-detailed - Get detailed student penalty information (admin only)
+router.get('/students-detailed', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { search, status = 'unpaid' } = req.query;
+        let whereClause = '';
+        let params = [];
+
+        if (search) {
+            whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ? OR b.title LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        if (status) {
+            const statusWhere = whereClause ? 'AND' : 'WHERE';
+            whereClause += `${statusWhere} f.status = ?`;
+            params.push(status);
+        }
+
+        const [students] = await pool.execute(`
+            SELECT 
+                u.id_number,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.is_verified,
+                u.email_verified,
+                u.last_login,
+                u.created_at as registration_date,
+                COUNT(f.id) as total_fines,
+                COUNT(CASE WHEN f.status = 'unpaid' THEN 1 END) as unpaid_fines,
+                COUNT(CASE WHEN f.status = 'paid' THEN 1 END) as paid_fines,
+                COALESCE(SUM(f.fine_amount), 0) as total_amount,
+                COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount,
+                COALESCE(SUM(CASE WHEN f.status = 'paid' THEN f.paid_amount ELSE 0 END), 0) as paid_amount,
+                MAX(f.fine_date) as latest_fine_date,
+                MIN(f.fine_date) as earliest_fine_date
+            FROM users u
+            LEFT JOIN fines f ON u.id_number = f.student_id_number
+            ${whereClause}
+            GROUP BY u.id_number, u.email, u.first_name, u.last_name, u.is_verified, u.email_verified, u.last_login, u.created_at
+            HAVING total_fines > 0
+            ORDER BY unpaid_amount DESC, total_amount DESC
+        `, params);
+
+        // Get detailed overdue books for each student
+        for (let student of students) {
+            const [overdueBooks] = await pool.execute(`
+                SELECT 
+                    bt.id as transaction_id,
+                    bt.borrowed_date,
+                    bt.due_date,
+                    bt.status as transaction_status,
+                    b.title,
+                    b.author,
+                    b.number_code,
+                    b.category,
+                    f.id as fine_id,
+                    f.fine_amount,
+                    f.paid_amount,
+                    f.days_overdue,
+                    f.fine_date,
+                    f.status as fine_status,
+                    CASE 
+                        WHEN bt.status = 'overdue' THEN 'Overdue'
+                        WHEN bt.status = 'borrowed' AND bt.due_date < CURDATE() THEN 'Overdue'
+                        WHEN bt.status = 'returned' THEN 'Returned'
+                        ELSE 'Borrowed'
+                    END as current_status,
+                    DATEDIFF(CURDATE(), bt.due_date) as days_past_due
+                FROM borrowing_transactions bt
+                JOIN books b ON bt.book_id = b.id
+                LEFT JOIN fines f ON bt.id = f.transaction_id
+                WHERE bt.student_id_number = ? 
+                AND (bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()))
+                ORDER BY bt.due_date ASC
+            `, [student.id_number]);
+
+            student.overdue_books = overdueBooks;
+        }
+
+        res.json({
+            success: true,
+            data: students,
+            lastUpdated: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching detailed student penalty information:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch detailed student penalty information'
+        });
+    }
+});
+
 // POST /api/penalty/mark-paid/:studentId - Mark all fines as paid and return books (admin only)
 router.post('/mark-paid/:studentId', auth, async (req, res) => {
     const connection = await pool.getConnection();
@@ -239,16 +343,28 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
             });
         }
 
-        // 2. Mark all unpaid fines as paid
+        // 2. Mark all unpaid fines as paid and create payment records
         const [fineResult] = await connection.execute(
             `UPDATE fines 
              SET status = 'paid', 
                  paid_amount = fine_amount,
-                 updated_at = CURRENT_TIMESTAMP,
-                 updated_at = NOW()
+                 updated_at = CURRENT_TIMESTAMP
              WHERE student_id_number = ? AND status = 'unpaid'`,
             [studentId]
         );
+
+        // Create payment records for each paid fine
+        for (const fine of unpaidFines) {
+            const remainingAmount = fine.fine_amount - (fine.paid_amount || 0);
+            if (remainingAmount > 0) {
+                await connection.execute(
+                    `INSERT INTO fine_payments 
+                     (fine_id, payment_amount, payment_method, processed_by, notes) 
+                     VALUES (?, ?, 'cash', ?, 'Full payment - All fines paid at once')`,
+                    [fine.id, remainingAmount, adminId]
+                );
+            }
+        }
 
         // 3. Return any borrowed books associated with these fines
         let booksReturned = 0;
@@ -316,19 +432,14 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
             );
 
             // Create return transaction record
-            try {
-                await createReturnTransaction(
-                    book.id, 
-                    adminId, 
-                    'good', 
-                    null, 
-                    'Book returned after fine payment - overdue book processed'
-                );
-                console.log('✅ Return transaction record created for book:', book.title);
-            } catch (returnError) {
-                console.error('❌ Error creating return transaction record:', returnError);
-                // Continue processing even if return transaction creation fails
-            }
+            await createReturnTransaction(
+                book.id, 
+                adminId, 
+                'good', 
+                'Overdue book returned after fine payment', 
+                'Overdue book processed - fine payment completed'
+            );
+            console.log('✅ Return transaction record created for overdue book:', book.title);
 
             booksReturned++;
             console.log('✅ Overdue book returned:', book.title);
@@ -381,10 +492,92 @@ router.get('/fines/:studentId', auth, async (req, res) => {
         const { studentId } = req.params;
         const { status, recalculate = 'true' } = req.query;
 
+        // Get student basic information
+        const [studentInfo] = await pool.execute(`
+            SELECT 
+                u.id_number,
+                u.email,
+                u.first_name,
+                u.last_name,
+                u.is_verified,
+                u.email_verified,
+                u.last_login,
+                u.created_at as registration_date
+            FROM users u
+            WHERE u.id_number = ?
+        `, [studentId]);
+
+        if (studentInfo.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        // Get student's fines with detailed book information
         const fines = await getStudentFines(studentId, status, recalculate === 'true');
+        
+        // Get current borrowing status
+        const [borrowingStatus] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total_borrowed,
+                COUNT(CASE WHEN status = 'borrowed' THEN 1 END) as currently_borrowed,
+                COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count,
+                COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned_count
+            FROM borrowing_transactions 
+            WHERE student_id_number = ?
+        `, [studentId]);
+
+        // Get overdue books details
+        const [overdueBooks] = await pool.execute(`
+            SELECT 
+                bt.id as transaction_id,
+                bt.borrowed_date,
+                bt.due_date,
+                bt.status as transaction_status,
+                b.title,
+                b.author,
+                b.number_code,
+                b.category,
+                f.id as fine_id,
+                f.fine_amount,
+                f.paid_amount,
+                f.days_overdue,
+                f.fine_date,
+                f.status as fine_status,
+                DATEDIFF(CURDATE(), bt.due_date) as days_past_due
+            FROM borrowing_transactions bt
+            JOIN books b ON bt.book_id = b.id
+            LEFT JOIN fines f ON bt.id = f.transaction_id
+            WHERE bt.student_id_number = ? 
+            AND (bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()))
+            ORDER BY bt.due_date ASC
+        `, [studentId]);
+
+        // Calculate summary statistics
+        const totalFines = fines.length;
+        const unpaidFines = fines.filter(fine => fine.status === 'unpaid');
+        const paidFines = fines.filter(fine => fine.status === 'paid');
+        const totalAmount = fines.reduce((sum, fine) => sum + parseFloat(fine.fine_amount), 0);
+        const unpaidAmount = unpaidFines.reduce((sum, fine) => sum + (parseFloat(fine.fine_amount) - parseFloat(fine.paid_amount || 0)), 0);
+        const paidAmount = paidFines.reduce((sum, fine) => sum + parseFloat(fine.paid_amount || 0), 0);
+
         res.json({
             success: true,
-            data: fines,
+            data: {
+                student: studentInfo[0],
+                fines: fines,
+                overdue_books: overdueBooks,
+                borrowing_status: borrowingStatus[0],
+                summary: {
+                    total_fines: totalFines,
+                    unpaid_fines: unpaidFines.length,
+                    paid_fines: paidFines.length,
+                    total_amount: totalAmount,
+                    unpaid_amount: unpaidAmount,
+                    paid_amount: paidAmount
+                }
+            },
             lastUpdated: new Date().toISOString()
         });
     } catch (error) {
@@ -723,7 +916,6 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                         UPDATE fines 
                         SET paid_amount = fine_amount, 
                             status = 'paid', 
-                            updated_at = CURRENT_TIMESTAMP,
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     `, [fine.id]);
@@ -754,19 +946,14 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                     `, [fine.transaction_id]);
 
                     // Create return transaction record
-                    try {
-                        await createReturnTransaction(
-                            fine.transaction_id, 
-                            adminId, 
-                            'good', 
-                            null, 
-                            'Book returned after fine payment - all fines paid at once'
-                        );
-                        console.log('✅ Return transaction record created for transaction:', fine.transaction_id);
-                    } catch (returnError) {
-                        console.error('❌ Error creating return transaction record:', returnError);
-                        // Continue processing even if return transaction creation fails
-                    }
+                    await createReturnTransaction(
+                        fine.transaction_id, 
+                        adminId, 
+                        'good', 
+                        'Book returned after fine payment', 
+                        'All fines paid at once - book returned'
+                    );
+                    console.log('✅ Return transaction record created for transaction:', fine.transaction_id);
 
                     paidFinesCount++;
                     returnedBooksCount++;
@@ -999,7 +1186,7 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
                     transaction.number_code,
                     transaction.borrowed_date,
                     transaction.due_date,
-                    Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24)),
+                    calculateOverdueDays(transaction.due_date),
                     transaction.fine_amount || 0,
                     transaction.paid_amount || 0,
                     adminId
@@ -1009,7 +1196,7 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
             historyRecords.push({
                 transactionId,
                 bookTitle: transaction.title,
-                daysOverdue: Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24)),
+                daysOverdue: calculateOverdueDays(transaction.due_date),
                 fineAmount: transaction.fine_amount || 0,
                 paidAmount: transaction.paid_amount || 0
             });
@@ -1087,6 +1274,58 @@ router.get('/overdue-history/:studentId', auth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch overdue history'
+        });
+    }
+});
+
+// POST /api/penalty/cleanup-duplicates - Clean up duplicate fines (admin only)
+router.post('/cleanup-duplicates', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        await cleanupDuplicateFines();
+        res.json({
+            success: true,
+            message: 'Duplicate fines cleaned up successfully'
+        });
+    } catch (error) {
+        console.error('Error cleaning up duplicate fines:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to clean up duplicate fines'
+        });
+    }
+});
+
+// POST /api/penalty/fix-return-records/:studentId - Fix missing return transaction records (admin only)
+router.post('/fix-return-records/:studentId', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { studentId } = req.params;
+        const adminId = req.user.id;
+
+        const result = await ensureReturnTransactionRecords(studentId, adminId);
+        res.json({
+            success: true,
+            message: `Fixed return transaction records for student ${studentId}`,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error fixing return transaction records:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fix return transaction records'
         });
     }
 });

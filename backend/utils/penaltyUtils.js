@@ -1,5 +1,26 @@
 const db = require('../config/database');
 
+// Centralized function to calculate overdue days consistently
+function calculateOverdueDays(dueDate, currentDate = new Date()) {
+    const due = new Date(dueDate);
+    const now = new Date(currentDate);
+    
+    // Reset time to compare only dates (avoid timezone issues)
+    due.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    // If due date is in the future or today, not overdue
+    if (due >= now) {
+        return 0;
+    }
+    
+    // Calculate days overdue
+    const timeDiff = now - due;
+    const daysOverdue = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, daysOverdue);
+}
+
 // Get system settings
 async function getSystemSettings() {
     try {
@@ -61,14 +82,17 @@ async function calculateFine(transactionId) {
         }
 
         const transaction = rows[0];
-        const dueDate = new Date(transaction.due_date);
-        const now = new Date();
 
-        if (dueDate >= now || transaction.status === 'returned') {
+        if (transaction.status === 'returned') {
             return { fineAmount: 0, daysOverdue: 0 };
         }
 
-        const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
+        const daysOverdue = calculateOverdueDays(transaction.due_date);
+        
+        if (daysOverdue === 0) {
+            return { fineAmount: 0, daysOverdue: 0 };
+        }
+
         const settings = await getSystemSettings();
         const finePerDay = parseFloat(settings.fine_per_day || 5);
         const fineAmount = daysOverdue * finePerDay;
@@ -288,7 +312,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
                 `UPDATE fines 
                  SET paid_amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ?`,
-                [newPaidAmount, newStatus, newStatus, fineId]
+                [newPaidAmount, newStatus, fineId]
             );
 
             // Check if student can now borrow (if all fines are paid)
@@ -439,6 +463,60 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1) {
     }
 }
 
+// Clean up duplicate fines for the same transaction
+async function cleanupDuplicateFines() {
+    try {
+        const connection = await db.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+            
+            // Find transactions with multiple fines
+            const [duplicateFines] = await connection.execute(`
+                SELECT transaction_id, COUNT(*) as count, 
+                       MIN(id) as keep_id, 
+                       SUM(fine_amount) as total_fine_amount,
+                       MAX(days_overdue) as max_days_overdue
+                FROM fines 
+                WHERE status = 'unpaid'
+                GROUP BY transaction_id 
+                HAVING COUNT(*) > 1
+            `);
+            
+            console.log(`🧹 Found ${duplicateFines.length} transactions with duplicate fines`);
+            
+            for (const duplicate of duplicateFines) {
+                // Keep the first fine record and update it with the correct total
+                await connection.execute(`
+                    UPDATE fines 
+                    SET fine_amount = ?, days_overdue = ?
+                    WHERE id = ?
+                `, [duplicate.total_fine_amount, duplicate.max_days_overdue, duplicate.keep_id]);
+                
+                // Delete all other duplicate fines for this transaction
+                await connection.execute(`
+                    DELETE FROM fines 
+                    WHERE transaction_id = ? AND id != ?
+                `, [duplicate.transaction_id, duplicate.keep_id]);
+                
+                console.log(`✅ Cleaned up ${duplicate.count - 1} duplicate fines for transaction ${duplicate.transaction_id}`);
+            }
+            
+            await connection.commit();
+            console.log(`🎉 Cleanup completed. Processed ${duplicateFines.length} transactions`);
+            
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Error cleaning up duplicate fines:', error);
+        throw error;
+    }
+}
+
 // Get all overdue books and calculate fines - FIXED VERSION
 async function processAllOverdueFines() {
     try {
@@ -446,6 +524,9 @@ async function processAllOverdueFines() {
         
         try {
             await connection.beginTransaction();
+            
+            // Step 0: Clean up any existing duplicate fines
+            await cleanupDuplicateFines();
             
             // Step 1: Update all borrowed books that are past due to overdue status
             const [updateResult] = await connection.execute(
@@ -485,11 +566,11 @@ async function processAllOverdueFines() {
                         [transaction.id]
                     );
                     
+                    const daysOverdue = calculateOverdueDays(transaction.due_date);
+                    const fineAmount = daysOverdue * finePerDay;
+                    
                     if (existingFines.length > 0) {
                         // Fine already exists, just update it
-                        const daysOverdue = Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24));
-                        const fineAmount = daysOverdue * finePerDay;
-                        
                         await connection.execute(
                             `UPDATE fines 
                              SET fine_amount = ?, days_overdue = ?, updated_at = CURRENT_TIMESTAMP
@@ -505,8 +586,6 @@ async function processAllOverdueFines() {
                         });
                     } else {
                         // Create new fine
-                        const daysOverdue = Math.ceil((new Date() - new Date(transaction.due_date)) / (1000 * 60 * 60 * 24));
-                        const fineAmount = daysOverdue * finePerDay;
                         
                         await connection.execute(
                             `INSERT INTO fines (
@@ -630,6 +709,7 @@ async function getPenaltyStats() {
 }
 
 module.exports = {
+    calculateOverdueDays,
     getSystemSettings,
     updateSystemSetting,
     calculateFine,
@@ -643,5 +723,6 @@ module.exports = {
     updateSemesterBooksCount,
     recalculateAllSemesterCounts,
     processAllOverdueFines,
+    cleanupDuplicateFines,
     getPenaltyStats
 };

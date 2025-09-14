@@ -67,44 +67,14 @@ const PenaltyManagement = () => {
         try {
             const token = localStorage.getItem('token');
             
-            // Get all fines grouped by student
-            const response = await fetch('/api/penalty/all-fines', {
+            // Get detailed student penalty information
+            const response = await fetch('/api/penalty/students-detailed', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             
             if (data.success) {
-                const fines = data.data.fines;
-                
-                // Group fines by student
-                const studentMap = new Map();
-                
-                fines.forEach(fine => {
-                    const studentId = fine.student_id_number;
-                    if (!studentMap.has(studentId)) {
-                        studentMap.set(studentId, {
-                            studentId,
-                            email: fine.email,
-                            totalFines: 0,
-                            unpaidFines: 0,
-                            totalAmount: 0,
-                            unpaidAmount: 0,
-                            fines: []
-                        });
-                    }
-                    
-                    const student = studentMap.get(studentId);
-                    student.fines.push(fine);
-                    student.totalFines++;
-                    student.totalAmount += parseFloat(fine.fine_amount);
-                    
-                    if (fine.status === 'unpaid') {
-                        student.unpaidFines++;
-                        student.unpaidAmount += parseFloat(fine.fine_amount - fine.paid_amount);
-                    }
-                });
-                
-                setStudents(Array.from(studentMap.values()));
+                setStudents(data.data || []);
             }
         } catch (error) {
             console.error('Error loading students with fines:', error);
