@@ -6,6 +6,7 @@ import {
   ScrollView,
   Dimensions,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import {
   Card,
@@ -35,6 +36,8 @@ import {
   MaterialIcons,
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
+import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -88,12 +91,51 @@ const UltraModernBorrowedBooksScreen = ({ userData, onBack }) => {
     scaleAnim.value = withSpring(1, { damping: 12, stiffness: 100 });
   }, []);
 
-  const onRefresh = React.useCallback(() => {
+  const loadBorrowedBooks = async () => {
+    try {
+      // Use the working URL directly
+      const response = await axios.get(
+        `http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}`
+      );
+
+      if (response.data.success) {
+        // Extract books from the correct nested structure
+        const books = response.data.data?.borrowedBooks || [];
+        const transformedBooks = books.map(book => ({
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          isbn: book.number_code, // Use number_code as ISBN
+          borrowDate: book.borrowed_date,
+          dueDate: book.due_date,
+          status: book.status === 'borrowed' ? 'active' : 'overdue',
+          coverImage: null,
+          daysRemaining: calculateDaysRemaining(book.due_date),
+        }));
+        setBorrowedBooks(transformedBooks);
+      }
+    } catch (error) {
+      console.error('Error loading borrowed books:', error);
+      Alert.alert('Error', 'Failed to load borrowed books');
+    }
+  };
+
+  const calculateDaysRemaining = (dueDate) => {
+    const due = new Date(dueDate);
+    const now = new Date();
+    const diffTime = due - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  useEffect(() => {
+    loadBorrowedBooks();
+  }, []);
+
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    await loadBorrowedBooks();
+    setRefreshing(false);
   }, []);
 
   const getStatusColor = (status, daysRemaining) => {

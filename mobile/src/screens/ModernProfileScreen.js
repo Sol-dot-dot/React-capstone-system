@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
@@ -38,6 +40,7 @@ try {
 const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
@@ -60,6 +63,12 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfileData();
+    setRefreshing(false);
   };
 
   const getSemesterStatus = () => {
@@ -88,17 +97,23 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
 
 
   return (
-    <UniversalPageTemplate
-      title={`ID ${userData?.idNumber || 'N/A'}`}
-      userData={userData}
-      onBack={onBack}
-      showUserInfo={false}
-      headerActions={
-        <TouchableOpacity style={styles.refreshButton}>
-          <Icon name="refresh-cw" size={20} color={ModernTheme.colors.textPrimary} />
-        </TouchableOpacity>
+    <ScrollView
+      style={{ flex: 1 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <UniversalPageTemplate
+        title={`ID ${userData?.idNumber || 'N/A'}`}
+        userData={userData}
+        onBack={onBack}
+        showUserInfo={false}
+        headerActions={
+          <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+            <Icon name="refresh-cw" size={20} color={ModernTheme.colors.textPrimary} />
+          </TouchableOpacity>
+        }
+      >
         {/* Profile Section */}
         <View style={ModernStyles.profileContainer}>
           <View style={[ModernStyles.profileImage, styles.profileImageContainer]}>
@@ -162,7 +177,8 @@ const ModernProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
             </>
           )}
         </View>
-    </UniversalPageTemplate>
+      </UniversalPageTemplate>
+    </ScrollView>
   );
 };
 

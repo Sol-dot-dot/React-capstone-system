@@ -67,7 +67,7 @@ const UltraModernPenaltyScreen = ({ userData, onBack }) => {
     try {
       setLoading(true);
       const response = await axios.get(
-        buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))
+        `http://10.0.2.2:5000/api/penalty/user/${userData.idNumber}`
       );
 
       if (response.data.success) {
@@ -101,7 +101,7 @@ const UltraModernPenaltyScreen = ({ userData, onBack }) => {
     setRefreshing(true);
     await loadPenaltyData();
     setRefreshing(false);
-  }, []);
+  }, [loadPenaltyData]);
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -3,8 +3,8 @@
 
 const API_CONFIG = {
   // Base URL - Change this IP address to match your backend server
-  BASE_URL: 'http://10.0.2.2:5000', // Android emulator default
-  // BASE_URL: 'http://localhost:5000', // For iOS simulator
+  BASE_URL: 'http://10.0.2.2:5000', // Android emulator - this is working
+  // BASE_URL: 'http://localhost:5000', // Try localhost first
   //BASE_URL: 'http://172.27.128.1:5000', // Add http:// // For physical device (replace with your computer's IP)
   // BASE_URL: 'https://your-production-domain.com', // For production
 
