@@ -338,9 +338,9 @@ router.post('/return', auth, async (req, res) => {
                     [adminId, transactionId]
                 );
 
-                // Update book status to available
+                // Increment available_copies (trigger will update status automatically)
                 await connection.execute(
-                    'UPDATE books SET status = "available" WHERE id = ?',
+                    'UPDATE books SET available_copies = available_copies + 1 WHERE id = ? AND available_copies < book_copies',
                     [transaction.book_id]
                 );
 
@@ -624,11 +624,11 @@ router.post('/admin/return', auth, async (req, res) => {
             [adminId, transactionId]
         );
 
-        // Update book status to available
+        // Increment available_copies (trigger will update status automatically)
         await connection.execute(
             `UPDATE books 
-             SET status = 'available'
-             WHERE id = ?`,
+             SET available_copies = available_copies + 1
+             WHERE id = ? AND available_copies < book_copies`,
             [transaction.book_id]
         );
 

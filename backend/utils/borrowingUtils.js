@@ -47,7 +47,7 @@ async function checkStudentExists(idNumber) {
 async function checkBookAvailability(bookCode) {
     try {
         const [rows] = await db.execute(
-            'SELECT id, title, author, number_code, status FROM books WHERE number_code = ?',
+            'SELECT id, title, author, number_code, status, available_copies FROM books WHERE number_code = ?',
             [bookCode]
         );
         
@@ -56,11 +56,11 @@ async function checkBookAvailability(bookCode) {
         }
         
         const book = rows[0];
-        if (book.status !== 'available') {
+        if (book.available_copies <= 0) {
             return { 
                 exists: true, 
                 available: false, 
-                message: `Book is currently ${book.status}`,
+                message: `Book is not available (${book.available_copies} copies available)`,
                 book 
             };
         }
@@ -198,9 +198,9 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
                 [studentIdNumber, book.id, adminId, actualDueDate]
             );
 
-            // Update book status to borrowed
+            // Decrement available_copies (trigger will update status automatically)
             await connection.execute(
-                'UPDATE books SET status = "borrowed" WHERE id = ?',
+                'UPDATE books SET available_copies = available_copies - 1 WHERE id = ? AND available_copies > 0',
                 [book.id]
             );
 
