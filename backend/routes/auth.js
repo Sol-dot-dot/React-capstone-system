@@ -104,6 +104,8 @@ router.post('/user/check-id', [
 // Step 2: Check Email and Send Verification Code
 router.post('/user/check-email', [
     body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
+    body('firstName').notEmpty().withMessage('First name is required'),
+    body('lastName').notEmpty().withMessage('Last name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('email').matches(/@my\.smciligan\.edu\.ph$/).withMessage('Email must be from @my.smciligan.edu.ph domain')
 ], async (req, res) => {
@@ -116,7 +118,7 @@ router.post('/user/check-email', [
             });
         }
 
-        const { idNumber, email } = req.body;
+        const { idNumber, firstName, lastName, email } = req.body;
 
         // Check if email already exists
         const [existingUsers] = await pool.execute(
@@ -144,8 +146,8 @@ router.post('/user/check-email', [
             const verificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
             await pool.execute(
-                'UPDATE users SET email = ?, verification_code = ?, verification_expires = ? WHERE id = ?',
-                [email, verificationCode, verificationExpires, userId]
+                'UPDATE users SET email = ?, first_name = ?, last_name = ?, verification_code = ?, verification_expires = ? WHERE id = ?',
+                [email, firstName, lastName, verificationCode, verificationExpires, userId]
             );
         } else {
             // Create new incomplete registration
@@ -154,7 +156,7 @@ router.post('/user/check-email', [
 
             const [result] = await pool.execute(
                 'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified, verification_code, verification_expires) VALUES (?, ?, ?, ?, ?, FALSE, ?, ?)',
-                [idNumber, email, 'temp_password', 'Temp', 'User', verificationCode, verificationExpires]
+                [idNumber, email, 'temp_password', firstName, lastName, verificationCode, verificationExpires]
             );
             userId = result.insertId;
         }
@@ -278,6 +280,8 @@ router.post('/user/complete-registration', [
 // Legacy registration endpoint (for backward compatibility)
 router.post('/user/register', [
     body('idNumber').matches(/^[A-Z]\d{2}-\d{3,4}$/).withMessage('ID Number must be in format XXX-XXX or XXX-XXXX'),
+    body('firstName').notEmpty().withMessage('First name is required'),
+    body('lastName').notEmpty().withMessage('Last name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
     body('email').matches(/@my\.smciligan\.edu\.ph$/).withMessage('Email must be from @my.smciligan.edu.ph domain'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
@@ -293,7 +297,7 @@ router.post('/user/register', [
             });
         }
 
-        const { idNumber, email, password } = req.body;
+        const { idNumber, firstName, lastName, email, password } = req.body;
 
         // Check if user already exists
         const [existingUsers] = await pool.execute(
@@ -315,7 +319,7 @@ router.post('/user/register', [
         // Insert user with verification code
         const [result] = await pool.execute(
             'INSERT INTO users (id_number, email, password_hash, first_name, last_name, is_verified, email_verified, verification_code, verification_expires) VALUES (?, ?, ?, ?, ?, TRUE, TRUE, ?, ?)',
-            [idNumber, email, hashedPassword, 'Student', 'User', verificationCode, verificationExpires]
+            [idNumber, email, hashedPassword, firstName, lastName, verificationCode, verificationExpires]
         );
 
         res.json({

@@ -41,7 +41,8 @@ const BookManagement = ({ user }) => {
         genre: '',
         description: '',
         status: 'available',
-        location: ''
+        location: '',
+        book_copies: 1
     });
 
     const API_BASE = 'http://localhost:5000/api';
@@ -192,7 +193,8 @@ const BookManagement = ({ user }) => {
             genre: book.genre || '',
             description: book.description || '',
             status: book.status,
-            location: book.location || ''
+            location: book.location || '',
+            book_copies: book.book_copies || 1
         });
         setShowEditForm(true);
     };
@@ -207,7 +209,8 @@ const BookManagement = ({ user }) => {
             genre: '',
             description: '',
             status: 'available',
-            location: ''
+            location: '',
+            book_copies: 1
         });
     };
 
@@ -461,6 +464,19 @@ const BookManagement = ({ user }) => {
                                     </select>
                                 </div>
                                 <div className="form-group">
+                                    <label>Book Copies *</label>
+                                    <input
+                                        type="number"
+                                        value={formData.book_copies}
+                                        onChange={(e) => setFormData({...formData, book_copies: parseInt(e.target.value) || 1})}
+                                        min="1"
+                                        max="100"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
                                     <label>Location</label>
                                     <input
                                         type="text"
@@ -571,6 +587,19 @@ const BookManagement = ({ user }) => {
                                         <option value="maintenance">Maintenance</option>
                                     </select>
                                 </div>
+                                <div className="form-group">
+                                    <label>Book Copies *</label>
+                                    <input
+                                        type="number"
+                                        value={formData.book_copies}
+                                        onChange={(e) => setFormData({...formData, book_copies: parseInt(e.target.value) || 1})}
+                                        min="1"
+                                        max="100"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-row">
                                 <div className="form-group">
                                     <label>Location</label>
                                     <input

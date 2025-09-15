@@ -21,6 +21,8 @@ const { width } = Dimensions.get('window');
 const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
   const [formData, setFormData] = useState({
     idNumber: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -47,6 +49,16 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
         const idNumberRegex = /^[A-Z]\d{2}-\d{3,4}$/;
         if (!value.trim()) return 'ID Number is required';
         if (!idNumberRegex.test(value)) return 'Format: XXX-XXX or XXX-XXXX';
+        return '';
+      
+      case 'firstName':
+        if (!value.trim()) return 'First name is required';
+        if (value.trim().length < 2) return 'First name must be at least 2 characters';
+        return '';
+      
+      case 'lastName':
+        if (!value.trim()) return 'Last name is required';
+        if (value.trim().length < 2) return 'Last name must be at least 2 characters';
         return '';
       
       case 'email':
@@ -133,6 +145,8 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
       // Step 2: Check Email and Send Verification Code
       const emailCheckResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
         idNumber: formData.idNumber,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
       });
 
@@ -149,6 +163,8 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
         onNavigate('verify', { 
           userId: emailCheckResponse.data.userId, 
           idNumber: formData.idNumber, 
+          firstName: formData.firstName,
+          lastName: formData.lastName,
           email: formData.email,
           password: formData.password 
         });
@@ -268,6 +284,48 @@ const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
                 </View>
                 {errors.idNumber && <Text style={styles.errorText}>{errors.idNumber}</Text>}
                 <Text style={styles.inputHint}>Format: XXX-XXX or XXX-XXXX (e.g., C22-004)</Text>
+              </View>
+
+              {/* First Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>First Name</Text>
+                <View style={styles.inputContainer}>
+                  <Icon name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, errors.firstName && styles.inputError]}
+                    placeholder="Enter your first name"
+                    placeholderTextColor="#9ca3af"
+                    value={formData.firstName}
+                    onChangeText={(value) => handleInputChange('firstName', value)}
+                    autoCapitalize="words"
+                    keyboardType="default"
+                  />
+                  {formData.firstName && !errors.firstName && (
+                    <Icon name="checkmark-circle" size={20} color="#10b981" style={styles.inputIcon} />
+                  )}
+                </View>
+                {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
+              </View>
+
+              {/* Last Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Last Name</Text>
+                <View style={styles.inputContainer}>
+                  <Icon name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.input, errors.lastName && styles.inputError]}
+                    placeholder="Enter your last name"
+                    placeholderTextColor="#9ca3af"
+                    value={formData.lastName}
+                    onChangeText={(value) => handleInputChange('lastName', value)}
+                    autoCapitalize="words"
+                    keyboardType="default"
+                  />
+                  {formData.lastName && !errors.lastName && (
+                    <Icon name="checkmark-circle" size={20} color="#10b981" style={styles.inputIcon} />
+                  )}
+                </View>
+                {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
               </View>
 
               {/* Email */}

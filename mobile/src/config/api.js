@@ -36,7 +36,10 @@ const API_CONFIG = {
 
     // Chatbot endpoints
     CHATBOT: {
-      SEND_MESSAGE: '/api/chatbot/message',
+      SEND_MESSAGE: '/api/chatbot/recommend',
+      PERSONALIZED: '/api/chatbot/personalized',
+      USER_KNOWLEDGE: (idNumber) => `/api/chatbot/user-knowledge/${idNumber}`,
+      CONVERSATION_STARTER: (idNumber) => `/api/chatbot/conversation-starter/${idNumber}`,
     },
 
     // Notifications endpoints

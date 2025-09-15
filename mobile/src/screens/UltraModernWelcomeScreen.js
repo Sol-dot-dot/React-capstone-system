@@ -47,9 +47,9 @@ const UltraModernWelcomeScreen = ({ onNavigate }) => {
         <View style={styles.featuresSection}>
           <View style={styles.featureItem}>
             <View style={[styles.featureIcon, { backgroundColor: ModernTheme.colors.primary + '20' }]}>
-              <Icon name="library-outline" size={24} color={ModernTheme.colors.primary} />
+              <Icon name="notifications-outline" size={24} color={ModernTheme.colors.primary} />
             </View>
-            <Text style={styles.featureText}>Browse Books</Text>
+            <Text style={styles.featureText}>Smart Notification</Text>
           </View>
           
           <View style={styles.featureItem}>

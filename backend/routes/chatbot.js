@@ -3,6 +3,7 @@ const router = express.Router();
 const chatbotService = require('../utils/chatbotService');
 const vectorDBService = require('../utils/vectorDBService');
 const readingHistoryService = require('../utils/readingHistoryService');
+const userKnowledgeService = require('../services/userKnowledgeService');
 const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 
@@ -108,7 +109,7 @@ router.post('/simple', async (req, res) => {
 // Chat with chatbot and get book recommendations
 router.post('/recommend', async (req, res) => {
   try {
-    const { message, studentIdNumber } = req.body;
+    const { message, studentIdNumber, conversationHistory = [] } = req.body;
     
     // Manual validation
     if (!message || typeof message !== 'string') {
@@ -159,15 +160,43 @@ router.post('/recommend', async (req, res) => {
 
     if (isBookRequest) {
       try {
-        // Search for similar books using AI vector database
-        books = await vectorDBService.searchSimilarBooks(message, 5);
-        
-        if (books.length > 0) {
-          // Generate AI-powered recommendation with personalization if student ID provided
-          response = await chatbotService.generateRecommendation(message, books, studentIdNumber);
+        // Use advanced hybrid recommendations if student ID is provided
+        if (studentIdNumber) {
+          console.log('🚀 Using advanced hybrid recommendations');
+          const advancedResult = await chatbotService.generateAdvancedRecommendations(studentIdNumber, message, 5);
+          
+          response = advancedResult.aiExplanation || advancedResult.explanation;
+          books = advancedResult.recommendations || [];
+          
+          // Add additional metadata
+          const metadata = {
+            recommendationEngine: advancedResult.recommendationEngine,
+            confidence: advancedResult.confidence,
+            userProfile: advancedResult.userProfile,
+            sources: books.map(book => book.sources || []).flat()
+          };
+          
+          res.json({
+            success: true,
+            data: {
+              response,
+              books: books.slice(0, 3), // Return top 3 books
+              isBookRequest,
+              aiPowered: true,
+              advancedRecommendations: true,
+              metadata
+            }
+          });
+          return;
         } else {
-          // No books found, get general response
-          response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
+          // Fallback to original vector search for non-authenticated users
+          books = await vectorDBService.searchSimilarBooks(message, 5);
+          
+          if (books.length > 0) {
+            response = await chatbotService.generateRecommendation(message, books, studentIdNumber);
+          } else {
+            response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
+          }
         }
       } catch (searchError) {
         console.error('❌ Error in book search:', searchError.message);
@@ -176,9 +205,11 @@ router.post('/recommend', async (req, res) => {
         books = [];
       }
     } else {
-      // General chat response
+      // General chat response with user context and conversation history
       try {
-        response = await chatbotService.getGeneralResponse(message);
+        // Add conversation context to the message
+        const contextualMessage = chatbotService.addConversationContext(message, conversationHistory);
+        response = await chatbotService.getGeneralResponse(contextualMessage, studentIdNumber);
       } catch (chatError) {
         console.error('❌ Error generating chat response:', chatError.message);
         return res.status(500).json({
@@ -303,6 +334,157 @@ router.post('/personalized', [
     res.status(500).json({
       success: false,
       message: 'An error occurred while generating personalized recommendations',
+      error: error.message
+    });
+  }
+});
+
+// Get advanced hybrid recommendations
+router.post('/advanced-recommendations', [
+  body('studentIdNumber').notEmpty().withMessage('Student ID number is required'),
+  body('query').optional().isString().withMessage('Query must be a string'),
+  body('limit').optional().isInt({ min: 1, max: 10 }).withMessage('Limit must be between 1 and 10')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { studentIdNumber, query = '', limit = 5 } = req.body;
+
+    // Generate advanced hybrid recommendations
+    const result = await chatbotService.generateAdvancedRecommendations(studentIdNumber, query, limit);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating advanced recommendations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while generating advanced recommendations',
+      error: error.message
+    });
+  }
+});
+
+// Submit user feedback for recommendations
+router.post('/feedback', [
+  body('messageId').notEmpty().withMessage('Message ID is required'),
+  body('feedback').isIn(['helpful', 'not-helpful']).withMessage('Feedback must be helpful or not-helpful'),
+  body('studentIdNumber').optional().isString().withMessage('Student ID must be a string')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { messageId, feedback, studentIdNumber } = req.body;
+
+    // Log feedback for analytics
+    console.log(`📝 User feedback received:`, {
+      messageId,
+      feedback,
+      studentIdNumber,
+      timestamp: new Date().toISOString()
+    });
+
+    // Store feedback in database (optional)
+    // You can add a feedback table to store this data for analytics
+
+    res.json({
+      success: true,
+      message: 'Feedback received successfully',
+      data: {
+        messageId,
+        feedback,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error processing feedback:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while processing feedback',
+      error: error.message
+    });
+  }
+});
+
+// Get comprehensive user knowledge
+router.get('/user-knowledge/:studentIdNumber', async (req, res) => {
+  try {
+    const { studentIdNumber } = req.params;
+
+    if (!studentIdNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student ID number is required'
+      });
+    }
+
+    // Get comprehensive user knowledge
+    const userKnowledge = await userKnowledgeService.getUserKnowledge(studentIdNumber);
+
+    res.json({
+      success: true,
+      data: userKnowledge
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting user knowledge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while getting user knowledge',
+      error: error.message
+    });
+  }
+});
+
+// Get dynamic conversation starter
+router.get('/conversation-starter/:studentIdNumber', async (req, res) => {
+  try {
+    const { studentIdNumber } = req.params;
+
+    if (!studentIdNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student ID number is required'
+      });
+    }
+
+    // Get user knowledge and generate dynamic starter
+    const userKnowledge = await userKnowledgeService.getUserKnowledge(studentIdNumber);
+    const dynamicStarter = chatbotService.generateDynamicStarter(userKnowledge);
+
+    res.json({
+      success: true,
+      data: {
+        message: dynamicStarter,
+        userKnowledge: userKnowledge.summary
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting conversation starter:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while getting conversation starter',
       error: error.message
     });
   }

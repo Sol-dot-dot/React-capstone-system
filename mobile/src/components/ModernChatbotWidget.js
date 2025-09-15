@@ -48,7 +48,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hi! I'm your friendly library assistant. I can help you find amazing books using AI-powered recommendations. What are you looking for today?",
+      text: "Hi there! I'm your library assistant and I'm excited to help you discover some amazing books! What's on your reading wishlist today?",
       isBot: true,
       timestamp: new Date(),
       isTyping: false,
@@ -57,6 +57,8 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [userKnowledge, setUserKnowledge] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const scrollViewRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const typingAnim = useRef(new Animated.Value(0)).current;
@@ -68,6 +70,11 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         duration: 300,
         useNativeDriver: false,
       }).start();
+      
+      // Load user knowledge when chatbot opens
+      if (userInfo?.id_number || userInfo?.idNumber) {
+        loadUserKnowledge();
+      }
     } else {
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -76,6 +83,63 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       }).start();
     }
   }, [isVisible]);
+
+  const loadUserKnowledge = async () => {
+    try {
+      const studentId = userInfo.id_number || userInfo.idNumber;
+      const response = await axios.get(buildApiUrl(getEndpoint('CHATBOT', 'USER_KNOWLEDGE', studentId)));
+      if (response.data.success) {
+        setUserKnowledge(response.data.data);
+        
+        // Update the welcome message with dynamic content
+        const dynamicWelcome = generateDynamicWelcome(response.data.data);
+        setMessages(prev => [{
+          id: 1,
+          text: dynamicWelcome,
+          isBot: true,
+          timestamp: new Date(),
+          isTyping: false,
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading user knowledge:', error);
+    }
+  };
+
+  const generateDynamicWelcome = (userKnowledge) => {
+    if (!userKnowledge) {
+      return "Hi there! I'm your library assistant and I'm excited to help you discover some amazing books! What's on your reading wishlist today?";
+    }
+
+    const { summary } = userKnowledge;
+    const welcomeMessages = [];
+
+    // Based on reading level
+    if (summary.readingLevel === 'New Reader') {
+      welcomeMessages.push("Welcome to your reading journey! I'm here to help you find books that'll make you fall in love with reading. What sounds interesting to you?");
+    } else if (summary.readingLevel === 'Expert') {
+      welcomeMessages.push(`Hey ${summary.name}! I see you're quite the bookworm with ${summary.totalBooks} books under your belt. What's your next literary adventure?`);
+    } else {
+      welcomeMessages.push(`Hi ${summary.name}! I love helping readers like you discover new favorites. What kind of stories are calling to you today?`);
+    }
+
+    // Based on current status
+    if (summary.currentBooks > 0) {
+      welcomeMessages.push(`I see you've got ${summary.currentBooks} book${summary.currentBooks > 1 ? 's' : ''} out right now. How are you enjoying them? Need suggestions for what to read next?`);
+    }
+
+    // Based on favorite genre
+    if (summary.favoriteGenre && summary.favoriteGenre !== 'None') {
+      welcomeMessages.push(`I know you love ${summary.favoriteGenre} books! I've got some great new titles in that genre that I think you'll absolutely love. Want to hear about them?`);
+    }
+
+    // Based on reading activity
+    if (summary.totalBooks > 10) {
+      welcomeMessages.push(`Wow, ${summary.totalBooks} books! You're on fire! 🔥 What's your next reading challenge going to be?`);
+    }
+
+    return welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+  };
 
   useEffect(() => {
     if (isTyping) {
@@ -113,21 +177,30 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     setIsTyping(true);
 
     try {
+      // Prepare conversation history (last 6 messages for context)
+      const conversationHistory = messages.slice(-6).map(msg => ({
+        text: msg.text,
+        isBot: msg.isBot,
+        timestamp: msg.timestamp
+      }));
+
       const requestData = {
         message: inputText.trim(),
+        conversationHistory: conversationHistory
       };
       
       // Add student ID for personalized recommendations if available
-      if (userInfo && userInfo.id_number) {
-        requestData.studentIdNumber = userInfo.id_number;
-        console.log('📱 Adding student ID to request:', userInfo.id_number);
+      if (userInfo && (userInfo.id_number || userInfo.idNumber)) {
+        requestData.studentIdNumber = userInfo.id_number || userInfo.idNumber;
+        console.log('📱 Adding student ID to request:', requestData.studentIdNumber);
+        console.log('📱 Conversation history length:', conversationHistory.length);
       } else {
-        console.log('📱 No user info available for personalization:', { userInfo, hasIdNumber: userInfo?.id_number });
+        console.log('📱 No user info available for personalization:', { userInfo, hasIdNumber: userInfo?.id_number || userInfo?.idNumber });
       }
 
       let response;
       try {
-        response = await axios.post(buildApiUrl('/api/chatbot/recommend'), requestData);
+        response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'SEND_MESSAGE')), requestData);
       } catch (mainError) {
         console.log('🔄 Main chatbot failed, trying simple endpoint...');
         // Try simple endpoint as fallback
@@ -142,6 +215,11 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           timestamp: new Date(),
           books: response.data.data.books || [],
           isTyping: false,
+          // Enhanced recommendation data
+          advancedRecommendations: response.data.data.advancedRecommendations || false,
+          metadata: response.data.data.metadata || null,
+          recommendationEngine: response.data.data.metadata?.recommendationEngine || 'basic',
+          confidence: response.data.data.metadata?.confidence || 0,
         };
 
         setMessages(prev => [...prev, botMessage]);
@@ -183,7 +261,8 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   };
 
   const getPersonalizedRecommendations = async () => {
-    if (!userInfo || !userInfo.id_number) {
+    const studentId = userInfo?.id_number || userInfo?.idNumber;
+    if (!userInfo || !studentId) {
       const errorMessage = {
         id: Date.now(),
         text: "I need to know who you are to provide personalized recommendations. Please make sure you're logged in.",
@@ -199,8 +278,8 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     setIsTyping(true);
 
     try {
-      const response = await axios.post(buildApiUrl('/api/chatbot/personalized'), {
-        studentIdNumber: userInfo.id_number,
+      const response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'PERSONALIZED')), {
+        studentIdNumber: studentId,
         limit: 5
       });
 
@@ -281,25 +360,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     </View>
   );
 
-  const renderBookCard = (book, index) => (
-    <View key={index} style={styles.bookCard}>
-      <View style={styles.bookImageContainer}>
-        <Icon name="book" size={24} color={ModernTheme.colors.primary} />
-      </View>
-      <View style={styles.bookInfo}>
-        <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-        <Text style={styles.bookAuthor} numberOfLines={1}>by {book.author}</Text>
-        <Text style={styles.bookGenre}>{book.genre}</Text>
-        <Text style={styles.bookDescription} numberOfLines={2}>
-          {book.description}
-        </Text>
-        <TouchableOpacity style={styles.borrowButton}>
-          <Icon name="book-open" size={16} color="#ffffff" />
-          <Text style={styles.borrowButtonText}>Borrow Now</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   const renderMessage = (message) => (
     <View key={message.id} style={[
@@ -326,16 +386,19 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         {message.books && message.books.length > 0 && (
           <View style={styles.recommendationsContainer}>
             <Text style={styles.recommendationsTitle}>
-              <Icon name="book" size={16} color={ModernTheme.colors.primary} />
-              {' '}Recommended Books
+              📚 Recommended Books
             </Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.booksScrollView}
-            >
-              {message.books.map((book, index) => renderBookCard(book, index))}
-            </ScrollView>
+            {message.books.map((book, index) => (
+              <View key={index} style={styles.textRecommendation}>
+                <Text style={styles.recommendationNumber}>{index + 1}.</Text>
+                <Text style={styles.recommendationText}>
+                  <Text style={styles.bookTitleText}>"{book.title}"</Text> by {book.author}
+                  {book.category && ` (${book.category})`}
+                  {book.description && ` - ${book.description}`}
+                  {book.reason && `\n💡 ${book.reason}`}
+                </Text>
+              </View>
+            ))}
           </View>
         )}
         
@@ -376,10 +439,52 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
             <Text style={styles.headerSubtitle}>AI-Powered Recommendations</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Icon name="x" size={20} color="#ffffff" />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {userKnowledge && (
+            <TouchableOpacity 
+              onPress={() => setShowUserProfile(!showUserProfile)} 
+              style={styles.profileButton}
+            >
+              <Icon name="user" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Icon name="x" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* User Profile Display */}
+      {showUserProfile && userKnowledge && (
+        <View style={styles.userProfileContainer}>
+          <Text style={styles.userProfileTitle}>Your Reading Profile</Text>
+          <View style={styles.userProfileStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{userKnowledge.summary.totalBooks}</Text>
+              <Text style={styles.statLabel}>Books Read</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{userKnowledge.summary.currentBooks}</Text>
+              <Text style={styles.statLabel}>Currently Reading</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{userKnowledge.summary.readingLevel}</Text>
+              <Text style={styles.statLabel}>Reading Level</Text>
+            </View>
+          </View>
+          <View style={styles.userProfileDetails}>
+            <Text style={styles.profileDetail}>
+              <Text style={styles.profileLabel}>Favorite Genre:</Text> {userKnowledge.summary.favoriteGenre}
+            </Text>
+            <Text style={styles.profileDetail}>
+              <Text style={styles.profileLabel}>Can Borrow:</Text> {userKnowledge.summary.canBorrow ? 'Yes' : 'No'}
+            </Text>
+            <Text style={styles.profileDetail}>
+              <Text style={styles.profileLabel}>Last Activity:</Text> {userKnowledge.summary.lastActivity}
+            </Text>
+          </View>
+        </View>
+      )}
 
       <ScrollView
         ref={scrollViewRef}
@@ -392,7 +497,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       </ScrollView>
 
       {/* Personalized Recommendations Button */}
-      {userInfo && userInfo.id_number && (
+      {userInfo && (userInfo.id_number || userInfo.idNumber) && (
         <View style={styles.personalizedButtonContainer}>
           <TouchableOpacity
             style={[styles.personalizedButton, isLoading && styles.personalizedButtonDisabled]}
@@ -431,6 +536,29 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       </View>
     </Animated.View>
   );
+
+  const handleFeedback = async (messageId, feedback) => {
+    try {
+      console.log(`📝 User feedback: ${feedback} for message ${messageId}`);
+      
+      // Send feedback to backend
+      await axios.post(buildApiUrl('/api/chatbot/feedback'), {
+        messageId,
+        feedback,
+        studentIdNumber: userInfo?.id_number || userInfo?.idNumber
+      });
+      
+      // Update UI to show feedback was received
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, feedbackReceived: feedback }
+          : msg
+      ));
+      
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+    }
+  };
 };
 
 const styles = StyleSheet.create({
@@ -559,67 +687,141 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  booksScrollView: {
-    marginHorizontal: -ModernTheme.spacing.sm,
-  },
-  bookCard: {
-    width: screenWidth * 0.6,
-    backgroundColor: '#ffffff',
-    borderRadius: ModernTheme.borderRadius.lg,
-    padding: ModernTheme.spacing.md,
-    marginHorizontal: ModernTheme.spacing.sm,
-    ...ModernTheme.shadows.card,
+  textRecommendation: {
     flexDirection: 'row',
+    marginBottom: ModernTheme.spacing.sm,
+    paddingVertical: ModernTheme.spacing.xs,
   },
-  bookImageContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: ModernTheme.borderRadius.md,
-    backgroundColor: ModernTheme.colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: ModernTheme.spacing.md,
-  },
-  bookInfo: {
-    flex: 1,
-  },
-  bookTitle: {
+  recommendationNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: ModernTheme.colors.textPrimary,
-    marginBottom: 2,
-  },
-  bookAuthor: {
-    fontSize: 12,
-    color: ModernTheme.colors.textSecondary,
-    marginBottom: 2,
-  },
-  bookGenre: {
-    fontSize: 10,
     color: ModernTheme.colors.primary,
-    fontWeight: '500',
-    marginBottom: ModernTheme.spacing.xs,
+    marginRight: ModernTheme.spacing.xs,
+    minWidth: 20,
   },
-  bookDescription: {
-    fontSize: 11,
-    color: ModernTheme.colors.textMuted,
-    lineHeight: 14,
-    marginBottom: ModernTheme.spacing.sm,
+  recommendationText: {
+    flex: 1,
+    fontSize: 13,
+    color: ModernTheme.colors.text,
+    lineHeight: 18,
   },
-  borrowButton: {
+  bookTitleText: {
+    fontWeight: '600',
+    color: ModernTheme.colors.primary,
+  },
+  advancedRecommendationIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: ModernTheme.colors.accent,
-    paddingHorizontal: ModernTheme.spacing.sm,
-    paddingVertical: ModernTheme.spacing.xs,
-    borderRadius: ModernTheme.borderRadius.sm,
-    alignSelf: 'flex-start',
+    backgroundColor: '#fff3e0',
+    padding: 8,
+    borderRadius: 6,
+    marginVertical: 8,
   },
-  borrowButtonText: {
-    color: '#ffffff',
-    fontSize: 10,
+  advancedText: {
+    fontSize: 12,
+    color: '#f57c00',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  confidenceText: {
+    fontSize: 10,
+    color: '#e65100',
+    marginLeft: 8,
+  },
+  feedbackContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  feedbackText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  feedbackButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  feedbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  thumbsUpButton: {
+    backgroundColor: '#e8f5e8',
+    borderColor: '#4caf50',
+  },
+  thumbsDownButton: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+  },
+  feedbackButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileButton: {
+    padding: 8,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  userProfileContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: ModernTheme.colors.primary,
+  },
+  userProfileTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ModernTheme.colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  userProfileStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 12,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: ModernTheme.colors.primary,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: ModernTheme.colors.textMuted,
+    textAlign: 'center',
+  },
+  userProfileDetails: {
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 8,
+  },
+  profileDetail: {
+    fontSize: 12,
+    color: ModernTheme.colors.text,
+    marginBottom: 4,
+  },
+  profileLabel: {
+    fontWeight: '600',
+    color: ModernTheme.colors.primary,
   },
   timestamp: {
     fontSize: 10,

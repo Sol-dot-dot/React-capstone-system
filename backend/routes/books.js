@@ -158,8 +158,8 @@ router.post('/', auth, async (req, res) => {
             INSERT INTO books (
                 title, author, isbn, publisher, publication_year, 
                 category, description, number_code, 
-                status, pages
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, pages, book_copies
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         
         const values = [
@@ -172,7 +172,8 @@ router.post('/', auth, async (req, res) => {
             bookData.description || null,
             numberCode,
             bookData.status || 'available',
-            bookData.pages || null
+            bookData.pages || null,
+            bookData.book_copies || 1
         ];
         
         const [result] = await db.execute(query, values);
@@ -221,7 +222,7 @@ router.put('/:id', auth, async (req, res) => {
             UPDATE books SET 
                 title = ?, author = ?, isbn = ?, publisher = ?, 
                 publication_year = ?, category = ?, description = ?, 
-                status = ?, pages = ?, updated_at = CURRENT_TIMESTAMP
+                status = ?, pages = ?, book_copies = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         `;
         
@@ -235,6 +236,7 @@ router.put('/:id', auth, async (req, res) => {
             bookData.description || null,
             bookData.status || existingBook[0].status,
             bookData.pages || null,
+            bookData.book_copies || existingBook[0].book_copies || 1,
             id
         ];
         
