@@ -99,7 +99,7 @@ const Login = ({ onLogin }) => {
 
             <div className="mt-6 p-4 bg-gray-50 rounded-md">
               <p className="text-sm font-medium text-gray-700 mb-2">Default Admin Credentials:</p>
-              <p className="text-sm text-gray-600">Username: admin</p>
+              <p className="text-sm text-gray-600">Username: admin@library.com</p>
               <p className="text-sm text-gray-600">Password: password</p>
             </div>
           </CardContent>

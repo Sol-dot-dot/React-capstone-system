@@ -36,8 +36,8 @@ const ModernBookManagement = ({ user }) => {
   const [selectedBook, setSelectedBook] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [genreFilter, setGenreFilter] = useState('');
-  const [genres, setGenres] = useState([]);
+  const [categoryFilter, setGenreFilter] = useState('');
+  const [categorys, setGenres] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -51,10 +51,11 @@ const ModernBookManagement = ({ user }) => {
     isbn: '',
     publisher: '',
     publication_year: '',
-    genre: '',
+    category: '',
     description: '',
     status: 'available',
-    location: ''
+    pages: '',
+    book_copies: 1
   });
 
   useEffect(() => {
@@ -116,7 +117,7 @@ const ModernBookManagement = ({ user }) => {
 
       const response = await axios.get('/api/books', config);
       if (response.data.success) {
-        setGenres(response.data.data.filters.genres || []);
+        setGenres(response.data.data.filters.categorys || []);
       }
     } catch (err) {
       console.error('Genres fetch error:', err);
@@ -140,10 +141,11 @@ const ModernBookManagement = ({ user }) => {
           isbn: '',
           publisher: '',
           publication_year: '',
-          genre: '',
+          category: '',
           description: '',
           status: 'available',
-          location: ''
+          pages: '',
+          book_copies: 1
         });
         fetchBooks();
       } else {
@@ -203,7 +205,7 @@ const ModernBookManagement = ({ user }) => {
                          book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          book.isbn.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || book.status === statusFilter;
-    const matchesGenre = !genreFilter || book.genre === genreFilter;
+    const matchesGenre = !categoryFilter || book.category === categoryFilter;
     
     return matchesSearch && matchesStatus && matchesGenre;
   });
@@ -311,13 +313,13 @@ const ModernBookManagement = ({ user }) => {
                     <option value="maintenance">Maintenance</option>
                   </select>
                   <select
-                    value={genreFilter}
+                    value={categoryFilter}
                     onChange={(e) => setGenreFilter(e.target.value)}
                     className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Genres</option>
-                    {genres.map(genre => (
-                      <option key={genre} value={genre}>{genre}</option>
+                    {categorys.map(category => (
+                      <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
                 </div>
@@ -409,7 +411,7 @@ const ModernBookManagement = ({ user }) => {
                         <td className="py-4 px-4">
                           <Badge variant="outline" className="text-xs">
                             <Tag className="h-3 w-3 mr-1" />
-                            {book.genre}
+                            {book.category}
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-slate-600">
@@ -535,6 +537,7 @@ const ModernBookManagement = ({ user }) => {
                         value={formData.title}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
                         required
+                        placeholder="Enter book title"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -546,6 +549,7 @@ const ModernBookManagement = ({ user }) => {
                         value={formData.author}
                         onChange={(e) => setFormData({...formData, author: e.target.value})}
                         required
+                        placeholder="Enter author name"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -556,6 +560,7 @@ const ModernBookManagement = ({ user }) => {
                       <Input
                         value={formData.isbn}
                         onChange={(e) => setFormData({...formData, isbn: e.target.value})}
+                        placeholder="e.g., 978-0134444321"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -566,6 +571,7 @@ const ModernBookManagement = ({ user }) => {
                       <Input
                         value={formData.publisher}
                         onChange={(e) => setFormData({...formData, publisher: e.target.value})}
+                        placeholder="e.g., Pearson Education"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -577,16 +583,46 @@ const ModernBookManagement = ({ user }) => {
                         type="number"
                         value={formData.publication_year}
                         onChange={(e) => setFormData({...formData, publication_year: e.target.value})}
+                        placeholder="e.g., 2023"
+                        min="1800"
+                        max={new Date().getFullYear()}
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Genre
+                        Category
                       </label>
                       <Input
-                        value={formData.genre}
-                        onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        placeholder="e.g., Programming, Web Development, Database"
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Pages
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.pages}
+                        onChange={(e) => setFormData({...formData, pages: e.target.value})}
+                        placeholder="Number of pages"
+                        min="1"
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Book Copies
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.book_copies}
+                        onChange={(e) => setFormData({...formData, book_copies: parseInt(e.target.value) || 1})}
+                        placeholder="Number of copies"
+                        min="1"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -602,17 +638,8 @@ const ModernBookManagement = ({ user }) => {
                         <option value="available">Available</option>
                         <option value="borrowed">Borrowed</option>
                         <option value="maintenance">Maintenance</option>
+                        <option value="lost">Lost</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Location
-                      </label>
-                      <Input
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                      />
                     </div>
                   </div>
                   <div>
@@ -685,6 +712,7 @@ const ModernBookManagement = ({ user }) => {
                         value={formData.title}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
                         required
+                        placeholder="Enter book title"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -696,6 +724,7 @@ const ModernBookManagement = ({ user }) => {
                         value={formData.author}
                         onChange={(e) => setFormData({...formData, author: e.target.value})}
                         required
+                        placeholder="Enter author name"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -706,6 +735,7 @@ const ModernBookManagement = ({ user }) => {
                       <Input
                         value={formData.isbn}
                         onChange={(e) => setFormData({...formData, isbn: e.target.value})}
+                        placeholder="e.g., 978-0134444321"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -716,6 +746,7 @@ const ModernBookManagement = ({ user }) => {
                       <Input
                         value={formData.publisher}
                         onChange={(e) => setFormData({...formData, publisher: e.target.value})}
+                        placeholder="e.g., Pearson Education"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -727,16 +758,46 @@ const ModernBookManagement = ({ user }) => {
                         type="number"
                         value={formData.publication_year}
                         onChange={(e) => setFormData({...formData, publication_year: e.target.value})}
+                        placeholder="e.g., 2023"
+                        min="1800"
+                        max={new Date().getFullYear()}
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Genre
+                        Category
                       </label>
                       <Input
-                        value={formData.genre}
-                        onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        placeholder="e.g., Programming, Web Development, Database"
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Pages
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.pages}
+                        onChange={(e) => setFormData({...formData, pages: e.target.value})}
+                        placeholder="Number of pages"
+                        min="1"
+                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Book Copies
+                      </label>
+                      <Input
+                        type="number"
+                        value={formData.book_copies}
+                        onChange={(e) => setFormData({...formData, book_copies: parseInt(e.target.value) || 1})}
+                        placeholder="Number of copies"
+                        min="1"
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
@@ -752,17 +813,8 @@ const ModernBookManagement = ({ user }) => {
                         <option value="available">Available</option>
                         <option value="borrowed">Borrowed</option>
                         <option value="maintenance">Maintenance</option>
+                        <option value="lost">Lost</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Location
-                      </label>
-                      <Input
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                      />
                     </div>
                   </div>
                   <div>

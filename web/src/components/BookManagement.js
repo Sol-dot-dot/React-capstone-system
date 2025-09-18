@@ -38,10 +38,10 @@ const BookManagement = ({ user }) => {
         isbn: '',
         publisher: '',
         publication_year: '',
-        genre: '',
+        category: '',
         description: '',
         status: 'available',
-        location: '',
+        pages: '',
         book_copies: 1
     });
 
@@ -190,10 +190,10 @@ const BookManagement = ({ user }) => {
             isbn: book.isbn || '',
             publisher: book.publisher || '',
             publication_year: book.publication_year || '',
-            genre: book.genre || '',
+            category: book.category || '',
             description: book.description || '',
             status: book.status,
-            location: book.location || '',
+            pages: book.pages || '',
             book_copies: book.book_copies || 1
         });
         setShowEditForm(true);
@@ -206,10 +206,10 @@ const BookManagement = ({ user }) => {
             isbn: '',
             publisher: '',
             publication_year: '',
-            genre: '',
+            category: '',
             description: '',
             status: 'available',
-            location: '',
+            pages: '',
             book_copies: 1
         });
     };

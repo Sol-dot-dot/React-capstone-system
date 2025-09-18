@@ -9,11 +9,11 @@
 9        android:targetSdkVersion="34" />
 10
 11    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-11-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:5:5-77
-11-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:5:22-75
+11-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:5:5-77
+11-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:5:22-75
 12    <uses-permission android:name="android.permission.INTERNET" />
-12-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:5-67
-12-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:22-64
+12-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:5-67
+12-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:3:22-64
 13    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\2639b12fabf4e0604e84c3524f011c07\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:5-76
 13-->[com.facebook.flipper:flipper:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\2639b12fabf4e0604e84c3524f011c07\transformed\jetified-flipper-0.182.0\AndroidManifest.xml:16:22-73
@@ -30,54 +30,54 @@
 19-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
 20
 21    <application
-21-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:5:5-24:19
+21-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:5:5-24:19
 22        android:name="com.capstonemobile.MainApplication"
-22-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
+22-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
 23        android:allowBackup="false"
-23-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:10:7-34
+23-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:10:7-34
 24        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
 24-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
 25        android:debuggable="true"
 26        android:extractNativeLibs="true"
 27        android:icon="@mipmap/ic_launcher"
-27-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:8:7-41
+27-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:8:7-41
 28        android:label="@string/app_name"
-28-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:7:7-39
+28-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:7:7-39
 29        android:roundIcon="@mipmap/ic_launcher_round"
-29-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:9:7-52
+29-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:9:7-52
 30        android:theme="@style/AppTheme"
-30-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:11:7-38
+30-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:11:7-38
 31        android:usesCleartextTraffic="true" >
-31-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:8:9-44
+31-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:8:9-44
 32        <activity
-32-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:9-111
+32-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:9-111
 33            android:name="com.facebook.react.devsupport.DevSettingsActivity"
-33-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:19-83
+33-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:19-83
 34            android:exported="false" />
-34-->C:\clone\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:84-108
+34-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:84-108
 35        <activity
-35-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
+35-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
 36            android:name="com.capstonemobile.MainActivity"
-36-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:13:9-37
+36-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:13:9-37
 37            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-37-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:15:9-118
+37-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:15:9-118
 38            android:exported="true"
-38-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:18:9-32
+38-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:18:9-32
 39            android:label="@string/app_name"
-39-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:14:9-41
+39-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:14:9-41
 40            android:launchMode="singleTask"
-40-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:16:9-40
+40-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:16:9-40
 41            android:windowSoftInputMode="adjustResize" >
-41-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:17:9-51
+41-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:17:9-51
 42            <intent-filter>
-42-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:19:9-22:25
+42-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:19:9-22:25
 43                <action android:name="android.intent.action.MAIN" />
-43-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:13-65
-43-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:21-62
+43-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:13-65
+43-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:20:21-62
 44
 45                <category android:name="android.intent.category.LAUNCHER" />
-45-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:13-73
-45-->C:\clone\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:23-70
+45-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:13-73
+45-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:21:23-70
 46            </intent-filter>
 47        </activity>
 48

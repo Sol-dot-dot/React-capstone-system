@@ -333,42 +333,6 @@
                     }
                 },
                 {
-                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\styles.xml",
-                    "from": {
-                        "startLines": "3",
-                        "startColumns": "4",
-                        "startOffsets": "57",
-                        "endLines": "6",
-                        "endColumns": "12",
-                        "endOffsets": "273"
-                    },
-                    "to": {
-                        "startLines": "407",
-                        "startColumns": "4",
-                        "startOffsets": "28162",
-                        "endLines": "410",
-                        "endColumns": "12",
-                        "endOffsets": "28340"
-                    }
-                },
-                {
-                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\strings.xml",
-                    "from": {
-                        "startLines": "1",
-                        "startColumns": "4",
-                        "startOffsets": "17",
-                        "endColumns": "51",
-                        "endOffsets": "64"
-                    },
-                    "to": {
-                        "startLines": "330",
-                        "startColumns": "4",
-                        "startOffsets": "21140",
-                        "endColumns": "51",
-                        "endOffsets": "21187"
-                    }
-                },
-                {
                     "source": "C:\\Users\\rhodc\\.gradle\\caches\\transforms-3\\6109204e53a8b211250ae196109517c7\\transformed\\jetified-react-android-0.72.6-debug\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,80,84,88,91,95,99,102,105,106,107,116,123,130,133,136,139,145",
@@ -421,6 +385,23 @@
                         "endLines": "2171,2177,2187,3389,3393",
                         "endColumns": "24,24,24,24,24",
                         "endOffsets": "141569,141747,142031,180375,180502"
+                    }
+                },
+                {
+                    "source": "C:\\clone-local\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "17",
+                        "endColumns": "51",
+                        "endOffsets": "64"
+                    },
+                    "to": {
+                        "startLines": "330",
+                        "startColumns": "4",
+                        "startOffsets": "21140",
+                        "endColumns": "51",
+                        "endOffsets": "21187"
                     }
                 },
                 {
@@ -587,7 +568,7 @@
                     }
                 },
                 {
-                    "source": "C:\\clone\\React-capstone-system\\mobile\\android\\app\\build\\generated\\res\\resValues\\debug\\values\\gradleResValues.xml",
+                    "source": "C:\\clone-local\\React-capstone-system\\mobile\\android\\app\\build\\generated\\res\\resValues\\debug\\values\\gradleResValues.xml",
                     "from": {
                         "startLines": "6,8",
                         "startColumns": "4,4",
@@ -601,6 +582,25 @@
                         "startOffsets": "18915,18979",
                         "endColumns": "63,68",
                         "endOffsets": "18974,19043"
+                    }
+                },
+                {
+                    "source": "C:\\clone-local\\React-capstone-system\\mobile\\android\\app\\src\\main\\res\\values\\styles.xml",
+                    "from": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "57",
+                        "endLines": "6",
+                        "endColumns": "12",
+                        "endOffsets": "273"
+                    },
+                    "to": {
+                        "startLines": "407",
+                        "startColumns": "4",
+                        "startOffsets": "28162",
+                        "endLines": "410",
+                        "endColumns": "12",
+                        "endOffsets": "28340"
                     }
                 }
             ]
