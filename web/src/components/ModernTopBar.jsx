@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, 
@@ -16,38 +16,63 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
+import axios from 'axios';
 
-const ModernTopBar = ({ onToggleSidebar, user, notifications = [] }) => {
+const ModernTopBar = ({ onToggleSidebar, user }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const notificationItems = [
-    {
-      id: 1,
-      title: 'New user registration',
-      message: 'John Doe has registered for the library',
-      time: '2 minutes ago',
-      type: 'info',
-      unread: true
-    },
-    {
-      id: 2,
-      title: 'Book overdue',
-      message: '3 books are overdue and need attention',
-      time: '1 hour ago',
-      type: 'warning',
-      unread: true
-    },
-    {
-      id: 3,
-      title: 'System update',
-      message: 'Library system has been updated successfully',
-      time: '3 hours ago',
-      type: 'success',
-      unread: false
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      const response = await axios.get('/api/notifications', config);
+      if (response.data.success) {
+        setNotifications(response.data.data.notifications);
+        setNotificationCount(response.data.data.unread);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Fetch notification count
+  const fetchNotificationCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      const response = await axios.get('/api/notifications/count', config);
+      if (response.data.success) {
+        setNotificationCount(response.data.data.unread);
+      }
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    }
+  };
+
+  // Load notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Refresh notifications every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -116,18 +141,23 @@ const ModernTopBar = ({ onToggleSidebar, user, notifications = [] }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              onClick={() => {
+                setIsNotificationOpen(!isNotificationOpen);
+                if (!isNotificationOpen) {
+                  fetchNotifications();
+                }
+              }}
               className="p-2 hover:bg-slate-100 rounded-lg relative"
             >
               <Bell className="h-5 w-5" />
-              {notifications.length > 0 && (
+              {notificationCount > 0 && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   className="absolute -top-1 -right-1"
                 >
                   <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {notifications.length}
+                    {notificationCount}
                   </Badge>
                 </motion.div>
               )}
@@ -146,45 +176,55 @@ const ModernTopBar = ({ onToggleSidebar, user, notifications = [] }) => {
                       <CardTitle className="text-lg flex items-center justify-between">
                         Notifications
                         <Badge variant="secondary" className="text-xs">
-                          {notificationItems.filter(n => n.unread).length} new
+                          {notificationCount} new
                         </Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       <div className="max-h-80 overflow-y-auto">
-                        {notificationItems.map((notification, index) => (
-                          <motion.div
-                            key={notification.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
-                              index !== notificationItems.length - 1 ? 'border-b border-slate-100' : ''
-                            }`}
-                          >
-                            <div className="flex items-start space-x-3">
-                              <div className="text-lg">
-                                {getNotificationIcon(notification.type)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm font-medium text-slate-900">
-                                    {notification.title}
-                                  </p>
-                                  {notification.unread && (
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                  )}
+                        {loading ? (
+                          <div className="p-4 text-center text-slate-500">
+                            Loading notifications...
+                          </div>
+                        ) : notifications.length > 0 ? (
+                          notifications.map((notification, index) => (
+                            <motion.div
+                              key={notification.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.1 }}
+                              className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
+                                index !== notifications.length - 1 ? 'border-b border-slate-100' : ''
+                              }`}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className="text-lg">
+                                  {getNotificationIcon(notification.type)}
                                 </div>
-                                <p className="text-sm text-slate-600 mt-1">
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {notification.time}
-                                </p>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2">
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {notification.title}
+                                    </p>
+                                    {notification.unread && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    {notification.time}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        ))}
+                            </motion.div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-slate-500">
+                            No notifications
+                          </div>
+                        )}
                       </div>
                       <div className="p-3 border-t border-slate-100">
                         <Button variant="ghost" className="w-full text-sm">

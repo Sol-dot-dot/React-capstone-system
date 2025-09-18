@@ -212,6 +212,7 @@ INSERT INTO `borrowing_transactions` (`id`, `student_id_number`, `book_id`, `bor
 DELIMITER $$
 CREATE TRIGGER `create_fine_on_overdue` AFTER UPDATE ON `borrowing_transactions` FOR EACH ROW BEGIN
     IF NEW.status = 'overdue' AND OLD.status != 'overdue' THEN
+        -- Create fine record
         INSERT INTO fines (student_id_number, transaction_id, fine_amount, days_overdue, fine_date, status)
         SELECT 
             NEW.student_id_number,
@@ -222,6 +223,30 @@ CREATE TRIGGER `create_fine_on_overdue` AFTER UPDATE ON `borrowing_transactions`
             'unpaid'
         FROM system_settings ss
         WHERE ss.setting_key = 'fine_per_day'
+        LIMIT 1;
+        
+        -- Create overdue history record
+        INSERT INTO overdue_history 
+        (student_id_number, transaction_id, book_title, book_author, book_code,
+         borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
+         returned_by_admin, created_at)
+        SELECT 
+            NEW.student_id_number,
+            NEW.id,
+            b.title,
+            b.author,
+            b.number_code,
+            NEW.borrowed_date,
+            NEW.due_date,
+            NULL,
+            DATEDIFF(CURDATE(), NEW.due_date),
+            DATEDIFF(CURDATE(), NEW.due_date) * COALESCE(ss.setting_value, 5),
+            0.00,
+            1, -- Default admin ID
+            NOW()
+        FROM books b, system_settings ss
+        WHERE b.id = NEW.book_id
+        AND ss.setting_key = 'fine_per_day'
         LIMIT 1;
     END IF;
 END
@@ -857,6 +882,7 @@ ALTER TABLE `student_borrowing_status`
 --
 ALTER TABLE `system_settings`
   ADD CONSTRAINT `system_settings_ibfk_1` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

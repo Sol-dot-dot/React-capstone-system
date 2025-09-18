@@ -54,11 +54,82 @@ class FineCalculationService {
     }
 
     /**
+     * Populate overdue history for existing overdue books
+     */
+    async populateOverdueHistory() {
+        try {
+            console.log('🔄 Populating overdue history for existing overdue books...');
+            
+            const [overdueTransactions] = await pool.execute(`
+                SELECT 
+                    bt.id as transaction_id,
+                    bt.student_id_number,
+                    bt.borrowed_date,
+                    bt.due_date,
+                    bt.status,
+                    b.title as book_title,
+                    b.author as book_author,
+                    b.number_code as book_code,
+                    f.fine_amount,
+                    f.paid_amount,
+                    DATEDIFF(CURDATE(), bt.due_date) as days_overdue
+                FROM borrowing_transactions bt
+                JOIN books b ON bt.book_id = b.id
+                LEFT JOIN fines f ON bt.id = f.transaction_id
+                WHERE bt.status = 'overdue' 
+                AND bt.due_date < CURDATE()
+                AND NOT EXISTS (
+                    SELECT 1 FROM overdue_history oh 
+                    WHERE oh.transaction_id = bt.id
+                )
+                ORDER BY bt.due_date ASC
+            `);
+
+            if (overdueTransactions.length === 0) {
+                console.log('✅ No overdue transactions need history records');
+                return;
+            }
+
+            console.log(`📝 Creating overdue history for ${overdueTransactions.length} transactions`);
+
+            for (const transaction of overdueTransactions) {
+                await pool.execute(`
+                    INSERT INTO overdue_history 
+                    (student_id_number, transaction_id, book_title, book_author, book_code,
+                     borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
+                     returned_by_admin, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NOW())
+                `, [
+                    transaction.student_id_number,
+                    transaction.transaction_id,
+                    transaction.book_title,
+                    transaction.book_author,
+                    transaction.book_code,
+                    transaction.borrowed_date,
+                    transaction.due_date,
+                    transaction.days_overdue,
+                    transaction.fine_amount || 0,
+                    transaction.paid_amount || 0,
+                    1 // Default admin ID
+                ]);
+            }
+
+            console.log(`✅ Successfully created ${overdueTransactions.length} overdue history records`);
+
+        } catch (error) {
+            console.error('❌ Error populating overdue history:', error);
+        }
+    }
+
+    /**
      * Process fines for all overdue books
      */
     async processFines() {
         try {
             const startTime = new Date();
+            
+            // First, populate overdue history for existing overdue books
+            await this.populateOverdueHistory();
             
             // Get all overdue transactions that need fine updates
             const [overdueTransactions] = await pool.execute(`

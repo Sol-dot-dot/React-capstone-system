@@ -82,6 +82,7 @@ router.get('/users', authMiddleware, async (req, res) => {
                 u.email,
                 u.is_verified,
                 u.created_at,
+                u.last_login,
                 (SELECT COUNT(*) FROM login_logs WHERE user_id = u.id) as login_count,
                 (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number) as total_borrowed,
                 (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'borrowed') as currently_borrowed,
@@ -89,7 +90,8 @@ router.get('/users', authMiddleware, async (req, res) => {
                 (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number) as total_fines,
                 (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_fines,
                 (SELECT COALESCE(SUM(fine_amount - paid_amount), 0) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_amount,
-                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books
+                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status IN ('borrowed', 'overdue')) as books_currently_borrowed
             FROM users u
             ORDER BY u.created_at DESC
         `);
@@ -121,6 +123,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
                 u.email,
                 u.is_verified,
                 u.created_at,
+                u.last_login,
                 (SELECT COUNT(*) FROM login_logs WHERE user_id = u.id) as login_count,
                 (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number) as total_borrowed,
                 (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status = 'borrowed') as currently_borrowed,
@@ -128,7 +131,8 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
                 (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number) as total_fines,
                 (SELECT COUNT(*) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_fines,
                 (SELECT COALESCE(SUM(fine_amount - paid_amount), 0) FROM fines WHERE student_id_number = u.id_number AND status = 'unpaid') as unpaid_amount,
-                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books
+                (SELECT books_borrowed_count FROM semester_tracking WHERE student_id_number = u.id_number AND status = 'active' LIMIT 1) as semester_books,
+                (SELECT COUNT(*) FROM borrowing_transactions WHERE student_id_number = u.id_number AND status IN ('borrowed', 'overdue')) as books_currently_borrowed
             FROM users u
             WHERE u.id_number = ?
         `, [idNumber]);
@@ -262,6 +266,71 @@ router.put('/users/:idNumber/verify', authMiddleware, async (req, res) => {
         });
     } catch (error) {
         console.error('Update user verification error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update user information (admin only)
+router.put('/users/:idNumber', authMiddleware, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admin only.' });
+        }
+
+        const { idNumber } = req.params;
+        const { email, isVerified } = req.body;
+
+        // Check if user exists
+        const [users] = await pool.execute(
+            'SELECT * FROM users WHERE id_number = ?',
+            [idNumber]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if email is already taken by another user
+        if (email && email !== users[0].email) {
+            const [existingUsers] = await pool.execute(
+                'SELECT * FROM users WHERE email = ? AND id_number != ?',
+                [email, idNumber]
+            );
+
+            if (existingUsers.length > 0) {
+                return res.status(400).json({ message: 'Email is already in use' });
+            }
+        }
+
+        // Update user information
+        const updateFields = [];
+        const updateValues = [];
+
+        if (email) {
+            updateFields.push('email = ?');
+            updateValues.push(email);
+        }
+
+        if (typeof isVerified === 'boolean') {
+            updateFields.push('is_verified = ?');
+            updateValues.push(isVerified);
+        }
+
+        if (updateFields.length > 0) {
+            updateValues.push(idNumber);
+            await pool.execute(
+                `UPDATE users SET ${updateFields.join(', ')} WHERE id_number = ?`,
+                updateValues
+            );
+        }
+
+        res.json({
+            success: true,
+            message: 'User information updated successfully'
+        });
+    } catch (error) {
+        console.error('Update user error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -315,8 +315,52 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
                 [newPaidAmount, newStatus, fineId]
             );
 
-            // Check if student can now borrow (if all fines are paid)
+            // If fine is fully paid, return the book and create return transaction
             if (newStatus === 'paid') {
+                // Get transaction details
+                const [transactionRows] = await connection.execute(
+                    `SELECT bt.*, b.title, b.author, b.number_code
+                     FROM borrowing_transactions bt
+                     JOIN books b ON bt.book_id = b.id
+                     WHERE bt.id = ? AND bt.status = 'overdue'`,
+                    [fine.transaction_id]
+                );
+
+                if (transactionRows.length > 0) {
+                    const transaction = transactionRows[0];
+                    
+                    // Update borrowing transaction to returned
+                    await connection.execute(
+                        `UPDATE borrowing_transactions 
+                         SET status = 'returned', 
+                             returned_date = CURDATE(),
+                             returned_by_admin = ?
+                         WHERE id = ?`,
+                        [adminId, fine.transaction_id]
+                    );
+
+                    // Update book status to available
+                    await connection.execute(
+                        `UPDATE books 
+                         SET status = 'available'
+                         WHERE id = ?`,
+                        [transaction.book_id]
+                    );
+
+                    // Create return transaction record
+                    const { createReturnTransaction } = require('./borrowingUtils');
+                    await createReturnTransaction(
+                        fine.transaction_id, 
+                        adminId, 
+                        'good', 
+                        'Overdue book returned after fine payment', 
+                        'Fine fully paid - book returned'
+                    );
+                    
+                    console.log('✅ Book returned after fine payment:', transaction.title);
+                }
+
+                // Check if student can now borrow (if all fines are paid)
                 await checkAndUpdateStudentBorrowingStatus(fine.student_id_number, connection);
             }
 
@@ -326,7 +370,8 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
                 success: true,
                 newPaidAmount,
                 remainingAmount,
-                status: newStatus
+                status: newStatus,
+                bookReturned: newStatus === 'paid'
             };
 
         } catch (error) {

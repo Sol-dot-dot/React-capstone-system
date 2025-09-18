@@ -337,7 +337,7 @@ const UserManagement = () => {
                                 </div>
                                 <div className="detail-item">
                                   <span className="detail-label">Currently Borrowed:</span>
-                                  <span className="detail-value">{user.currently_borrowed || 0}</span>
+                                  <span className="detail-value">{user.books_currently_borrowed || 0}</span>
                                 </div>
                                 <div className="detail-item">
                                   <span className="detail-label">Overdue Books:</span>

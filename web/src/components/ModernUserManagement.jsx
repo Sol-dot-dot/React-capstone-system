@@ -16,7 +16,11 @@ import {
   Mail,
   BookOpen,
   DollarSign,
-  Activity
+  Activity,
+  Edit,
+  Trash2,
+  Save,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -34,6 +38,10 @@ const ModernUserManagement = ({ user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [expandedUser, setExpandedUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({ email: '', isVerified: false });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -76,6 +84,7 @@ const ModernUserManagement = ({ user }) => {
 
   const updateUserVerification = async (idNumber, isVerified) => {
     try {
+      setActionLoading(true);
       const token = localStorage.getItem('token');
       const config = {
         headers: { Authorization: `Bearer ${token}` }
@@ -97,6 +106,88 @@ const ModernUserManagement = ({ user }) => {
     } catch (err) {
       console.error('Verification update error:', err);
       alert(err.response?.data?.message || 'Failed to update user verification');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const startEditUser = (user) => {
+    setEditingUser(user.id_number);
+    setEditForm({
+      email: user.email,
+      isVerified: user.is_verified
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingUser(null);
+    setEditForm({ email: '', isVerified: false });
+  };
+
+  const saveUserEdit = async (idNumber) => {
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      await axios.put(`/api/admin/users/${idNumber}`, 
+        { 
+          email: editForm.email,
+          isVerified: editForm.isVerified
+        }, 
+        config
+      );
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(u => 
+          u.id_number === idNumber 
+            ? { ...u, email: editForm.email, is_verified: editForm.isVerified }
+            : u
+        )
+      );
+      
+      setEditingUser(null);
+      setEditForm({ email: '', isVerified: false });
+      alert('User updated successfully!');
+    } catch (err) {
+      console.error('User update error:', err);
+      alert(err.response?.data?.message || 'Failed to update user');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const confirmDeleteUser = (idNumber) => {
+    setShowDeleteConfirm(idNumber);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(null);
+  };
+
+  const deleteUser = async (idNumber) => {
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem('token');
+      const config = {
+        headers: { Authorization: `Bearer ${token}` }
+      };
+
+      await axios.delete(`/api/admin/users/${idNumber}`, config);
+      
+      // Remove from local state
+      setUsers(prevUsers => prevUsers.filter(u => u.id_number !== idNumber));
+      
+      setShowDeleteConfirm(null);
+      alert('User deleted successfully!');
+    } catch (err) {
+      console.error('User deletion error:', err);
+      alert(err.response?.data?.message || 'Failed to delete user');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -337,16 +428,36 @@ const ModernUserManagement = ({ user }) => {
                             <div className="space-y-2">
                               <h4 className="font-medium text-slate-900">Activity</h4>
                               <div className="text-sm text-slate-600">
-                                <p>Books Borrowed: {user.semester_progress || 0}</p>
+                                <p>Books Borrowed: {user.books_currently_borrowed || 0}</p>
+                                <p>Total Borrowed: {user.total_borrowed || 0}</p>
                                 <p>Status: {user.is_verified ? 'Active' : 'Pending'}</p>
                               </div>
                             </div>
                             <div className="space-y-2">
                               <h4 className="font-medium text-slate-900">Actions</h4>
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 flex-wrap">
                                 <Button variant="outline" size="sm">
                                   <Eye className="h-4 w-4 mr-1" />
                                   View Details
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => startEditUser(user)}
+                                  disabled={actionLoading}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit User
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => confirmDeleteUser(user.id_number)}
+                                  disabled={actionLoading}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Remove User
                                 </Button>
                               </div>
                             </div>
@@ -371,6 +482,116 @@ const ModernUserManagement = ({ user }) => {
           </Card>
         </motion.div>
       </div>
+
+      {/* Edit User Modal */}
+      <AnimatePresence>
+        {editingUser && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+            >
+              <h3 className="text-lg font-semibold mb-4">Edit User</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email Address
+                  </label>
+                  <Input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    placeholder="user@my.smciligan.edu.ph"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isVerified"
+                    checked={editForm.isVerified}
+                    onChange={(e) => setEditForm({ ...editForm, isVerified: e.target.checked })}
+                    className="rounded"
+                  />
+                  <label htmlFor="isVerified" className="text-sm font-medium text-slate-700">
+                    Verified User
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <Button
+                  onClick={() => saveUserEdit(editingUser)}
+                  disabled={actionLoading}
+                  className="flex-1"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save Changes
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelEdit}
+                  disabled={actionLoading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+            >
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
+                <h3 className="text-lg font-semibold text-red-600">Confirm Deletion</h3>
+              </div>
+              <p className="text-slate-600 mb-6">
+                Are you sure you want to delete this user? This action cannot be undone and will remove all user data including borrowing history and fines.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteUser(showDeleteConfirm)}
+                  disabled={actionLoading}
+                  className="flex-1"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete User
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelDelete}
+                  disabled={actionLoading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

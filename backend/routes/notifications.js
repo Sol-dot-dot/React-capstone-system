@@ -4,6 +4,200 @@ const auth = require('../middleware/auth');
 const { sendDueDateReminderEmail, sendBulkDueDateReminders } = require('../utils/emailService');
 const pool = require('../config/database');
 
+// Helper function to format time ago
+const getTimeAgo = (date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+};
+
+// Generate notifications from existing data
+const generateNotifications = async (userId = null) => {
+    const notifications = [];
+    
+    try {
+        // 1. Overdue books notifications
+        const overdueQuery = `
+            SELECT 
+                bt.id as transaction_id,
+                bt.student_id_number,
+                u.first_name,
+                u.last_name,
+                b.title,
+                b.author,
+                bt.due_date,
+                DATEDIFF(CURDATE(), bt.due_date) as days_overdue
+            FROM borrowing_transactions bt
+            JOIN users u ON bt.student_id_number = u.id_number
+            JOIN books b ON bt.book_id = b.id
+            WHERE bt.status = 'overdue' 
+            AND bt.due_date < CURDATE()
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY bt.due_date ASC
+            LIMIT 10
+        `;
+        
+        const overdueParams = userId ? [userId] : [];
+        const [overdueBooks] = await pool.execute(overdueQuery, overdueParams);
+        
+        if (overdueBooks.length > 0) {
+            notifications.push({
+                id: 'overdue_books',
+                title: 'Overdue Books',
+                message: `${overdueBooks.length} book(s) are overdue and need attention`,
+                type: 'warning',
+                unread: true,
+                time: getTimeAgo(overdueBooks[0].due_date),
+                data: overdueBooks
+            });
+        }
+
+        // 2. Books due today notifications
+        const dueTodayQuery = `
+            SELECT 
+                bt.id as transaction_id,
+                bt.student_id_number,
+                u.first_name,
+                u.last_name,
+                b.title,
+                b.author,
+                bt.due_date
+            FROM borrowing_transactions bt
+            JOIN users u ON bt.student_id_number = u.id_number
+            JOIN books b ON bt.book_id = b.id
+            WHERE bt.status = 'borrowed' 
+            AND bt.due_date = CURDATE()
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY bt.due_date ASC
+            LIMIT 10
+        `;
+        
+        const [dueTodayBooks] = await pool.execute(dueTodayQuery, overdueParams);
+        
+        if (dueTodayBooks.length > 0) {
+            notifications.push({
+                id: 'due_today',
+                title: 'Books Due Today',
+                message: `${dueTodayBooks.length} book(s) are due today`,
+                type: 'info',
+                unread: true,
+                time: 'Today',
+                data: dueTodayBooks
+            });
+        }
+
+        // 3. Unpaid fines notifications
+        const unpaidFinesQuery = `
+            SELECT 
+                f.id as fine_id,
+                f.student_id_number,
+                u.first_name,
+                u.last_name,
+                f.fine_amount,
+                f.paid_amount,
+                (f.fine_amount - f.paid_amount) as unpaid_amount,
+                f.fine_date
+            FROM fines f
+            JOIN users u ON f.student_id_number = u.id_number
+            WHERE f.status = 'unpaid'
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY f.fine_date DESC
+            LIMIT 10
+        `;
+        
+        const [unpaidFines] = await pool.execute(unpaidFinesQuery, overdueParams);
+        
+        if (unpaidFines.length > 0) {
+            const totalUnpaid = unpaidFines.reduce((sum, fine) => sum + parseFloat(fine.unpaid_amount), 0);
+            notifications.push({
+                id: 'unpaid_fines',
+                title: 'Unpaid Fines',
+                message: `$${totalUnpaid.toFixed(2)} in unpaid fines from ${unpaidFines.length} transaction(s)`,
+                type: 'error',
+                unread: true,
+                time: getTimeAgo(unpaidFines[0].fine_date),
+                data: unpaidFines
+            });
+        }
+
+        // 4. Recent user registrations (for admins only)
+        if (!userId) {
+            const recentUsersQuery = `
+                SELECT 
+                    u.id,
+                    u.id_number,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.created_at
+                FROM users u
+                WHERE u.role = 'student'
+                AND u.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAYS)
+                ORDER BY u.created_at DESC
+                LIMIT 5
+            `;
+            
+            const [recentUsers] = await pool.execute(recentUsersQuery);
+            
+            if (recentUsers.length > 0) {
+                notifications.push({
+                    id: 'new_registrations',
+                    title: 'New User Registrations',
+                    message: `${recentUsers.length} new user(s) registered this week`,
+                    type: 'success',
+                    unread: true,
+                    time: getTimeAgo(recentUsers[0].created_at),
+                    data: recentUsers
+                });
+            }
+        }
+
+        // 5. Books due soon (within 3 days)
+        const dueSoonQuery = `
+            SELECT 
+                bt.id as transaction_id,
+                bt.student_id_number,
+                u.first_name,
+                u.last_name,
+                b.title,
+                b.author,
+                bt.due_date,
+                DATEDIFF(bt.due_date, CURDATE()) as days_until_due
+            FROM borrowing_transactions bt
+            JOIN users u ON bt.student_id_number = u.id_number
+            JOIN books b ON bt.book_id = b.id
+            WHERE bt.status = 'borrowed' 
+            AND bt.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY bt.due_date ASC
+            LIMIT 10
+        `;
+        
+        const [dueSoonBooks] = await pool.execute(dueSoonQuery, overdueParams);
+        
+        if (dueSoonBooks.length > 0) {
+            notifications.push({
+                id: 'due_soon',
+                title: 'Books Due Soon',
+                message: `${dueSoonBooks.length} book(s) are due within 3 days`,
+                type: 'info',
+                unread: true,
+                time: 'Upcoming',
+                data: dueSoonBooks
+            });
+        }
+
+        return notifications;
+    } catch (error) {
+        console.error('Error generating notifications:', error);
+        return [];
+    }
+};
+
 // POST /api/notifications/send-email - Send email notification (mobile app)
 router.post('/send-email', async (req, res) => {
     try {
@@ -348,6 +542,151 @@ router.put('/user/:idNumber', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error'
+        });
+    }
+});
+
+// GET /api/notifications - Get real-time notifications from existing data
+router.get('/', auth, async (req, res) => {
+    try {
+        const userId = req.user.role === 'admin' ? null : req.user.id;
+        const notifications = await generateNotifications(userId);
+        
+        res.json({
+            success: true,
+            data: {
+                notifications: notifications,
+                total: notifications.length,
+                unread: notifications.filter(n => n.unread).length
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching notifications'
+        });
+    }
+});
+
+// GET /api/notifications/count - Get notification count
+router.get('/count', auth, async (req, res) => {
+    try {
+        const userId = req.user.role === 'admin' ? null : req.user.id;
+        const notifications = await generateNotifications(userId);
+        const unreadCount = notifications.filter(n => n.unread).length;
+        
+        res.json({
+            success: true,
+            data: {
+                total: notifications.length,
+                unread: unreadCount
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching notification count:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching notification count'
+        });
+    }
+});
+
+// GET /api/notifications/overdue - Get overdue books details
+router.get('/overdue', auth, async (req, res) => {
+    try {
+        const userId = req.user.role === 'admin' ? null : req.user.id;
+        
+        const overdueQuery = `
+            SELECT 
+                bt.id as transaction_id,
+                bt.student_id_number,
+                u.first_name,
+                u.last_name,
+                u.email,
+                b.title,
+                b.author,
+                b.number_code,
+                bt.due_date,
+                DATEDIFF(CURDATE(), bt.due_date) as days_overdue,
+                f.fine_amount,
+                f.paid_amount,
+                (f.fine_amount - f.paid_amount) as unpaid_amount
+            FROM borrowing_transactions bt
+            JOIN users u ON bt.student_id_number = u.id_number
+            JOIN books b ON bt.book_id = b.id
+            LEFT JOIN fines f ON bt.id = f.transaction_id AND f.status = 'unpaid'
+            WHERE bt.status = 'overdue' 
+            AND bt.due_date < CURDATE()
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY bt.due_date ASC
+        `;
+        
+        const overdueParams = userId ? [userId] : [];
+        const [overdueBooks] = await pool.execute(overdueQuery, overdueParams);
+        
+        res.json({
+            success: true,
+            data: {
+                overdueBooks: overdueBooks,
+                total: overdueBooks.length
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching overdue books:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching overdue books'
+        });
+    }
+});
+
+// GET /api/notifications/fines - Get unpaid fines details
+router.get('/fines', auth, async (req, res) => {
+    try {
+        const userId = req.user.role === 'admin' ? null : req.user.id;
+        
+        const finesQuery = `
+            SELECT 
+                f.id as fine_id,
+                f.student_id_number,
+                u.first_name,
+                u.last_name,
+                u.email,
+                f.fine_amount,
+                f.paid_amount,
+                (f.fine_amount - f.paid_amount) as unpaid_amount,
+                f.fine_date,
+                f.days_overdue,
+                b.title,
+                b.author
+            FROM fines f
+            JOIN users u ON f.student_id_number = u.id_number
+            LEFT JOIN borrowing_transactions bt ON f.transaction_id = bt.id
+            LEFT JOIN books b ON bt.book_id = b.id
+            WHERE f.status = 'unpaid'
+            ${userId ? 'AND u.id = ?' : ''}
+            ORDER BY f.fine_date DESC
+        `;
+        
+        const finesParams = userId ? [userId] : [];
+        const [unpaidFines] = await pool.execute(finesQuery, finesParams);
+        
+        const totalUnpaid = unpaidFines.reduce((sum, fine) => sum + parseFloat(fine.unpaid_amount), 0);
+        
+        res.json({
+            success: true,
+            data: {
+                unpaidFines: unpaidFines,
+                total: unpaidFines.length,
+                totalAmount: totalUnpaid
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching unpaid fines:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching unpaid fines'
         });
     }
 });

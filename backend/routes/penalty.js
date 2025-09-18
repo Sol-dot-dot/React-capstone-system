@@ -1171,11 +1171,21 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
                 [transaction.book_id]
             );
 
+            // Create return transaction record
+            await createReturnTransaction(
+                transactionId, 
+                adminId, 
+                'good', 
+                'Overdue book returned after fine payment', 
+                'Overdue book processed - fine payment completed'
+            );
+            console.log('✅ Return transaction record created for overdue book:', transaction.title);
+
             // Store in overdue history
             await connection.execute(
                 `INSERT INTO overdue_history 
                  (student_id_number, transaction_id, book_title, book_author, book_code,
-                  borrowed_date, due_date, returned_date, days_overdue, fine_amount, paid_amount,
+                  borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
                   returned_by_admin, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, NOW())`,
                 [
@@ -1224,6 +1234,224 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
         });
     } finally {
         connection.release();
+    }
+});
+
+// POST /api/penalty/populate-overdue-history - Populate overdue history for current overdue books
+router.post('/populate-overdue-history', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin privileges required.'
+            });
+        }
+
+        const connection = await pool.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            // Get all current overdue transactions that don't have overdue history records
+            const [overdueTransactions] = await connection.execute(`
+                SELECT 
+                    bt.id as transaction_id,
+                    bt.student_id_number,
+                    bt.borrowed_date,
+                    bt.due_date,
+                    bt.status,
+                    b.title as book_title,
+                    b.author as book_author,
+                    b.number_code as book_code,
+                    f.fine_amount,
+                    f.paid_amount,
+                    DATEDIFF(CURDATE(), bt.due_date) as days_overdue
+                FROM borrowing_transactions bt
+                JOIN books b ON bt.book_id = b.id
+                LEFT JOIN fines f ON bt.id = f.transaction_id
+                WHERE bt.status = 'overdue' 
+                AND bt.due_date < CURDATE()
+                AND NOT EXISTS (
+                    SELECT 1 FROM overdue_history oh 
+                    WHERE oh.transaction_id = bt.id
+                )
+                ORDER BY bt.due_date ASC
+            `);
+
+            console.log(`Found ${overdueTransactions.length} overdue transactions without history records`);
+
+            let recordsCreated = 0;
+
+            for (const transaction of overdueTransactions) {
+                await connection.execute(`
+                    INSERT INTO overdue_history 
+                    (student_id_number, transaction_id, book_title, book_author, book_code,
+                     borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
+                     returned_by_admin, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NOW())
+                `, [
+                    transaction.student_id_number,
+                    transaction.transaction_id,
+                    transaction.book_title,
+                    transaction.book_author,
+                    transaction.book_code,
+                    transaction.borrowed_date,
+                    transaction.due_date,
+                    transaction.days_overdue,
+                    transaction.fine_amount || 0,
+                    transaction.paid_amount || 0,
+                    req.user.id // Admin ID
+                ]);
+
+                recordsCreated++;
+            }
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: `Successfully created ${recordsCreated} overdue history records`,
+                data: {
+                    recordsCreated,
+                    totalOverdue: overdueTransactions.length
+                }
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+
+    } catch (error) {
+        console.error('Error populating overdue history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to populate overdue history'
+        });
+    }
+});
+
+// POST /api/penalty/force-populate-overdue-history - Force populate overdue history (admin only)
+router.post('/force-populate-overdue-history', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin privileges required.'
+            });
+        }
+
+        const fineCalculationService = require('../services/fineCalculationService');
+        await fineCalculationService.populateOverdueHistory();
+
+        res.json({
+            success: true,
+            message: 'Overdue history population completed'
+        });
+
+    } catch (error) {
+        console.error('Error forcing overdue history population:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to populate overdue history'
+        });
+    }
+});
+
+// POST /api/penalty/fix-missing-return-transactions - Fix missing return transaction records for paid overdue books
+router.post('/fix-missing-return-transactions', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin privileges required.'
+            });
+        }
+
+        const connection = await pool.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            // Find overdue books that are marked as returned but don't have return transaction records
+            const [missingReturns] = await connection.execute(`
+                SELECT 
+                    bt.id as transaction_id,
+                    bt.student_id_number,
+                    bt.book_id,
+                    bt.returned_date,
+                    bt.returned_by_admin,
+                    b.title as book_title,
+                    b.author as book_author,
+                    b.number_code as book_code,
+                    f.fine_amount,
+                    f.paid_amount
+                FROM borrowing_transactions bt
+                JOIN books b ON bt.book_id = b.id
+                LEFT JOIN fines f ON bt.id = f.transaction_id
+                WHERE bt.status = 'returned' 
+                AND bt.returned_date IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT 1 FROM return_transactions rt 
+                    WHERE rt.transaction_id = bt.id
+                )
+                ORDER BY bt.returned_date ASC
+            `);
+
+            console.log(`Found ${missingReturns.length} returned books without return transaction records`);
+
+            let recordsCreated = 0;
+
+            for (const book of missingReturns) {
+                // Create return transaction record
+                await connection.execute(`
+                    INSERT INTO return_transactions 
+                    (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
+                     return_condition, condition_notes, processing_notes, status, fine_applied, fine_reason) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)
+                `, [
+                    book.transaction_id,
+                    book.student_id_number,
+                    book.book_id,
+                    book.returned_date,
+                    book.returned_by_admin || req.user.id,
+                    'good',
+                    'Overdue book returned (retroactive record)',
+                    'Retroactive return transaction record creation',
+                    book.fine_amount || 0,
+                    book.fine_amount > 0 ? 'Overdue fine applied' : null
+                ]);
+
+                recordsCreated++;
+                console.log(`✅ Created retroactive return transaction for book: ${book.book_title}`);
+            }
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: `Successfully created ${recordsCreated} missing return transaction records`,
+                data: {
+                    recordsCreated,
+                    totalMissing: missingReturns.length
+                }
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+
+    } catch (error) {
+        console.error('Error fixing missing return transactions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fix missing return transactions'
+        });
     }
 });
 
