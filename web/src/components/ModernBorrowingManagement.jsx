@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   Plus, 
@@ -27,10 +28,15 @@ import { Separator } from './ui/separator';
 import axios from 'axios';
 
 const ModernBorrowingManagement = ({ user }) => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('borrow');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  
+  // Get search highlight from navigation state
+  const highlightTransactionId = location.state?.highlightTransaction;
+  const searchQuery = location.state?.searchQuery;
 
   // Borrow form state
   const [studentIdNumber, setStudentIdNumber] = useState('');
@@ -50,6 +56,12 @@ const ModernBorrowingManagement = ({ user }) => {
   useEffect(() => {
     if (activeTab === 'transactions') {
       fetchTransactions();
+    }
+    
+    // Set search term if coming from search
+    if (searchQuery) {
+      setSearchTerm(searchQuery);
+      setActiveTab('transactions'); // Switch to transactions tab to show the result
     }
   }, [activeTab, currentPage, searchTerm, statusFilter]);
 
@@ -578,7 +590,9 @@ const ModernBorrowingManagement = ({ user }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200"
+                        className={`border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+                          highlightTransactionId === transaction.id ? 'bg-purple-50 border-purple-200' : ''
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { 
   Users, 
   UserCheck, 
@@ -31,11 +32,16 @@ import { Separator } from './ui/separator';
 import axios from 'axios';
 
 const ModernUserManagement = ({ user }) => {
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [userDetails, setUserDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Get search highlight from navigation state
+  const highlightUserId = location.state?.highlightUser;
+  const searchQuery = location.state?.searchQuery;
   const [sortBy, setSortBy] = useState('created_at');
   const [expandedUser, setExpandedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
@@ -45,6 +51,11 @@ const ModernUserManagement = ({ user }) => {
 
   useEffect(() => {
     fetchUsers();
+    
+    // Set search term if coming from search
+    if (searchQuery) {
+      setSearchTerm(searchQuery);
+    }
   }, []);
 
   const fetchUsers = async () => {
@@ -334,7 +345,9 @@ const ModernUserManagement = ({ user }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200"
+                    className={`border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+                      highlightUserId === user.id_number ? 'bg-green-50 border-green-200' : ''
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">

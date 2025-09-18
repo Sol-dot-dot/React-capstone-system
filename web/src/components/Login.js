@@ -38,15 +38,71 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+      style={{
+        backgroundImage: "url('/loginbackground.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+        width: "100vw",
+        height: "100vh",
+        position: "relative"
+      }}
+    >
+      {/* Vertical blurred overlay in center */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "500px", // Adjust width as needed
+          height: "100%",
+          backgroundColor: "rgba(248, 250, 252, 0.7)", // Gray background with transparency
+          backdropFilter: "blur(-20px)", // Blur effect - Change this value to control blur intensity
+          pointerEvents: "none", // This allows clicks to pass through
+          zIndex: 1
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
       <div className="max-w-md w-full space-y-8">
+        {/* Logo */}
+        <div className="text-center">
+          <img 
+            src="/smc-logo.png" 
+            alt="SMC Logo" 
+            className="h-24 w-auto mx-auto mb-6"
+            style={{
+              height: '170px',
+              width: 'auto',
+              marginTop: '-150px',
+              marginBottom: '45px',
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+        
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               SMC Library System
             </CardTitle>
             <CardDescription className="text-center">
-              St. Michael's College Library Management - Admin Login
+              St. Michael&apos;s College Library Management - Admin Login
             </CardDescription>
           </CardHeader>
           
@@ -97,13 +153,14 @@ const Login = ({ onLogin }) => {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-gray-50 rounded-md">
+            {/* <div className="mt-6 p-4 bg-gray-50 rounded-md">
               <p className="text-sm font-medium text-gray-700 mb-2">Default Admin Credentials:</p>
               <p className="text-sm text-gray-600">Username: admin@library.com</p>
               <p className="text-sm text-gray-600">Password: password</p>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

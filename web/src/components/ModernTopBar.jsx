@@ -14,6 +14,8 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
+import { useSearch } from '../contexts/SearchContext';
+import SearchResults from './SearchResults';
 import axios from 'axios';
 
 const ModernTopBar = ({ onToggleSidebar, user }) => {
@@ -22,6 +24,17 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
   const [notifications, setNotifications] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Search context
+  const { 
+    searchQuery, 
+    setSearchQuery, 
+    searchResults, 
+    isSearching, 
+    showResults, 
+    setShowResults,
+    clearSearch 
+  } = useSearch();
 
   // Fetch notifications from API
   const fetchNotifications = async () => {
@@ -112,7 +125,28 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
             <input
               type="text"
               placeholder="Search books, users, or activities..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowResults(true)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-slate-50 focus:bg-white transition-colors"
+            />
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+            
+            {/* Search Results */}
+            <SearchResults
+              searchQuery={searchQuery}
+              searchResults={searchResults}
+              isSearching={isSearching}
+              showResults={showResults}
+              onClose={() => setShowResults(false)}
+              onItemClick={(type, item) => {
+                // Navigation is handled in SearchResults component
+                console.log('Search item clicked:', type, item);
+              }}
             />
           </div>
         </div>

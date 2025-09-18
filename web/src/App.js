@@ -22,6 +22,7 @@ import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import ModernSidebar from './components/ModernSidebar';
 import ModernTopBar from './components/ModernTopBar';
+import { SearchProvider } from './contexts/SearchContext';
 import designSystem from './styles/designSystem';
 import './App.css';
 
@@ -93,7 +94,8 @@ function App() {
   };
 
   return (
-    <Router>
+    <SearchProvider>
+      <Router>
       <div style={appStyles.app}>
         {isAuthenticated ? (
           <div className="flex h-screen bg-slate-50">
@@ -270,7 +272,8 @@ function App() {
           onClose={() => setIsChatbotVisible(false)} 
         />
       </div>
-    </Router>
+      </Router>
+    </SearchProvider>
   );
 }
 

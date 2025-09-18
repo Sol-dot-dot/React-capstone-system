@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   Plus, 
@@ -28,9 +29,14 @@ import { Separator } from './ui/separator';
 import axios from 'axios';
 
 const ModernBookManagement = ({ user }) => {
+  const location = useLocation();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Get search highlight from navigation state
+  const highlightBookId = location.state?.highlightBook;
+  const searchQuery = location.state?.searchQuery;
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
@@ -61,6 +67,11 @@ const ModernBookManagement = ({ user }) => {
   useEffect(() => {
     fetchBooks();
     fetchGenres();
+    
+    // Set search term if coming from search
+    if (searchQuery) {
+      setSearchTerm(searchQuery);
+    }
   }, []);
 
   useEffect(() => {
@@ -372,7 +383,9 @@ const ModernBookManagement = ({ user }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                        className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                          highlightBookId === book.id ? 'bg-blue-50 border-blue-200' : ''
+                        }`}
                       >
                         <td className="py-4 px-4">
                           <div>

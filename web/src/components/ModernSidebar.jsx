@@ -13,7 +13,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Bell,
   Search,
   GraduationCap
 } from 'lucide-react';
@@ -21,9 +20,19 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import { useSearch } from '../contexts/SearchContext';
+import SearchResults from './SearchResults';
 
 const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
   const location = useLocation();
+  const { 
+    searchQuery, 
+    setSearchQuery, 
+    searchResults, 
+    isSearching, 
+    showResults, 
+    setShowResults 
+  } = useSearch();
   
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/enhanced-dashboard' },
@@ -142,7 +151,28 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
                 <input
                   type="text"
                   placeholder="Search books, users, or activities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setShowResults(true)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+                
+                {/* Search Results */}
+                <SearchResults
+                  searchQuery={searchQuery}
+                  searchResults={searchResults}
+                  isSearching={isSearching}
+                  showResults={showResults}
+                  onClose={() => setShowResults(false)}
+                  onItemClick={(type, item) => {
+                    // Navigation is handled in SearchResults component
+                    console.log('Search item clicked:', type, item);
+                  }}
                 />
               </div>
             </motion.div>
@@ -210,18 +240,6 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
                 exit={{ opacity: 0, y: 20 }}
                 className="space-y-4"
               >
-                {/* Notifications */}
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Bell className="h-5 w-5 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">Notifications</span>
-                  </div>
-                  <Badge variant="destructive" className="text-xs">
-                    3
-                  </Badge>
-                </div>
-
-                <Separator />
 
                 {/* User Profile */}
                 <div className="flex items-center space-x-3 p-3 hover:bg-slate-50 rounded-lg transition-colors">
