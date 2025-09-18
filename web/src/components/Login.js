@@ -79,13 +79,13 @@ const Login = ({ onLogin }) => {
       >
       <div className="max-w-md w-full space-y-8">
         {/* Logo */}
-        <div className="text-center">
+        <div className="text-center mb-8">
           <img 
             src="/smc-logo.png" 
             alt="SMC Logo" 
             className="h-24 w-auto mx-auto mb-6"
             style={{
-              height: '170px',
+              height: '150px',
               width: 'auto',
               marginTop: '-150px',
               marginBottom: '45px',
@@ -96,26 +96,28 @@ const Login = ({ onLogin }) => {
           />
         </div>
         
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
+        <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="space-y-3 pb-8">
+            <CardTitle className="text-3xl font-bold text-center text-slate-800">
               SMC Library System
             </CardTitle>
-            <CardDescription className="text-center">
-              St. Michael&apos;s College Library Management - Admin Login
+            <CardDescription className="text-center text-slate-600 text-base">
+              St. Michael&apos;s College Library Management
             </CardDescription>
+            <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"></div>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className="px-8 pb-8">
             {error && (
-              <div className="mb-4 p-3 text-sm text-red-800 bg-red-100 border border-red-200 rounded-md">
-                {error}
+              <div className="mb-6 p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="username" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-3">
+                <label htmlFor="username" className="text-sm font-semibold text-slate-700 block">
                   Username
                 </label>
                 <Input
@@ -125,12 +127,13 @@ const Login = ({ onLogin }) => {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Enter your username"
+                  className="h-12 px-4 text-base border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              <div className="space-y-3">
+                <label htmlFor="password" className="text-sm font-semibold text-slate-700 block">
                   Password
                 </label>
                 <Input
@@ -140,16 +143,24 @@ const Login = ({ onLogin }) => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
+                  className="h-12 px-4 text-base border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
                   required
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                 disabled={loading}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
 
