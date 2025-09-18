@@ -521,7 +521,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
         const [borrowingStatus] = await pool.execute(`
             SELECT 
                 COUNT(*) as total_borrowed,
-                COUNT(CASE WHEN status = 'borrowed' THEN 1 END) as currently_borrowed,
+                COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currently_borrowed,
                 COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count,
                 COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned_count
             FROM borrowing_transactions 

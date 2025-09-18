@@ -72,13 +72,13 @@ async function checkBookAvailability(bookCode) {
     }
 }
 
-// Check how many books a student currently has borrowed
+// Check how many books a student currently has borrowed (including overdue books)
 async function getStudentBorrowedCount(studentIdNumber) {
     try {
         const [rows] = await db.execute(
             `SELECT COUNT(*) as count 
              FROM borrowing_transactions 
-             WHERE student_id_number = ? AND status = 'borrowed'`,
+             WHERE student_id_number = ? AND status IN ('borrowed', 'overdue')`,
             [studentIdNumber]
         );
         return rows[0].count;
@@ -234,7 +234,7 @@ async function getBorrowingStats() {
     try {
         // Total borrowed books
         const [totalBorrowed] = await db.execute(
-            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE status = 'borrowed'"
+            "SELECT COUNT(*) as count FROM borrowing_transactions WHERE status IN ('borrowed', 'overdue')"
         );
 
         // Overdue books

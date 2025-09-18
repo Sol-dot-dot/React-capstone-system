@@ -9,7 +9,7 @@ const {
     getStudentBorrowedCount,
     createReturnTransaction
 } = require('../utils/borrowingUtils');
-const { createOrUpdateFine, updateSemesterBooksCount, calculateOverdueDays } = require('../utils/penaltyUtils');
+const { createOrUpdateFine, updateSemesterBooksCount, calculateOverdueDays, checkAndUpdateStudentBorrowingStatus, getSystemSettings } = require('../utils/penaltyUtils');
 const pool = require('../config/database');
 
 // GET /api/borrowing/stats - Get borrowing statistics
@@ -29,6 +29,61 @@ router.get('/stats', auth, async (req, res) => {
     }
 });
 
+// GET /api/borrowing/check-eligibility/:idNumber - Check student borrowing eligibility
+router.get('/check-eligibility/:idNumber', auth, async (req, res) => {
+    try {
+        const { idNumber } = req.params;
+
+        if (!idNumber) {
+            return res.status(400).json({
+                success: false,
+                message: 'Student ID number is required'
+            });
+        }
+
+        // Check if student exists
+        const student = await checkStudentExists(idNumber);
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        // Check borrowing status
+        const borrowingStatus = await checkAndUpdateStudentBorrowingStatus(idNumber);
+        const currentBorrowed = await getStudentBorrowedCount(idNumber);
+        
+        // Get system settings for borrowing limits
+        const settings = await getSystemSettings();
+        const maxBooks = parseInt(settings.max_books_per_borrowing || 3);
+
+        const canBorrow = borrowingStatus.canBorrow && currentBorrowed < maxBooks;
+        
+        res.json({
+            success: true,
+            data: {
+                student: student,
+                currentBorrowed: currentBorrowed,
+                maxBooks: maxBooks,
+                canBorrow: canBorrow,
+                borrowingStatus: {
+                    hasOverdueBooks: !borrowingStatus.canBorrow && borrowingStatus.reasonBlocked === 'Overdue books',
+                    hasUnpaidFines: !borrowingStatus.canBorrow && borrowingStatus.reasonBlocked === 'Unpaid fines',
+                    withinLimit: currentBorrowed < maxBooks,
+                    reasonBlocked: borrowingStatus.reasonBlocked
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error checking borrowing eligibility:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check borrowing eligibility'
+        });
+    }
+});
+
 // POST /api/borrowing/validate - Validate borrowing request
 router.post('/validate', auth, async (req, res) => {
     try {
@@ -44,20 +99,33 @@ router.post('/validate', auth, async (req, res) => {
         const validation = await validateBorrowingRequest(studentIdNumber, bookCodes);
         
         if (validation.valid) {
+            const currentBorrowed = await getStudentBorrowedCount(studentIdNumber);
             res.json({
                 success: true,
                 message: 'Borrowing request is valid',
                 data: {
                     student: validation.student,
                     validBooks: validation.validations,
-                    currentBorrowed: await getStudentBorrowedCount(studentIdNumber)
+                    currentBorrowed: currentBorrowed,
+                    canBorrow: true,
+                    borrowingStatus: {
+                        hasOverdueBooks: false,
+                        hasUnpaidFines: false,
+                        withinLimit: true
+                    }
                 }
             });
         } else {
+            const currentBorrowed = await getStudentBorrowedCount(studentIdNumber);
             res.status(400).json({
                 success: false,
                 message: 'Borrowing request validation failed',
-                errors: validation.errors
+                errors: validation.errors,
+                data: {
+                    student: validation.student,
+                    currentBorrowed: currentBorrowed,
+                    canBorrow: false
+                }
             });
         }
     } catch (error) {

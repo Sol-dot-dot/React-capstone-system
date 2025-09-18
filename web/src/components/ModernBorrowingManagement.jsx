@@ -109,31 +109,69 @@ const ModernBorrowingManagement = ({ user }) => {
 
     try {
       const token = localStorage.getItem('token');
-      console.log('Validating student:', studentIdNumber);
-      const response = await axios.get(`/api/admin/users/${studentIdNumber}`, {
+      console.log('Validating student borrowing eligibility:', studentIdNumber);
+      
+      // First get student info
+      const userResponse = await axios.get(`/api/admin/users/${studentIdNumber}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log('Validation response:', response.data);
-
-      if (response.data.user) {
-        setValidationResult({
-          valid: true,
-          user: response.data.user,
-          message: 'Student found and verified'
-        });
-      } else {
+      if (!userResponse.data.user) {
         setValidationResult({
           valid: false,
-          message: 'Student not found in response'
+          message: 'Student not found'
+        });
+        return;
+      }
+
+      // Then check borrowing eligibility using the dedicated endpoint
+      const eligibilityResponse = await axios.get(`/api/borrowing/check-eligibility/${studentIdNumber.trim()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      console.log('Borrowing eligibility response:', eligibilityResponse.data);
+
+      if (eligibilityResponse.data.success && eligibilityResponse.data.data) {
+        const { currentBorrowed, maxBooks, canBorrow, borrowingStatus } = eligibilityResponse.data.data;
+        
+        setValidationResult({
+          valid: true,
+          user: userResponse.data.user,
+          currentBorrowed: currentBorrowed,
+          canBorrow: canBorrow,
+          message: canBorrow ? 'Student is eligible to borrow books' : 'Student cannot borrow books',
+          details: {
+            currentBorrowed: currentBorrowed,
+            maxAllowed: maxBooks,
+            canBorrow: canBorrow,
+            borrowingStatus: borrowingStatus
+          }
+        });
+      } else {
+        // If eligibility check fails, show the error
+        setValidationResult({
+          valid: false,
+          user: userResponse.data.user,
+          message: eligibilityResponse.data.message || 'Student cannot borrow books',
+          details: []
         });
       }
     } catch (error) {
       console.error('Validation error:', error.response?.data || error.message);
-      setValidationResult({
-        valid: false,
-        message: error.response?.data?.message || 'Student not found or not verified'
-      });
+      
+      // If it's a borrowing validation error, show specific message
+      if (error.response?.data?.errors) {
+        setValidationResult({
+          valid: false,
+          message: 'Student cannot borrow books',
+          details: error.response.data.errors
+        });
+      } else {
+        setValidationResult({
+          valid: false,
+          message: error.response?.data?.message || 'Student not found or not verified'
+        });
+      }
     }
   };
 
@@ -329,24 +367,61 @@ const ModernBorrowingManagement = ({ user }) => {
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`p-3 rounded-lg border ${
-                          validationResult.valid 
+                        className={`p-4 rounded-lg border ${
+                          validationResult.valid && validationResult.canBorrow
                             ? 'bg-green-50 border-green-200 text-green-700' 
                             : 'bg-red-50 border-red-200 text-red-700'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          {validationResult.valid ? (
+                          {validationResult.valid && validationResult.canBorrow ? (
                             <CheckCircle className="h-4 w-4" />
                           ) : (
                             <AlertCircle className="h-4 w-4" />
                           )}
                           <span className="text-sm font-medium">{validationResult.message}</span>
                         </div>
-                        {validationResult.valid && validationResult.user && (
-                          <div className="mt-2 text-sm">
+                        
+                        {validationResult.user && (
+                          <div className="mt-3 text-sm space-y-1">
                             <p><strong>Email:</strong> {validationResult.user.email}</p>
                             <p><strong>Status:</strong> {validationResult.user.is_verified ? 'Verified' : 'Unverified'}</p>
+                            
+                            {validationResult.details && (
+                              <div className="mt-2 p-2 bg-white/50 rounded border">
+                                <p><strong>Currently Borrowed:</strong> {validationResult.currentBorrowed || 0} books</p>
+                                <p><strong>Max Allowed:</strong> {validationResult.details.maxAllowed || 3} books</p>
+                                <p><strong>Can Borrow:</strong> {validationResult.canBorrow ? 'Yes' : 'No'}</p>
+                                
+                                {validationResult.details.borrowingStatus && (
+                                  <div className="mt-2 text-xs">
+                                    {validationResult.details.borrowingStatus.hasOverdueBooks && (
+                                      <p className="text-red-600">⚠️ Has overdue books</p>
+                                    )}
+                                    {validationResult.details.borrowingStatus.hasUnpaidFines && (
+                                      <p className="text-red-600">⚠️ Has unpaid fines</p>
+                                    )}
+                                    {!validationResult.details.borrowingStatus.withinLimit && (
+                                      <p className="text-red-600">⚠️ Exceeded borrowing limit</p>
+                                    )}
+                                    {validationResult.details.borrowingStatus.reasonBlocked && (
+                                      <p className="text-red-600">🚫 {validationResult.details.borrowingStatus.reasonBlocked}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {validationResult.details && Array.isArray(validationResult.details) && validationResult.details.length > 0 && (
+                              <div className="mt-2">
+                                <p className="font-medium text-red-600">Issues found:</p>
+                                <ul className="list-disc list-inside text-xs mt-1">
+                                  {validationResult.details.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         )}
                       </motion.div>
@@ -354,8 +429,11 @@ const ModernBorrowingManagement = ({ user }) => {
                       <div className="p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-700">
                         <div className="flex items-center gap-2">
                           <Search className="h-4 w-4" />
-                          <span className="text-sm font-medium">Click "Validate" to verify the student before borrowing</span>
+                          <span className="text-sm font-medium">Click "Validate" to check student borrowing eligibility</span>
                         </div>
+                        <p className="text-xs mt-1 text-blue-600">
+                          Checks for overdue books, unpaid fines, and borrowing limits
+                        </p>
                       </div>
                     )}
                   </div>
@@ -404,7 +482,7 @@ const ModernBorrowingManagement = ({ user }) => {
                   <div className="flex gap-3 pt-4">
                     <Button 
                       type="submit" 
-                      disabled={loading || (!studentIdNumber.trim() || bookCodes.every(code => !code.trim()))}
+                      disabled={loading || (!studentIdNumber.trim() || bookCodes.every(code => !code.trim()) || !validationResult?.canBorrow)}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       {loading ? (

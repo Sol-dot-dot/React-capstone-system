@@ -231,7 +231,7 @@ class UserKnowledgeService {
         SELECT 
           COUNT(*) as total_borrowed,
           COUNT(CASE WHEN returned_date IS NOT NULL THEN 1 END) as total_returned,
-          COUNT(CASE WHEN status = 'borrowed' THEN 1 END) as currently_borrowed,
+          COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currently_borrowed,
           COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_books,
           COUNT(CASE WHEN DATEDIFF(COALESCE(returned_date, NOW()), borrowed_date) >= 7 THEN 1 END) as long_reads,
           AVG(DATEDIFF(COALESCE(returned_date, NOW()), borrowed_date)) as avg_reading_days,

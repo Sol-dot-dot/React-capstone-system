@@ -6,8 +6,6 @@ import {
   Settings, 
   User, 
   ChevronDown,
-  Sun,
-  Moon,
   Maximize2,
   Minimize2
 } from 'lucide-react';
@@ -21,7 +19,6 @@ import axios from 'axios';
 const ModernTopBar = ({ onToggleSidebar, user }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -74,6 +71,7 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
     return () => clearInterval(interval);
   }, []);
 
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'warning': return '⚠️';
@@ -121,21 +119,6 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
 
         {/* Right Section */}
         <div className="flex items-center space-x-4">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-2 hover:bg-slate-100 rounded-lg"
-          >
-            <motion.div
-              animate={{ rotate: isDarkMode ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </motion.div>
-          </Button>
-
           {/* Notifications */}
           <div className="relative">
             <Button

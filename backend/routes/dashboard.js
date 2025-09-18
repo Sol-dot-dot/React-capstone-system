@@ -24,7 +24,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
       SELECT 
         COUNT(*) as totalBooks,
         COUNT(CASE WHEN status = 'available' THEN 1 END) as availableBooks,
-        COUNT(CASE WHEN status = 'borrowed' THEN 1 END) as borrowedBooks,
+        COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as borrowedBooks,
         COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdueBooks,
         COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) as addedToday
       FROM books
@@ -33,7 +33,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     // Borrowing Statistics
     const [borrowingStats] = await connection.execute(`
       SELECT 
-        COUNT(CASE WHEN status = 'borrowed' THEN 1 END) as currentlyBorrowed,
+        COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currentlyBorrowed,
         COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdueBooks,
         COUNT(CASE WHEN DATE(borrowed_date) = CURDATE() THEN 1 END) as todayBorrowings,
         COUNT(CASE WHEN DATE(returned_date) = CURDATE() THEN 1 END) as todayReturns,
