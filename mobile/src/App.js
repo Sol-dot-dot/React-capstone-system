@@ -36,6 +36,13 @@ import UltraModernBottomNavigation from './components/UltraModernBottomNavigatio
 import NotificationService from './services/NotificationService';
 import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
+import EnhancedBottomNavigation from './components/EnhancedBottomNavigation';
+import EnhancedWelcomeScreen from './screens/EnhancedWelcomeScreen';
+import EnhancedLoginScreen from './screens/EnhancedLoginScreen';
+import EnhancedDashboardScreen from './screens/EnhancedDashboardScreen';
+import EnhancedBorrowedBooksScreen from './screens/EnhancedBorrowedBooksScreen';
+import EnhancedPenaltyScreen from './screens/EnhancedPenaltyScreen';
+import EnhancedProfileScreen from './screens/EnhancedProfileScreen';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, verifyResetCode, resetPassword, profile, changePassword, borrowedBooks, penalties
@@ -1177,31 +1184,31 @@ const App = () => {
      }
    };
 
-  // Show ultra-modern screens when user is logged in
+  // Show enhanced screens when user is logged in
   if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
               {currentScreen === 'dashboard' && (
-                <UltraModernDashboardScreen
+                <EnhancedDashboardScreen
                   userData={userData}
                   onNavigate={handleNavigate}
                   onLogout={handleLogout}
                 />
               )}
         {currentScreen === 'borrowedBooks' && (
-          <BorrowedBooksScreen 
+          <EnhancedBorrowedBooksScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
         )}
         {currentScreen === 'penalties' && (
-          <PenaltyScreen 
+          <EnhancedPenaltyScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
         )}
         {currentScreen === 'profile' && (
-          <ModernProfileScreen 
+          <EnhancedProfileScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')}
             onNavigate={handleNavigate}
@@ -1209,8 +1216,8 @@ const App = () => {
           />
         )}
         
-        {/* Ultra Modern Bottom Navigation */}
-        <UltraModernBottomNavigation
+        {/* Enhanced Bottom Navigation */}
+        <EnhancedBottomNavigation
           activeTab={activeTab}
           onTabPress={handleTabPress}
         />
@@ -1225,18 +1232,18 @@ const App = () => {
     );
   }
 
-  // Show ultra-modern auth screens fullscreen
+  // Show enhanced auth screens fullscreen
   if (['welcome', 'login', 'register', 'verify', 'forgotPassword'].includes(currentScreen)) {
-    console.log('Rendering ultra-modern auth screen:', currentScreen);
+    console.log('Rendering enhanced auth screen:', currentScreen);
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
         {currentScreen === 'welcome' && (
-          <UltraModernWelcomeScreen 
+          <EnhancedWelcomeScreen 
             onNavigate={setCurrentScreen}
           />
         )}
         {currentScreen === 'login' && (
-          <UltraModernLoginScreen
+          <EnhancedLoginScreen
             onLogin={(user) => {
               setUserData(user);
               setCurrentScreen('dashboard');

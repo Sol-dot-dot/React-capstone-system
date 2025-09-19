@@ -9,6 +9,7 @@ MERGED from [:react-native-vector-icons] C:\clone-local\React-capstone-system\mo
 MERGED from [:react-native-async-storage_async-storage] C:\clone-local\React-capstone-system\mobile\node_modules\@react-native-async-storage\async-storage\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-7:12
 MERGED from [:react-native-gesture-handler] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-gesture-handler\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-7:12
 MERGED from [:react-native-reanimated] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-reanimated\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-7:12
+MERGED from [:react-native-svg] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-svg\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-7:12
 MERGED from [com.facebook.react:react-android:0.72.6] C:\Users\rhodc\.gradle\caches\transforms-3\6109204e53a8b211250ae196109517c7\transformed\jetified-react-android-0.72.6-debug\AndroidManifest.xml:2:1-7:12
 MERGED from [com.facebook.flipper:flipper-network-plugin:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\7334f0e44d7d8817774889c4c8f01a57\transformed\jetified-flipper-network-plugin-0.182.0\AndroidManifest.xml:8:1-15:12
 MERGED from [com.facebook.flipper:flipper-fresco-plugin:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\0aeda4410e5804f0979ae4c1ed8dc03c\transformed\jetified-flipper-fresco-plugin-0.182.0\AndroidManifest.xml:8:1-15:12
@@ -174,6 +175,8 @@ MERGED from [:react-native-gesture-handler] C:\clone-local\React-capstone-system
 MERGED from [:react-native-gesture-handler] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-gesture-handler\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
 MERGED from [:react-native-reanimated] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-reanimated\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
 MERGED from [:react-native-reanimated] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-reanimated\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
+MERGED from [:react-native-svg] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-svg\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
+MERGED from [:react-native-svg] C:\clone-local\React-capstone-system\mobile\node_modules\react-native-svg\android\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-44
 MERGED from [com.facebook.react:react-android:0.72.6] C:\Users\rhodc\.gradle\caches\transforms-3\6109204e53a8b211250ae196109517c7\transformed\jetified-react-android-0.72.6-debug\AndroidManifest.xml:5:5-44
 MERGED from [com.facebook.react:react-android:0.72.6] C:\Users\rhodc\.gradle\caches\transforms-3\6109204e53a8b211250ae196109517c7\transformed\jetified-react-android-0.72.6-debug\AndroidManifest.xml:5:5-44
 MERGED from [com.facebook.flipper:flipper-network-plugin:0.182.0] C:\Users\rhodc\.gradle\caches\transforms-3\7334f0e44d7d8817774889c4c8f01a57\transformed\jetified-flipper-network-plugin-0.182.0\AndroidManifest.xml:11:5-13:41

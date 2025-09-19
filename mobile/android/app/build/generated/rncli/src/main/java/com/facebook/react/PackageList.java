@@ -19,6 +19,8 @@ import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;
 import com.swmansion.gesturehandler.RNGestureHandlerPackage;
 // react-native-reanimated
 import com.swmansion.reanimated.ReanimatedPackage;
+// react-native-svg
+import com.horcrux.svg.SvgPackage;
 
 public class PackageList {
   private Application application;
@@ -67,7 +69,8 @@ public class PackageList {
       new VectorIconsPackage(),
       new AsyncStoragePackage(),
       new RNGestureHandlerPackage(),
-      new ReanimatedPackage()
+      new ReanimatedPackage(),
+      new SvgPackage()
     ));
   }
 }

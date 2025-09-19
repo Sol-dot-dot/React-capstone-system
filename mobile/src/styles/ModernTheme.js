@@ -1,6 +1,17 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 
 export const ModernTheme = {
+  // Device dimensions
+  dimensions: {
+    width,
+    height,
+    isSmallDevice: width < 375,
+    isMediumDevice: width >= 375 && width < 414,
+    isLargeDevice: width >= 414,
+  },
+
   colors: {
     // Match web design system colors
     background: '#ffffff',
@@ -158,6 +169,51 @@ export const ModernTheme = {
       shadowRadius: 2,
       elevation: 2,
     },
+    elevated: {
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    floating: {
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 8,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 12,
+    },
+  },
+
+  // Animation configurations
+  animations: {
+    duration: {
+      fast: 200,
+      normal: 300,
+      slow: 500,
+    },
+    easing: {
+      easeInOut: 'ease-in-out',
+      easeOut: 'ease-out',
+      easeIn: 'ease-in',
+    },
+    spring: {
+      damping: 15,
+      stiffness: 150,
+    },
+  },
+
+  // Responsive breakpoints
+  breakpoints: {
+    small: 375,
+    medium: 414,
+    large: 768,
   },
 };
 
