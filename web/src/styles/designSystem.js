@@ -56,21 +56,19 @@ export const designSystem = {
     },
     
     // Semantic Colors
-    // Semantic Colors
-semantic: {
-  background: `url('/loginbackground.jpg') no-repeat center center fixed`,
-  surface: '#f8fafc',
-  surfaceElevated: '#ffffff',
-  border: '#e2e8f0',
-  borderLight: '#f1f5f9',
-  text: {
-    primary: '#0f172a',
-    secondary: '#475569',
-    tertiary: '#64748b',
-    inverse: '#ffffff',
-  },
-},
-
+    semantic: {
+      background: '#ffffff',
+      surface: '#f8fafc',
+      surfaceElevated: '#ffffff',
+      border: '#e2e8f0',
+      borderLight: '#f1f5f9',
+      text: {
+        primary: '#0f172a',
+        secondary: '#475569',
+        tertiary: '#64748b',
+        inverse: '#ffffff',
+      },
+    },
   },
   
   // Typography
