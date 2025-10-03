@@ -29,4 +29,5 @@ com.capstonemobile.app-main-27 C:\clone-local\React-capstone-system\mobile\andro
 com.capstonemobile.app-packaged_res-28 C:\clone-local\React-capstone-system\mobile\node_modules\@react-native-async-storage\async-storage\android\build\intermediates\packaged_res\debug
 com.capstonemobile.app-packaged_res-29 C:\clone-local\React-capstone-system\mobile\node_modules\react-native-gesture-handler\android\build\intermediates\packaged_res\debug
 com.capstonemobile.app-packaged_res-30 C:\clone-local\React-capstone-system\mobile\node_modules\react-native-reanimated\android\build\intermediates\packaged_res\debug
-com.capstonemobile.app-packaged_res-31 C:\clone-local\React-capstone-system\mobile\node_modules\react-native-vector-icons\android\build\intermediates\packaged_res\debug
+com.capstonemobile.app-packaged_res-31 C:\clone-local\React-capstone-system\mobile\node_modules\react-native-svg\android\build\intermediates\packaged_res\debug
+com.capstonemobile.app-packaged_res-32 C:\clone-local\React-capstone-system\mobile\node_modules\react-native-vector-icons\android\build\intermediates\packaged_res\debug
