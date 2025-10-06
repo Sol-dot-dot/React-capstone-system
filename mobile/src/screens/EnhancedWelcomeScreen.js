@@ -10,8 +10,6 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
-import * as Animatable from 'react-native-animatable';
-import Icon from 'react-native-vector-icons/Ionicons';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
 import { ModernButton } from '../components/ModernComponents';
@@ -39,26 +37,6 @@ const EnhancedWelcomeScreen = ({ onNavigate }) => {
     }).start();
   }, []);
 
-  const features = [
-    {
-      icon: 'notifications-outline',
-      title: 'Smart Notifications',
-      description: 'Get timely reminders for book returns',
-      color: ModernTheme.colors.primary,
-    },
-    {
-      icon: 'book-outline',
-      title: 'Track Borrowing',
-      description: 'Monitor your borrowed books easily',
-      color: ModernTheme.colors.success,
-    },
-    {
-      icon: 'chatbubble-outline',
-      title: 'AI Assistant',
-      description: 'Get help with library queries',
-      color: ModernTheme.colors.accent,
-    },
-  ];
 
   return (
     <View style={styles.container}>
@@ -104,24 +82,6 @@ const EnhancedWelcomeScreen = ({ onNavigate }) => {
           </Text>
         </Animated.View>
 
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.featuresTitle}>Key Features</Text>
-          {features.map((feature, index) => (
-            <View
-              key={feature.title}
-              style={styles.featureItem}
-            >
-              <View style={[styles.featureIcon, { backgroundColor: feature.color + '20' }]}>
-                <Icon name={feature.icon} size={28} color={feature.color} />
-              </View>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
@@ -129,7 +89,7 @@ const EnhancedWelcomeScreen = ({ onNavigate }) => {
             title="Sign In"
             onPress={() => onNavigate('login')}
             variant="primary"
-            size="large"
+            size="medium"
             style={styles.primaryButton}
             icon="log-in-outline"
           />
@@ -138,7 +98,7 @@ const EnhancedWelcomeScreen = ({ onNavigate }) => {
             title="Create Account"
             onPress={() => onNavigate('register')}
             variant="secondary"
-            size="large"
+            size="medium"
             style={styles.secondaryButton}
             icon="person-add-outline"
           />
@@ -176,18 +136,15 @@ const styles = StyleSheet.create({
     marginBottom: ModernTheme.spacing.xl,
   },
   logoImageWrapper: {
+    width: 180,
+    height: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoImage: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: ModernTheme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...ModernTheme.shadows.elevated,
-  },
-  logoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
   },
   title: {
     ...ModernTheme.typography.h1,
@@ -207,46 +164,6 @@ const styles = StyleSheet.create({
     color: ModernTheme.colors.textTertiary,
     lineHeight: 24,
     paddingHorizontal: ModernTheme.spacing.md,
-  },
-  featuresSection: {
-    marginBottom: ModernTheme.spacing.xxl,
-  },
-  featuresTitle: {
-    ...ModernTheme.typography.h3,
-    textAlign: 'center',
-    marginBottom: ModernTheme.spacing.lg,
-    color: ModernTheme.colors.textPrimary,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: ModernTheme.colors.surface,
-    borderRadius: ModernTheme.borderRadius.lg,
-    padding: ModernTheme.spacing.lg,
-    marginBottom: ModernTheme.spacing.md,
-    ...ModernTheme.shadows.card,
-  },
-  featureIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: ModernTheme.spacing.lg,
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureTitle: {
-    ...ModernTheme.typography.bodyMedium,
-    color: ModernTheme.colors.textPrimary,
-    marginBottom: ModernTheme.spacing.xs,
-    fontWeight: '600',
-  },
-  featureDescription: {
-    ...ModernTheme.typography.caption,
-    color: ModernTheme.colors.textSecondary,
-    lineHeight: 20,
   },
   actionSection: {
     gap: ModernTheme.spacing.md,

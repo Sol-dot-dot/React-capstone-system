@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 // import { Card, TextInput, Button, Title, Paragraph } from 'react-native-paper';
 import axios from 'axios';
@@ -61,9 +62,14 @@ const ModernLoginScreen = ({ onLogin, onNavigate, onBack }) => {
         {/* Logo/Icon Section */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>📚</Text>
+            <Image 
+              source={require('../assets/smc-logo.png')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+              onError={(error) => console.log('Logo load error:', error)}
+            />
           </View>
-          <Text style={styles.welcomeTitle}>Library Management</Text>
+          <Text style={styles.welcomeTitle}>Welcome Back!</Text>
           <Text style={styles.welcomeSubtitle}>Sign in to your account</Text>
         </View>
 
@@ -137,16 +143,16 @@ const styles = StyleSheet.create({
     marginBottom: ModernTheme.spacing.xxl,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: ModernTheme.colors.accent + '20',
+    width: 120,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: ModernTheme.spacing.lg,
   },
-  logoIcon: {
-    fontSize: 40,
+  logoImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   welcomeTitle: {
     textAlign: 'center',
