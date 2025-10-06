@@ -20,7 +20,8 @@ import {
   Mail,
   Calendar,
   Eye,
-  Filter
+  Filter,
+  Printer
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -279,6 +280,244 @@ const ModernPenaltyManagement = ({ user }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const printInvoice = (student) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    // Get current date
+    const currentDate = new Date();
+    const invoiceDate = currentDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    // Calculate due date (30 days from now)
+    const dueDate = new Date(currentDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+    const dueDateFormatted = dueDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    // Generate invoice number
+    const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+    
+    // Create the invoice HTML
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Penalty Invoice - ${student.id_number}</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          .invoice-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #374151;
+            margin: 0;
+          }
+          .invoice-details {
+            text-align: right;
+            color: #6b7280;
+          }
+          .invoice-details p {
+            margin: 5px 0;
+            font-size: 14px;
+          }
+          .details-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .issued-to, .pay-to {
+            flex: 1;
+            margin-right: 20px;
+          }
+          .section-title {
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 10px;
+            font-size: 16px;
+          }
+          .section-content {
+            color: #6b7280;
+            line-height: 1.5;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th {
+            background-color: #f9fafb;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: bold;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          .items-table td {
+            padding: 15px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+          }
+          .items-table tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .summary {
+            text-align: right;
+            margin-top: 20px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+          }
+          .summary-label {
+            font-weight: bold;
+            color: #374151;
+          }
+          .summary-value {
+            color: #6b7280;
+            min-width: 100px;
+            text-align: right;
+          }
+          .total-row {
+            border-top: 2px solid #e5e7eb;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #374151;
+          }
+          .signature {
+            text-align: center;
+            margin-top: 50px;
+            color: #6b7280;
+            font-style: italic;
+          }
+          @media print {
+            body { margin: 0; }
+            .invoice-container { max-width: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <div class="header">
+            <div>
+              <h1 class="invoice-title">INVOICE</h1>
+            </div>
+            <div class="invoice-details">
+              <p><strong>INVOICE NO:</strong> ${invoiceNumber}</p>
+              <p><strong>DATE:</strong> ${invoiceDate}</p>
+              <p><strong>DUE DATE:</strong> ${dueDateFormatted}</p>
+            </div>
+          </div>
+          
+          <div class="details-section">
+            <div class="issued-to">
+              <div class="section-title">ISSUED TO:</div>
+              <div class="section-content">
+                ${student.first_name} ${student.last_name}<br>
+                Student ID: ${student.id_number}<br>
+                ${student.email}
+              </div>
+            </div>
+            <div class="pay-to">
+              <div class="section-title">PAY TO:</div>
+              <div class="section-content">
+                SMC finance
+              </div>
+            </div>
+          </div>
+          
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>DESCRIPTION</th>
+                <th>UNIT PRICE</th>
+                <th>QTY</th>
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${student.overdue_books && student.overdue_books.length > 0 ? 
+                student.overdue_books.map(book => `
+                  <tr>
+                    <td>Overdue Book: ${book.title} by ${book.author}</td>
+                    <td>₱${book.fine_amount || 0}</td>
+                    <td>1</td>
+                    <td>₱${book.fine_amount || 0}</td>
+                  </tr>
+                `).join('') : 
+                `<tr>
+                  <td>Library Penalty Fees</td>
+                  <td>₱${student.unpaid_amount || 0}</td>
+                  <td>1</td>
+                  <td>₱${student.unpaid_amount || 0}</td>
+                </tr>`
+              }
+            </tbody>
+          </table>
+          
+          <div class="summary">
+            <div class="summary-row">
+              <span class="summary-label">SUBTOTAL:</span>
+              <span class="summary-value">₱${student.unpaid_amount || 0}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Tax:</span>
+              <span class="summary-value">0%</span>
+            </div>
+            <div class="summary-row total-row">
+              <span class="summary-label">TOTAL:</span>
+              <span class="summary-value">₱${student.unpaid_amount || 0}</span>
+            </div>
+          </div>
+          
+          <div class="signature">
+            Library Administrator
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    // Write the HTML to the new window
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+    
+    // Wait for the content to load, then trigger print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
   };
 
   const resetSemester = async () => {
@@ -605,27 +844,39 @@ const ModernPenaltyManagement = ({ user }) => {
                                 <ChevronDown className="h-4 w-4" />
                               )}
                             </Button>
-                            {student.unpaid_fines > 0 ? (
+                            <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
-                                onClick={() => handleMarkAsPaid(student.id_number)}
-                                title="Mark fines as paid and return books"
+                                className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                                onClick={() => printInvoice(student)}
+                                title="Print penalty invoice"
                               >
-                                <Check className="h-4 w-4 mr-1" />
-                                Paid
+                                <Printer className="h-4 w-4 mr-1" />
+                                Print Invoice
                               </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                title="View student details"
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View Details
-                              </Button>
-                            )}
+                              {student.unpaid_fines > 0 ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+                                  onClick={() => handleMarkAsPaid(student.id_number)}
+                                  title="Mark fines as paid and return books"
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Paid
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="View student details"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Details
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
