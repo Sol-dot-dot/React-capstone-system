@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   DollarSign, 
@@ -29,6 +29,15 @@ import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import axios from 'axios';
 
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
+
 const ModernPenaltyManagement = ({ user }) => {
   const [activeTab, setActiveTab] = useState('fines');
   const [settings, setSettings] = useState({});
@@ -40,9 +49,94 @@ const ModernPenaltyManagement = ({ user }) => {
   const [studentFines, setStudentFines] = useState([]);
   const [expandedStudents, setExpandedStudents] = useState(new Set());
 
+  // Barcode scanner state
+  const [isScanning, setIsScanning] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [activeTab]);
+
+  // Auto-focus the search input field when on fines tab
+  useEffect(() => {
+    if (activeTab === 'fines') {
+      const field = document.getElementById('barcode-field-penalty-search');
+      if (field) {
+        field.focus();
+        field.select();
+      }
+    }
+  }, [activeTab]);
+
+  // Handle barcode scanner input
+  useEffect(() => {
+    let scanTimeout;
+    
+    const handleKeyDown = (event) => {
+      // Check if it's a barcode scanner input (usually ends with Enter)
+      if (event.key === 'Enter' && isScanning && event.target.id === 'barcode-field-penalty-search') {
+        event.preventDefault();
+        handleBarcodeInput();
+        return;
+      }
+      
+      // Start scanning when user starts typing in barcode field
+      if (event.target.id === 'barcode-field-penalty-search') {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      // Reset scanning state after a delay
+      if (event.target.id === 'barcode-field-penalty-search') {
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => setIsScanning(false), 500);
+      }
+    };
+
+    // Handle rapid input (typical of barcode scanners)
+    const handleInput = (event) => {
+      if (event.target.id === 'barcode-field-penalty-search') {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => {
+          setIsScanning(false);
+          // Trigger live search when scanning stops
+          const scannedValue = event.target.value.trim();
+          if (scannedValue && scannedValue.length > 3) {
+            setSearchTerm(scannedValue);
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(() => {
+              loadStudentsWithFines();
+            }, 100);
+          }
+        }, 300); // Shorter timeout for immediate processing
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('input', handleInput);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('input', handleInput);
+      clearTimeout(scanTimeout);
+    };
+  }, [isScanning]);
+
+  const handleBarcodeInput = () => {
+    const field = document.getElementById('barcode-field-penalty-search');
+    if (!field) return;
+
+    const scannedValue = field.value.trim();
+    if (scannedValue) {
+      setSearchTerm(scannedValue);
+      // Trigger debounced search for live search
+      debouncedLoadStudentsWithFines(scannedValue);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -65,6 +159,29 @@ const ModernPenaltyManagement = ({ user }) => {
       setLoading(false);
     }
   };
+
+  // Create debounced search function
+  const debouncedLoadStudentsWithFines = useCallback(
+    debounce(async (searchTerm) => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/penalty/students-detailed', {
+          headers: { 'Authorization': `Bearer ${token}` },
+          params: {
+            search: searchTerm || undefined,
+            status: 'unpaid'
+          }
+        });
+        
+        if (response.data.success) {
+          setStudents(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading students with fines:', error);
+      }
+    }, 500),
+    []
+  );
 
   const loadStudentsWithFines = async () => {
     try {
@@ -334,6 +451,29 @@ const ModernPenaltyManagement = ({ user }) => {
                 <CardDescription>
                   View and manage student penalty records and fine calculations
                 </CardDescription>
+                
+                {/* Barcode Scanner Status */}
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+                      <span className="text-sm font-medium text-blue-700">
+                        {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-blue-600">
+                      <span>Current Field: Student Search</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-600">
+                    <p>💡 <strong>Barcode Scanner Tips:</strong></p>
+                    <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                      <li>Scan student ID barcode directly into the highlighted field</li>
+                      <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to search automatically</li>
+                      <li>Student fines will load automatically after scanning</li>
+                    </ul>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {message && (
@@ -348,11 +488,24 @@ const ModernPenaltyManagement = ({ user }) => {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                       <Input
+                        id="barcode-field-penalty-search"
                         placeholder="Search by Student ID, Email, or Book Title..."
                         value={searchTerm}
-                        onChange={handleSearchChange}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
-                        className="pl-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSearchTerm(value);
+                          // Trigger live search for any input
+                          if (value.trim().length > 0) {
+                            debouncedLoadStudentsWithFines(value);
+                          } else {
+                            // Load all students when search is empty
+                            debouncedLoadStudentsWithFines('');
+                          }
+                        }}
+                        className={`pl-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
+                          isScanning ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                        }`}
+                        autoComplete="off"
                       />
                     </div>
                   </div>

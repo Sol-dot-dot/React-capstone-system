@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -18,6 +18,15 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import axios from 'axios';
 
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
+
 const ModernReturningManagement = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,7 +43,89 @@ const ModernReturningManagement = ({ user }) => {
   const [conditionNotes, setConditionNotes] = useState({});
   const [processingNotes, setProcessingNotes] = useState({});
 
+  // Barcode scanner state
+  const [isScanning, setIsScanning] = useState(false);
 
+
+
+  // Auto-focus the student ID input field
+  useEffect(() => {
+    const field = document.getElementById('barcode-field-returning-student-id');
+    if (field) {
+      field.focus();
+      field.select();
+    }
+  }, []);
+
+  // Handle barcode scanner input
+  useEffect(() => {
+    let scanTimeout;
+    
+    const handleKeyDown = (event) => {
+      // Check if it's a barcode scanner input (usually ends with Enter)
+      if (event.key === 'Enter' && isScanning && event.target.id === 'barcode-field-returning-student-id') {
+        event.preventDefault();
+        handleBarcodeInput();
+        return;
+      }
+      
+      // Start scanning when user starts typing in barcode field
+      if (event.target.id === 'barcode-field-returning-student-id') {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      // Reset scanning state after a delay
+      if (event.target.id === 'barcode-field-returning-student-id') {
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => setIsScanning(false), 500);
+      }
+    };
+
+    // Handle rapid input (typical of barcode scanners)
+    const handleInput = (event) => {
+      if (event.target.id === 'barcode-field-returning-student-id') {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => {
+          setIsScanning(false);
+          // Trigger live search when scanning stops
+          const scannedValue = event.target.value.trim();
+          if (scannedValue && scannedValue.length > 3) {
+            setReturnSearchId(scannedValue);
+            setTimeout(() => {
+              searchStudentBooks();
+            }, 100);
+          }
+        }, 300); // Shorter timeout for immediate processing
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('input', handleInput);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('input', handleInput);
+      clearTimeout(scanTimeout);
+    };
+  }, [isScanning]);
+
+  const handleBarcodeInput = () => {
+    const field = document.getElementById('barcode-field-returning-student-id');
+    if (!field) return;
+
+    const scannedValue = field.value.trim();
+    if (scannedValue) {
+      setReturnSearchId(scannedValue);
+      // Trigger debounced search for live search
+      debouncedSearchStudentBooks(scannedValue);
+    }
+  };
 
   // Listen for payment processed events to refresh data
   useEffect(() => {
@@ -56,6 +147,72 @@ const ModernReturningManagement = ({ user }) => {
     };
   }, [searchedStudent]);
 
+
+  // Create debounced search function
+  const debouncedSearchStudentBooks = useCallback(
+    debounce(async (studentId) => {
+      if (!studentId || !studentId.trim()) {
+        setMessage('Please enter a student ID number');
+        return;
+      }
+
+      try {
+        setReturnLoading(true);
+        setMessage(''); // Clear previous messages
+        const token = localStorage.getItem('token');
+        
+        console.log('Searching for student:', studentId.trim());
+        console.log('Token present:', !!token);
+        
+        const response = await axios.get(`/api/borrowing/admin/search/${studentId.trim()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        console.log('Search response:', response.data);
+
+        if (response.data.success) {
+          const student = response.data.data.student;
+          const borrowedBooks = response.data.data.borrowedBooks || [];
+          
+          setSearchedStudent(student);
+          setStudentBooks(borrowedBooks);
+          
+          const activeBooks = borrowedBooks.filter(book => book.status !== 'returned');
+          const returnedBooks = borrowedBooks.filter(book => book.status === 'returned');
+          
+          if (activeBooks.length === 0 && returnedBooks.length === 0) {
+            setMessage(`Student ${student.idNumber} found but has no book history.`);
+          } else if (activeBooks.length === 0) {
+            setMessage(`Student ${student.idNumber} has no currently borrowed books. ${returnedBooks.length} book(s) recently returned.`);
+          } else {
+            setMessage(`Found ${activeBooks.length} borrowed book(s) for student ${student.idNumber}${returnedBooks.length > 0 ? ` (${returnedBooks.length} recently returned)` : ''}`);
+          }
+        } else {
+          setMessage(response.data.message || 'Student not found');
+          setSearchedStudent(null);
+          setStudentBooks([]);
+        }
+      } catch (error) {
+        console.error('Error searching student books:', error);
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
+        
+        if (error.response?.status === 404) {
+          setMessage(`Student ${studentId} not found in the system.`);
+        } else if (error.response?.status === 403) {
+          setMessage('Access denied. Admin privileges required.');
+        } else {
+          setMessage(`Error searching student books: ${error.response?.data?.message || error.message}`);
+        }
+        
+        setSearchedStudent(null);
+        setStudentBooks([]);
+      } finally {
+        setReturnLoading(false);
+      }
+    }, 500),
+    []
+  );
 
   // Returning Management functions
   const searchStudentBooks = async () => {
@@ -242,6 +399,29 @@ const ModernReturningManagement = ({ user }) => {
               <CardDescription>
                 Search for students and process their book returns
               </CardDescription>
+              
+              {/* Barcode Scanner Status */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+                    <span className="text-sm font-medium text-blue-700">
+                      {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    <span>Current Field: Student ID Search</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-blue-600">
+                  <p>💡 <strong>Barcode Scanner Tips:</strong></p>
+                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                    <li>Scan student ID barcode directly into the highlighted field</li>
+                    <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to search automatically</li>
+                    <li>Student books will load automatically after scanning</li>
+                  </ul>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {message && (
@@ -264,11 +444,25 @@ const ModernReturningManagement = ({ user }) => {
                   </label>
                   <div className="flex gap-2">
                     <Input
+                      id="barcode-field-returning-student-id"
                       placeholder="Enter student ID (e.g., C22-0044)"
                       value={returnSearchId}
-                      onChange={(e) => setReturnSearchId(e.target.value)}
-                      className="flex-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && searchStudentBooks()}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setReturnSearchId(value);
+                        // Trigger live search for any input
+                        if (value.trim().length > 0) {
+                          debouncedSearchStudentBooks(value);
+                        } else {
+                          setSearchedStudent(null);
+                          setStudentBooks([]);
+                          setMessage('');
+                        }
+                      }}
+                      className={`flex-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
+                        isScanning ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                      }`}
+                      autoComplete="off"
                     />
                     <Button
                       onClick={searchStudentBooks}

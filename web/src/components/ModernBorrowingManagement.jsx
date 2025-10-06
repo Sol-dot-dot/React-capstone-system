@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { 
@@ -27,6 +27,15 @@ import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import axios from 'axios';
 
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
+
 const ModernBorrowingManagement = ({ user }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('borrow');
@@ -43,6 +52,10 @@ const ModernBorrowingManagement = ({ user }) => {
   const [bookCodes, setBookCodes] = useState(['', '', '']);
   const [validationResult, setValidationResult] = useState(null);
   const [dueDate, setDueDate] = useState('');
+  
+  // Barcode scanner state
+  const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Transactions state
   const [transactions, setTransactions] = useState([]);
@@ -64,6 +77,147 @@ const ModernBorrowingManagement = ({ user }) => {
       setActiveTab('transactions'); // Switch to transactions tab to show the result
     }
   }, [activeTab, currentPage, searchTerm, statusFilter]);
+
+  // Barcode scanner functionality
+  useEffect(() => {
+    if (activeTab === 'borrow') {
+      // Auto-focus the current field when component mounts or field changes
+      const fieldId = getFieldId(currentFieldIndex);
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.focus();
+        field.select(); // Select all text for easy replacement
+      }
+    }
+  }, [currentFieldIndex, activeTab]);
+
+  // Handle barcode scanner input
+  useEffect(() => {
+    let scanTimeout;
+    
+    const handleKeyDown = (event) => {
+      // Check if it's a barcode scanner input (usually ends with Enter)
+      if (event.key === 'Enter' && isScanning) {
+        event.preventDefault();
+        handleBarcodeInput();
+        return;
+      }
+      
+      // Handle Tab key for manual navigation
+      if (event.key === 'Tab' && event.target.id && event.target.id.startsWith('barcode-field-')) {
+        event.preventDefault();
+        if (event.shiftKey) {
+          moveToPreviousField();
+        } else {
+          moveToNextField();
+        }
+        return;
+      }
+      
+      // Start scanning when user starts typing in barcode fields
+      if (event.target.id && event.target.id.startsWith('barcode-field-')) {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      // Reset scanning state after a delay
+      if (event.target.id && event.target.id.startsWith('barcode-field-')) {
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => setIsScanning(false), 500);
+      }
+    };
+
+    // Handle rapid input (typical of barcode scanners)
+    const handleInput = (event) => {
+      if (event.target.id && event.target.id.startsWith('barcode-field-')) {
+        setIsScanning(true);
+        clearTimeout(scanTimeout);
+        
+        // More aggressive barcode detection - trigger immediately when input stops
+        scanTimeout = setTimeout(() => {
+          setIsScanning(false);
+          // Trigger barcode input processing
+          const scannedValue = event.target.value.trim();
+          if (scannedValue && scannedValue.length > 3) {
+            handleBarcodeInput();
+          }
+        }, 300); // Shorter timeout for immediate processing
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('input', handleInput);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('input', handleInput);
+      clearTimeout(scanTimeout);
+    };
+  }, [isScanning]);
+
+  const getFieldId = (index) => {
+    switch (index) {
+      case 0: return 'barcode-field-student-id';
+      case 1: return 'barcode-field-book-1';
+      case 2: return 'barcode-field-book-2';
+      case 3: return 'barcode-field-book-3';
+      default: return 'barcode-field-student-id';
+    }
+  };
+
+  const handleBarcodeInput = () => {
+    const currentField = document.getElementById(getFieldId(currentFieldIndex));
+    if (!currentField) return;
+
+    const scannedValue = currentField.value.trim();
+    
+    if (scannedValue) {
+      // Update the appropriate state based on current field
+      switch (currentFieldIndex) {
+        case 0: // Student ID
+          setStudentIdNumber(scannedValue);
+          // Trigger debounced validation for live search
+          debouncedValidateStudent(scannedValue);
+          break;
+        case 1: // Book 1
+          setBookCodes(prev => [scannedValue, prev[1], prev[2]]);
+          break;
+        case 2: // Book 2
+          setBookCodes(prev => [prev[0], scannedValue, prev[2]]);
+          break;
+        case 3: // Book 3
+          setBookCodes(prev => [prev[0], prev[1], scannedValue]);
+          break;
+      }
+      
+      // Move to next field
+      moveToNextField();
+    }
+  };
+
+  const moveToNextField = () => {
+    const maxFields = 4; // student ID + 3 book codes (excluding due date)
+    setCurrentFieldIndex(prev => (prev + 1) % maxFields);
+  };
+
+  const moveToPreviousField = () => {
+    const maxFields = 4; // student ID + 3 book codes (excluding due date)
+    setCurrentFieldIndex(prev => prev === 0 ? maxFields - 1 : prev - 1);
+  };
+
+  const getCurrentFieldName = () => {
+    switch (currentFieldIndex) {
+      case 0: return 'Student ID';
+      case 1: return 'Book Code 1';
+      case 2: return 'Book Code 2';
+      case 3: return 'Book Code 3';
+      default: return 'Student ID';
+    }
+  };
 
   // Listen for payment processed events to refresh data
   useEffect(() => {
@@ -112,6 +266,84 @@ const ModernBorrowingManagement = ({ user }) => {
       setLoading(false);
     }
   };
+
+  // Create debounced validation function
+  const debouncedValidateStudent = useCallback(
+    debounce(async (studentId) => {
+      if (!studentId || !studentId.trim()) {
+        setValidationResult({ valid: false, message: 'Please enter a student ID number' });
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('token');
+        console.log('Validating student borrowing eligibility:', studentId);
+        
+        // First get student info
+        const userResponse = await axios.get(`/api/admin/users/${studentId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!userResponse.data.user) {
+          setValidationResult({
+            valid: false,
+            message: 'Student not found'
+          });
+          return;
+        }
+
+        // Then check borrowing eligibility using the dedicated endpoint
+        const eligibilityResponse = await axios.get(`/api/borrowing/check-eligibility/${studentId.trim()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        console.log('Borrowing eligibility response:', eligibilityResponse.data);
+
+        if (eligibilityResponse.data.success && eligibilityResponse.data.data) {
+          const { currentBorrowed, maxBooks, canBorrow, borrowingStatus } = eligibilityResponse.data.data;
+          
+          setValidationResult({
+            valid: true,
+            user: userResponse.data.user,
+            currentBorrowed: currentBorrowed,
+            canBorrow: canBorrow,
+            message: canBorrow ? 'Student is eligible to borrow books' : 'Student cannot borrow books',
+            details: {
+              currentBorrowed: currentBorrowed,
+              maxAllowed: maxBooks,
+              canBorrow: canBorrow,
+              borrowingStatus: borrowingStatus
+            }
+          });
+        } else {
+          // If eligibility check fails, show the error
+          setValidationResult({
+            valid: false,
+            user: userResponse.data.user,
+            message: eligibilityResponse.data.message || 'Student cannot borrow books',
+            details: []
+          });
+        }
+      } catch (error) {
+        console.error('Validation error:', error.response?.data || error.message);
+        
+        // If it's a borrowing validation error, show specific message
+        if (error.response?.data?.errors) {
+          setValidationResult({
+            valid: false,
+            message: 'Student cannot borrow books',
+            details: error.response.data.errors
+          });
+        } else {
+          setValidationResult({
+            valid: false,
+            message: error.response?.data?.message || 'Student not found or not verified'
+          });
+        }
+      }
+    }, 500),
+    []
+  );
 
   const validateStudent = async () => {
     if (!studentIdNumber.trim()) {
@@ -220,6 +452,8 @@ const ModernBorrowingManagement = ({ user }) => {
       setBookCodes(['', '', '']);
       setDueDate('');
       setValidationResult(null);
+      setCurrentFieldIndex(0);
+      setIsScanning(false);
     } catch (error) {
       console.error('Borrow error:', error);
       console.error('Error response:', error.response?.data);
@@ -335,6 +569,51 @@ const ModernBorrowingManagement = ({ user }) => {
                 <CardDescription>
                   Process book borrowing requests for students
                 </CardDescription>
+                
+                {/* Barcode Scanner Status */}
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
+                      <span className="text-sm font-medium text-blue-700">
+                        {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-blue-600">
+                      <span>Current Field: {getCurrentFieldName()}</span>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={moveToPreviousField}
+                          className="h-6 px-2 text-xs"
+                        >
+                          ← Prev
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={moveToNextField}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Next →
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-600">
+                    <p>💡 <strong>Barcode Scanner Tips:</strong></p>
+                    <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                      <li>Scan barcodes directly into the highlighted field</li>
+                      <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to move to next field</li>
+                      <li>Use <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Tab</kbd> to navigate between fields</li>
+                      <li>Student ID will auto-validate after scanning</li>
+                      <li>Due date is optional and not included in scanner flow</li>
+                    </ul>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {message && (
@@ -358,10 +637,23 @@ const ModernBorrowingManagement = ({ user }) => {
                       </label>
                       <div className="flex gap-2">
                         <Input
+                          id="barcode-field-student-id"
                           placeholder="Enter student ID (e.g., C22-0044)"
                           value={studentIdNumber}
-                          onChange={(e) => setStudentIdNumber(e.target.value)}
-                          className="flex-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setStudentIdNumber(value);
+                            // Trigger live validation for any input
+                            if (value.trim().length > 0) {
+                              debouncedValidateStudent(value);
+                            } else {
+                              setValidationResult(null);
+                            }
+                          }}
+                          className={`flex-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
+                            currentFieldIndex === 0 ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                          }`}
+                          autoComplete="off"
                         />
                         <Button
                           type="button"
@@ -458,6 +750,7 @@ const ModernBorrowingManagement = ({ user }) => {
                     {bookCodes.map((code, index) => (
                       <div key={index}>
                         <Input
+                          id={`barcode-field-book-${index + 1}`}
                           placeholder={`Book code ${index + 1}`}
                           value={code}
                           onChange={(e) => {
@@ -465,7 +758,10 @@ const ModernBorrowingManagement = ({ user }) => {
                             newCodes[index] = e.target.value;
                             setBookCodes(newCodes);
                           }}
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                          className={`border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
+                            currentFieldIndex === index + 1 ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                          }`}
+                          autoComplete="off"
                         />
                       </div>
                     ))}
@@ -483,6 +779,7 @@ const ModernBorrowingManagement = ({ user }) => {
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
                         className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                        autoComplete="off"
                       />
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -519,6 +816,8 @@ const ModernBorrowingManagement = ({ user }) => {
                         setValidationResult(null);
                         setError('');
                         setMessage('');
+                        setCurrentFieldIndex(0);
+                        setIsScanning(false);
                       }}
                     >
                       Clear Form
