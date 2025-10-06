@@ -18,7 +18,7 @@ import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
-const EnhancedProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
+const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -527,4 +527,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EnhancedProfileScreen;
+export default ProfileScreen;

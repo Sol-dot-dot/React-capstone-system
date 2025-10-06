@@ -18,7 +18,7 @@ import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
 const { width } = Dimensions.get('window');
 
-const ModernRegisterScreen = ({ onRegister, onNavigate, onBack }) => {
+const RegisterScreen = ({ onRegister, onNavigate, onBack }) => {
   const [formData, setFormData] = useState({
     idNumber: '',
     firstName: '',
@@ -762,4 +762,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ModernRegisterScreen;
+export default RegisterScreen;

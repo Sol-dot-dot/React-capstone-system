@@ -16,7 +16,7 @@ import { ModernButton } from '../components/ModernComponents';
 
 const { width, height } = Dimensions.get('window');
 
-const EnhancedWelcomeScreen = ({ onNavigate }) => {
+const WelcomeScreen = ({ onNavigate }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -179,4 +179,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EnhancedWelcomeScreen;
+export default WelcomeScreen;

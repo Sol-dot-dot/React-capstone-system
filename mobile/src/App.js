@@ -13,36 +13,21 @@ import {
 // import { Provider as PaperProvider } from 'react-native-paper';
 import axios from 'axios';
 import API_CONFIG, { buildApiUrl, getEndpoint } from './config/api';
-import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
-import PenaltyScreen from './screens/PenaltyScreen';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
-import ModernProfileScreen from './screens/ModernProfileScreen';
-import ModernBorrowedBooksScreen from './screens/ModernBorrowedBooksScreen';
-import ModernDashboardScreen from './screens/ModernDashboardScreen';
-import ModernPenaltyScreen from './screens/ModernPenaltyScreen';
-import ModernLoginScreen from './screens/ModernLoginScreen';
-import ModernRegisterScreen from './screens/ModernRegisterScreen';
-import ModernVerificationScreen from './screens/ModernVerificationScreen';
-import ModernWelcomeScreen from './screens/ModernWelcomeScreen';
-import ModernForgotPasswordScreen from './screens/ModernForgotPasswordScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import VerificationScreen from './screens/VerificationScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ModernBottomNavigation from './components/ModernBottomNavigation';
-import SimpleLoginScreen from './screens/SimpleLoginScreen';
-import SimpleDashboardScreen from './screens/SimpleDashboardScreen';
-import SimpleModernBottomNavigation from './components/SimpleModernBottomNavigation';
-import UltraModernWelcomeScreen from './screens/UltraModernWelcomeScreen';
-import UltraModernLoginScreen from './screens/UltraModernLoginScreen';
-import UltraModernDashboardScreen from './screens/UltraModernDashboardScreen';
-import UltraModernBottomNavigation from './components/UltraModernBottomNavigation';
 import NotificationService from './services/NotificationService';
 import ModernChatbotWidget from './components/ModernChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
 import EnhancedBottomNavigation from './components/EnhancedBottomNavigation';
-import EnhancedWelcomeScreen from './screens/EnhancedWelcomeScreen';
-import EnhancedLoginScreen from './screens/EnhancedLoginScreen';
-import EnhancedDashboardScreen from './screens/EnhancedDashboardScreen';
-import EnhancedBorrowedBooksScreen from './screens/EnhancedBorrowedBooksScreen';
-import EnhancedPenaltyScreen from './screens/EnhancedPenaltyScreen';
-import EnhancedProfileScreen from './screens/EnhancedProfileScreen';
+import WelcomeScreen from './screens/WelcomeScreen';
+import LoginScreen from './screens/LoginScreen';
+import DashboardScreen from './screens/DashboardScreen';
+import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
+import PenaltyScreen from './screens/PenaltyScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, verifyResetCode, resetPassword, profile, changePassword, borrowedBooks, penalties
@@ -1189,26 +1174,26 @@ const App = () => {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
               {currentScreen === 'dashboard' && (
-                <EnhancedDashboardScreen
+                <DashboardScreen
                   userData={userData}
                   onNavigate={handleNavigate}
                   onLogout={handleLogout}
                 />
               )}
         {currentScreen === 'borrowedBooks' && (
-          <EnhancedBorrowedBooksScreen 
+          <BorrowedBooksScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
         )}
         {currentScreen === 'penalties' && (
-          <EnhancedPenaltyScreen 
+          <PenaltyScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')} 
           />
         )}
         {currentScreen === 'profile' && (
-          <EnhancedProfileScreen 
+          <ProfileScreen 
             userData={userData} 
             onBack={() => setCurrentScreen('dashboard')}
             onNavigate={handleNavigate}
@@ -1238,12 +1223,12 @@ const App = () => {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
         {currentScreen === 'welcome' && (
-          <EnhancedWelcomeScreen 
+          <WelcomeScreen 
             onNavigate={setCurrentScreen}
           />
         )}
         {currentScreen === 'login' && (
-          <EnhancedLoginScreen
+          <LoginScreen
             onLogin={(user) => {
               setUserData(user);
               setCurrentScreen('dashboard');
@@ -1254,7 +1239,7 @@ const App = () => {
           />
         )}
         {currentScreen === 'register' && (
-          <ModernRegisterScreen 
+          <RegisterScreen 
             onRegister={() => {}}
             onNavigate={(screen, data) => {
               if (screen === 'verify') {
@@ -1266,18 +1251,18 @@ const App = () => {
           />
         )}
         {currentScreen === 'verify' && (
-          <ModernVerificationScreen 
+          <VerificationScreen 
             userData={verificationData}
             onNavigate={setCurrentScreen}
             onBack={() => setCurrentScreen('register')}
           />
         )}
         {currentScreen === 'forgotPassword' && (
-          <ModernForgotPasswordScreen 
+          <ForgotPasswordScreen 
             onBack={() => setCurrentScreen('login')}
             onNavigate={setCurrentScreen}
             onEmailSubmit={(email) => {
-              console.log('Email submitted from ModernForgotPasswordScreen:', email);
+              console.log('Email submitted from ForgotPasswordScreen:', email);
               setResetEmail(email);
             }}
           />

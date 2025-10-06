@@ -18,7 +18,7 @@ import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
-const EnhancedDashboardScreen = ({ userData, onNavigate, onLogout }) => {
+const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [penalties, setPenalties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -471,4 +471,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EnhancedDashboardScreen;
+export default DashboardScreen;

@@ -9,6 +9,8 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -20,7 +22,7 @@ import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
 
-const EnhancedLoginScreen = ({ onLogin, onNavigate, onBack }) => {
+const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
   const [idNumber, setIdNumber] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,12 @@ const EnhancedLoginScreen = ({ onLogin, onNavigate, onBack }) => {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <View style={styles.logoWrapper}>
-                <Icon name="library" size={40} color={ModernTheme.colors.primary} />
+                <Image 
+                  source={require('../assets/smc-logo.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                  onError={(error) => console.log('Logo load error:', error)}
+                />
               </View>
             </View>
             
@@ -161,15 +168,9 @@ const EnhancedLoginScreen = ({ onLogin, onNavigate, onBack }) => {
           </View>
 
           {/* Back Button */}
-          <View style={styles.backButtonContainer}>
-            <ModernButton
-              title="←"
-              onPress={onBack}
-              variant="secondary"
-              size="small"
-              style={styles.backButton}
-            />
-          </View>
+          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <Icon name="arrow-back" size={24} color="#374151" />
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -206,13 +207,15 @@ const styles = StyleSheet.create({
     marginBottom: ModernTheme.spacing.lg,
   },
   logoWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: ModernTheme.colors.primary + '20',
+    width: 120,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    ...ModernTheme.shadows.card,
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 50,
   },
   title: {
     ...ModernTheme.typography.h1,
@@ -258,21 +261,15 @@ const styles = StyleSheet.create({
   registerButton: {
     marginLeft: ModernTheme.spacing.sm,
   },
-  backButtonContainer: {
+  backButton: {
     position: 'absolute',
     top: 60,
-    left: ModernTheme.spacing.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 0,
-    backgroundColor: ModernTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: ModernTheme.colors.border,
-    ...ModernTheme.shadows.button,
+    left: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
-export default EnhancedLoginScreen;
+export default LoginScreen;

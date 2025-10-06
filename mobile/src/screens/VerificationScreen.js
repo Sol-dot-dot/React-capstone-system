@@ -12,7 +12,7 @@ import {
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
 
-const ModernVerificationScreen = ({ onNavigate, onBack, userData }) => {
+const VerificationScreen = ({ onNavigate, onBack, userData }) => {
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ModernVerificationScreen;
+export default VerificationScreen;
 
 
 

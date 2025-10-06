@@ -3,35 +3,42 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Alert,
+  Dimensions,
+  StatusBar,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
-import axios from 'axios';
+import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
+// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import UniversalPageTemplate from '../components/UniversalPageTemplate';
+import { ModernButton, ModernCard, ModernBadge } from '../components/ModernComponents';
+import axios from 'axios';
+import { buildApiUrl, getEndpoint } from '../config/api';
+
+const { width } = Dimensions.get('window');
 
 const PenaltyScreen = ({ userData, onBack }) => {
-  const [penaltyData, setPenaltyData] = useState(null);
+  const [penalties, setPenalties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadPenaltyData();
+    loadPenalties();
   }, []);
 
-  const loadPenaltyData = async () => {
+  const loadPenalties = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(
-        `http://10.0.2.2:5000/api/penalty/user/${userData.idNumber}`
+        buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))
       );
 
       if (response.data.success) {
-        setPenaltyData(response.data.data);
+        setPenalties(response.data.data.penalties || []);
       }
     } catch (error) {
-      console.error('Error loading penalty data:', error);
-      Alert.alert('Error', 'Failed to load penalty information');
+      console.error('Error loading penalties:', error);
     } finally {
       setLoading(false);
     }
@@ -39,365 +46,356 @@ const PenaltyScreen = ({ userData, onBack }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadPenaltyData();
+    await loadPenalties();
     setRefreshing(false);
   };
 
-  const formatCurrency = (amount) => {
-    return `₱${parseFloat(amount).toFixed(2)}`;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'unpaid':
-        return '#dc3545';
-      case 'paid':
-        return '#28a745';
-      case 'waived':
-        return '#ffc107';
-      default:
-        return '#6c757d';
+  const getPenaltyStatus = (penalty) => {
+    if (penalty.status === 'paid') {
+      return { status: 'paid', color: ModernTheme.colors.success, text: 'Paid' };
+    } else if (penalty.status === 'pending') {
+      return { status: 'pending', color: ModernTheme.colors.warning, text: 'Pending' };
+    } else {
+      return { status: 'overdue', color: ModernTheme.colors.error, text: 'Overdue' };
     }
   };
 
-  const getBorrowingStatusColor = (canBorrow) => {
-    return canBorrow ? '#28a745' : '#dc3545';
+  const getTotalAmount = () => {
+    return penalties.reduce((total, penalty) => {
+      if (penalty.status !== 'paid') {
+        return total + penalty.amount;
+      }
+      return total;
+    }, 0);
   };
 
-  if (loading) {
+  const getPaidAmount = () => {
+    return penalties.reduce((total, penalty) => {
+      if (penalty.status === 'paid') {
+        return total + penalty.amount;
+      }
+      return total;
+    }, 0);
+  };
+
+  const renderPenaltyCard = (penalty, index) => {
+    const status = getPenaltyStatus(penalty);
+    const dueDate = new Date(penalty.dueDate);
+    const createdDate = new Date(penalty.createdAt);
+
     return (
-      <UniversalPageTemplate
-        title="Penalty Information"
-        userData={userData}
-        onBack={onBack}
-        showUserInfo={false}
+      <Animatable.View
+        key={penalty.id}
+        animation="fadeInUp"
+        duration={600}
+        delay={index * 100}
+        style={styles.penaltyCardContainer}
       >
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading penalty information...</Text>
-        </View>
-      </UniversalPageTemplate>
-    );
-  }
-
-  return (
-    <UniversalPageTemplate
-      title="Penalty Information"
-      userData={userData}
-      onBack={onBack}
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      showUserInfo={false}
-    >
-        {/* Borrowing Status Card */}
-        <View style={styles.card}>
-          <View style={styles.cardTitleContainer}>
-            <Icon name="library-outline" size={20} color="#2c3e50" />
-            <Text style={styles.cardTitle}>Borrowing Status</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Can Borrow Books:</Text>
-            <Text
-              style={[
-                styles.statusValue,
-                { color: getBorrowingStatusColor(penaltyData?.borrowingStatus?.canBorrow) }
-              ]}
-            >
-              {penaltyData?.borrowingStatus?.canBorrow ? 'Yes' : 'No'}
-            </Text>
-          </View>
-          {!penaltyData?.borrowingStatus?.canBorrow && (
-            <View style={styles.warningContainer}>
-              <Icon name="warning-outline" size={16} color="#dc3545" />
-              <Text style={styles.warningText}>
-                {penaltyData?.borrowingStatus?.reasonBlocked}
+        <ModernCard style={styles.penaltyCard}>
+          <View style={styles.penaltyHeader}>
+            <View style={styles.penaltyInfo}>
+              <Text style={styles.penaltyTitle} numberOfLines={2}>
+                {penalty.reason}
+              </Text>
+              <Text style={styles.penaltyBook} numberOfLines={1}>
+                Book: {penalty.bookTitle}
               </Text>
             </View>
-          )}
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Currently Borrowed:</Text>
-            <Text style={styles.statusValue}>
-              {penaltyData?.currentBorrowedCount || 0} books
-            </Text>
+            <ModernBadge
+              text={status.text}
+              variant={status.status === 'paid' ? 'success' : status.status === 'pending' ? 'warning' : 'error'}
+              size="small"
+            />
           </View>
-        </View>
 
-        {/* Semester Progress Card */}
-        {penaltyData?.semesterTracking && (
-          <View style={styles.card}>
-            <View style={styles.cardTitleContainer}>
-              <Icon name="calendar-outline" size={20} color="#2c3e50" />
-              <Text style={styles.cardTitle}>Semester Progress</Text>
-            </View>
-            <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Books Borrowed This Semester:</Text>
-              <Text style={styles.statusValue}>
-                {penaltyData.semesterTracking.books_borrowed_count || 0} / {penaltyData.semesterTracking.books_required || 20}
+          <View style={styles.penaltyDetails}>
+            <View style={styles.detailItem}>
+              <Icon name="cash-outline" size={16} color={ModernTheme.colors.textTertiary} />
+              <Text style={styles.detailText}>
+                Amount: ₱{penalty.amount.toFixed(2)}
               </Text>
             </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.min(
-                      ((penaltyData.semesterTracking.books_borrowed_count || 0) /
-                        (penaltyData.semesterTracking.books_required || 20)) *
-                        100,
-                      100
-                    )}%`
-                  }
-                ]}
+            <View style={styles.detailItem}>
+              <Icon name="calendar-outline" size={16} color={ModernTheme.colors.textTertiary} />
+              <Text style={styles.detailText}>
+                Created: {createdDate.toLocaleDateString()}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="time-outline" size={16} color={ModernTheme.colors.textTertiary} />
+              <Text style={styles.detailText}>
+                Due: {dueDate.toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+
+          {penalty.status !== 'paid' && (
+            <View style={styles.paymentSection}>
+              <ModernButton
+                title="Pay Now"
+                onPress={() => {
+                  // Handle payment logic here
+                  console.log('Payment for penalty:', penalty.id);
+                }}
+                variant="primary"
+                size="small"
+                icon="card-outline"
+                style={styles.payButton}
               />
             </View>
-            <Text style={styles.progressText}>
-              {penaltyData.semesterTracking.books_borrowed_count || 0} of {penaltyData.semesterTracking.books_required || 20} books borrowed this semester
-            </Text>
-          </View>
-        )}
-
-        {/* Fines Card */}
-        <View style={styles.card}>
-          <View style={styles.cardTitleContainer}>
-            <Icon name="card-outline" size={20} color="#2c3e50" />
-            <Text style={styles.cardTitle}>Fines</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Total Unpaid Fines:</Text>
-            <Text style={[styles.statusValue, { color: '#dc3545' }]}>
-              {formatCurrency(penaltyData?.totalUnpaidAmount || 0)}
-            </Text>
-          </View>
-
-          {penaltyData?.fines && penaltyData.fines.length > 0 ? (
-            <View style={styles.finesList}>
-              <Text style={styles.finesListTitle}>Unpaid Fines:</Text>
-              {penaltyData.fines.map((fine, index) => (
-                <View key={index} style={styles.fineItem}>
-                  <View style={styles.fineHeader}>
-                    <Text style={styles.fineBookTitle}>{fine.title}</Text>
-                    <Text style={[styles.fineStatus, { color: getStatusColor(fine.status) }]}>
-                      {fine.status.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={styles.fineBookCode}>Book Code: {fine.number_code}</Text>
-                  <View style={styles.fineDetails}>
-                    <Text style={styles.fineAmount}>
-                      Amount: {formatCurrency(fine.fine_amount)}
-                    </Text>
-                    <Text style={styles.finePaid}>
-                      Paid: {formatCurrency(fine.paid_amount)}
-                    </Text>
-                    <Text style={styles.fineRemaining}>
-                      Remaining: {formatCurrency(fine.fine_amount - fine.paid_amount)}
-                    </Text>
-                  </View>
-                  <Text style={styles.fineDays}>
-                    Days Overdue: {fine.days_overdue}
-                  </Text>
-                  <Text style={styles.fineDate}>
-                    Fine Date: {new Date(fine.fine_date).toLocaleDateString()}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.noFinesContainer}>
-              <Icon name="checkmark-circle-outline" size={20} color="#28a745" />
-              <Text style={styles.noFinesText}>No unpaid fines</Text>
-            </View>
           )}
-        </View>
+        </ModernCard>
+      </Animatable.View>
+    );
+  };
 
-        {/* Important Notes */}
-        {/* <View style={styles.card}>
-          <View style={styles.cardTitleContainer}>
-            <Icon name="clipboard-outline" size={20} color="#2c3e50" />
-            <Text style={styles.cardTitle}>Important Notes</Text>
+  const renderEmptyState = () => (
+    <Animatable.View
+      animation="fadeIn"
+      duration={600}
+      style={styles.emptyState}
+    >
+      <View style={styles.emptyIcon}>
+        <Icon name="checkmark-circle-outline" size={64} color={ModernTheme.colors.success} />
+      </View>
+      <Text style={styles.emptyTitle}>No Penalties</Text>
+      <Text style={styles.emptySubtitle}>
+        Great! You don't have any outstanding penalties. Keep up the good work!
+      </Text>
+    </Animatable.View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Background Gradient */}
+      <View style={styles.backgroundGradient} />
+
+      {/* Header */}
+      <Animatable.View
+        animation="fadeInDown"
+        duration={600}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <ModernButton
+            title="←"
+            onPress={onBack}
+            variant="outline"
+            size="small"
+            style={styles.backButton}
+          />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Penalty Information</Text>
+            <Text style={styles.headerSubtitle}>
+              {penalties.length} penalty{penalties.length !== 1 ? 'ies' : ''} found
+            </Text>
           </View>
-          <Text style={styles.noteText}>
-            • You can borrow up to 3 books at a time
-          </Text>
-          <Text style={styles.noteText}>
-            • Books must be returned within 7 days
-          </Text>
-          <Text style={styles.noteText}>
-            • Overdue books incur a fine of ₱5.00 per day
-          </Text>
-          <Text style={styles.noteText}>
-            • You must borrow at least 20 books during the semester (accumulative)
-          </Text>
-          <Text style={styles.noteText}>
-            • You cannot borrow new books if you have unpaid fines or overdue books
-          </Text>
-        </View> */}
-    </UniversalPageTemplate>
+        </View>
+      </Animatable.View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[ModernTheme.colors.primary]}
+            tintColor={ModernTheme.colors.primary}
+          />
+        }
+      >
+        {penalties.length === 0 ? (
+          renderEmptyState()
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <Animatable.View
+              animation="fadeInUp"
+              duration={600}
+              delay={200}
+              style={styles.summaryContainer}
+            >
+              <View style={styles.summaryGrid}>
+                <ModernCard style={[styles.summaryCard, { borderLeftColor: ModernTheme.colors.error, borderLeftWidth: 4 }]}>
+                  <View style={styles.summaryContent}>
+                    <Icon name="cash-outline" size={24} color={ModernTheme.colors.error} />
+                    <View style={styles.summaryText}>
+                      <Text style={styles.summaryValue}>₱{getTotalAmount().toFixed(2)}</Text>
+                      <Text style={styles.summaryLabel}>Outstanding</Text>
+                    </View>
+                  </View>
+                </ModernCard>
+
+                <ModernCard style={[styles.summaryCard, { borderLeftColor: ModernTheme.colors.success, borderLeftWidth: 4 }]}>
+                  <View style={styles.summaryContent}>
+                    <Icon name="checkmark-circle-outline" size={24} color={ModernTheme.colors.success} />
+                    <View style={styles.summaryText}>
+                      <Text style={styles.summaryValue}>₱{getPaidAmount().toFixed(2)}</Text>
+                      <Text style={styles.summaryLabel}>Paid</Text>
+                    </View>
+                  </View>
+                </ModernCard>
+              </View>
+            </Animatable.View>
+
+            {/* Penalties List */}
+            <View style={styles.penaltiesContainer}>
+              {penalties.map((penalty, index) => renderPenaltyCard(penalty, index))}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  cardTitleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: ModernTheme.colors.background,
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: ModernTheme.colors.backgroundGradient[0],
+  },
+  header: {
+    paddingHorizontal: ModernTheme.spacing.lg,
+    paddingTop: 60,
+    paddingBottom: ModernTheme.spacing.lg,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
   },
-  loadingContainer: {
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    padding: 0,
+    marginRight: ModernTheme.spacing.md,
+  },
+  headerText: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  loadingText: {
-    fontSize: 16,
-    color: '#6c757d',
+  headerTitle: {
+    ...ModernTheme.typography.h2,
+    color: ModernTheme.colors.textPrimary,
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+  headerSubtitle: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    marginTop: ModernTheme.spacing.xs,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginLeft: 8,
+  scrollContent: {
+    paddingHorizontal: ModernTheme.spacing.lg,
+    paddingBottom: 120, // Account for bottom navigation
   },
-  statusRow: {
+  summaryContainer: {
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
   },
-  statusLabel: {
-    fontSize: 16,
-    color: '#495057',
-    flex: 1,
+  summaryCard: {
+    width: '48%',
+    padding: ModernTheme.spacing.lg,
   },
-  statusValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-  },
-  warningContainer: {
+  summaryContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8d7da',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
   },
-  warningText: {
-    fontSize: 14,
-    color: '#dc3545',
-    marginLeft: 8,
+  summaryText: {
+    marginLeft: ModernTheme.spacing.md,
+  },
+  summaryValue: {
+    ...ModernTheme.typography.h2,
+    color: ModernTheme.colors.textPrimary,
+  },
+  summaryLabel: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+  },
+  penaltiesContainer: {
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  penaltyCardContainer: {
+    marginBottom: ModernTheme.spacing.md,
+  },
+  penaltyCard: {
+    padding: ModernTheme.spacing.lg,
+  },
+  penaltyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: ModernTheme.spacing.md,
+  },
+  penaltyInfo: {
     flex: 1,
+    marginRight: ModernTheme.spacing.md,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e9ecef',
-    borderRadius: 4,
-    marginVertical: 10,
+  penaltyTitle: {
+    ...ModernTheme.typography.bodyMedium,
+    color: ModernTheme.colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: ModernTheme.spacing.xs,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#007bff',
-    borderRadius: 4,
+  penaltyBook: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
   },
-  progressText: {
-    fontSize: 14,
-    color: '#6c757d',
+  penaltyDetails: {
+    marginBottom: ModernTheme.spacing.md,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: ModernTheme.spacing.xs,
+  },
+  detailText: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    marginLeft: ModernTheme.spacing.sm,
+  },
+  paymentSection: {
+    alignItems: 'flex-end',
+  },
+  payButton: {
+    paddingHorizontal: ModernTheme.spacing.lg,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ModernTheme.spacing.xxl,
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: ModernTheme.colors.success + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: ModernTheme.spacing.lg,
+  },
+  emptyTitle: {
+    ...ModernTheme.typography.h3,
+    color: ModernTheme.colors.textPrimary,
+    marginBottom: ModernTheme.spacing.sm,
+  },
+  emptySubtitle: {
+    ...ModernTheme.typography.body,
+    color: ModernTheme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 5,
-  },
-  finesList: {
-    marginTop: 15,
-  },
-  finesListTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#495057',
-    marginBottom: 10,
-  },
-  fineItem: {
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#dc3545',
-  },
-  fineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  fineBookTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-    flex: 1,
-  },
-  fineStatus: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  fineBookCode: {
-    fontSize: 14,
-    color: '#6c757d',
-    marginBottom: 10,
-  },
-  fineDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
-  },
-  fineAmount: {
-    fontSize: 14,
-    color: '#dc3545',
-    fontWeight: '600',
-  },
-  finePaid: {
-    fontSize: 14,
-    color: '#28a745',
-  },
-  fineRemaining: {
-    fontSize: 14,
-    color: '#ffc107',
-    fontWeight: '600',
-  },
-  fineDays: {
-    fontSize: 14,
-    color: '#6c757d',
-    marginBottom: 5,
-  },
-  fineDate: {
-    fontSize: 12,
-    color: '#6c757d',
-  },
-  noFinesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  noFinesText: {
-    fontSize: 16,
-    color: '#28a745',
-    marginLeft: 8,
-  },
-  noteText: {
-    fontSize: 14,
-    color: '#495057',
-    marginBottom: 8,
-    lineHeight: 20,
+    lineHeight: 24,
+    paddingHorizontal: ModernTheme.spacing.lg,
   },
 });
 
