@@ -135,6 +135,9 @@ const ModernPenaltyManagement = ({ user }) => {
       setSearchTerm(scannedValue);
       // Trigger debounced search for live search
       debouncedLoadStudentsWithFines(scannedValue);
+    } else {
+      // Clear students when search is empty
+      setStudents([]);
     }
   };
 
@@ -151,7 +154,8 @@ const ModernPenaltyManagement = ({ user }) => {
           setSettings(response.data.data);
         }
       } else if (activeTab === 'fines') {
-        await loadStudentsWithFines();
+        // Don't automatically load all students - only show when searched
+        setStudents([]);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -165,6 +169,7 @@ const ModernPenaltyManagement = ({ user }) => {
     debounce(async (searchTerm) => {
       try {
         const token = localStorage.getItem('token');
+        
         const response = await axios.get('/api/penalty/students-detailed', {
           headers: { 'Authorization': `Bearer ${token}` },
           params: {
@@ -175,9 +180,12 @@ const ModernPenaltyManagement = ({ user }) => {
         
         if (response.data.success) {
           setStudents(response.data.data || []);
+        } else {
+          setStudents([]);
         }
       } catch (error) {
         console.error('Error loading students with fines:', error);
+        setStudents([]); // Clear students on error
       }
     }, 500),
     []
@@ -186,6 +194,7 @@ const ModernPenaltyManagement = ({ user }) => {
   const loadStudentsWithFines = async () => {
     try {
       const token = localStorage.getItem('token');
+      
       const response = await axios.get('/api/penalty/students-detailed', {
         headers: { 'Authorization': `Bearer ${token}` },
         params: {
@@ -498,8 +507,8 @@ const ModernPenaltyManagement = ({ user }) => {
                           if (value.trim().length > 0) {
                             debouncedLoadStudentsWithFines(value);
                           } else {
-                            // Load all students when search is empty
-                            debouncedLoadStudentsWithFines('');
+                            // Clear students when search is empty
+                            setStudents([]);
                           }
                         }}
                         className={`pl-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
@@ -510,6 +519,15 @@ const ModernPenaltyManagement = ({ user }) => {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      onClick={loadStudentsWithFines}
+                      disabled={loading}
+                      variant="outline"
+                      className="border-slate-300 hover:bg-slate-50"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Load All Students
+                    </Button>
                     <Button
                       onClick={processOverdueFines}
                       disabled={loading}
@@ -691,9 +709,14 @@ const ModernPenaltyManagement = ({ user }) => {
                   ) : (
                     <div className="text-center py-8">
                       <DollarSign className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No student fines found</h3>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">
+                        {searchTerm ? 'No students found' : 'Search for a Student'}
+                      </h3>
                       <p className="text-slate-600">
-                        {searchTerm ? 'Try adjusting your search terms' : 'No students have penalty records yet'}
+                        {searchTerm 
+                          ? `No students found matching "${searchTerm}". Try a different search term or click "Load All Students" to see all students with fines.`
+                          : 'Enter a student ID, email, or book title to search for students with fines, or click "Load All Students" to view all students.'
+                        }
                       </p>
                     </div>
                   )}

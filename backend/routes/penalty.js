@@ -214,43 +214,115 @@ router.get('/students-detailed', auth, async (req, res) => {
         const { search, status = 'unpaid' } = req.query;
         let whereClause = '';
         let params = [];
+        let joinClause = '';
+
+        console.log('Penalty search request:', { search, status });
+
+        // Debug: Check if student exists in users table
+        if (search) {
+            try {
+                const [userCheck] = await pool.execute('SELECT id_number FROM users WHERE id_number = ?', [search.trim()]);
+                console.log('User exists check:', userCheck.length > 0 ? 'YES' : 'NO', userCheck);
+                
+                // Check if student has fines
+                const [finesCheck] = await pool.execute('SELECT COUNT(*) as count FROM fines WHERE student_id_number = ?', [search.trim()]);
+                console.log('Fines count for student:', finesCheck[0]?.count || 0);
+            } catch (err) {
+                console.log('User check error:', err.message);
+            }
+        }
 
         if (search) {
-            whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ? OR b.title LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            // Check if search term looks like a student ID (contains C and numbers)
+            const isStudentId = /^C\d{2}-\d{4}$/.test(search.trim());
+            console.log('Search term analysis:', { search: search.trim(), isStudentId });
+            
+            if (isStudentId) {
+                // For student ID, search exactly and don't filter by status in WHERE clause
+                whereClause = 'WHERE u.id_number = ?';
+                params.push(search.trim());
+                console.log('Using exact student ID search');
+            } else {
+                // For other searches, use LIKE with wildcards
+                whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ?)';
+                params.push(`%${search}%`, `%${search}%`);
+                console.log('Using LIKE search');
+                
+                // Add status filter for non-student-ID searches
+                if (status) {
+                    whereClause += ' AND f.status = ?';
+                    params.push(status);
+                }
+            }
+        } else {
+            // If not searching, filter by status
+            if (status) {
+                whereClause = 'WHERE f.status = ?';
+                params.push(status);
+            }
         }
 
-        if (status) {
-            const statusWhere = whereClause ? 'AND' : 'WHERE';
-            whereClause += `${statusWhere} f.status = ?`;
-            params.push(status);
+        // Build the query with conditional HAVING clause
+        let havingClause = '';
+        if (search) {
+            // If searching for a specific student, show them even if they have no fines
+            const isStudentId = /^C\d{2}-\d{4}$/.test(search.trim());
+            if (!isStudentId) {
+                havingClause = 'HAVING total_fines > 0';
+            } else {
+                // For student ID searches, only show if they have fines
+                havingClause = 'HAVING total_fines > 0';
+            }
+        } else {
+            // If not searching, only show students with fines
+            havingClause = 'HAVING total_fines > 0';
         }
 
-        const [students] = await pool.execute(`
-            SELECT 
-                u.id_number,
-                u.email,
-                u.first_name,
-                u.last_name,
-                u.is_verified,
-                u.email_verified,
-                u.last_login,
-                u.created_at as registration_date,
-                COUNT(f.id) as total_fines,
-                COUNT(CASE WHEN f.status = 'unpaid' THEN 1 END) as unpaid_fines,
-                COUNT(CASE WHEN f.status = 'paid' THEN 1 END) as paid_fines,
-                COALESCE(SUM(f.fine_amount), 0) as total_amount,
-                COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount,
-                COALESCE(SUM(CASE WHEN f.status = 'paid' THEN f.paid_amount ELSE 0 END), 0) as paid_amount,
-                MAX(f.fine_date) as latest_fine_date,
-                MIN(f.fine_date) as earliest_fine_date
-            FROM users u
-            LEFT JOIN fines f ON u.id_number = f.student_id_number
-            ${whereClause}
-            GROUP BY u.id_number, u.email, u.first_name, u.last_name, u.is_verified, u.email_verified, u.last_login, u.created_at
-            HAVING total_fines > 0
-            ORDER BY unpaid_amount DESC, total_amount DESC
-        `, params);
+        let students = [];
+        try {
+            [students] = await pool.execute(`
+                SELECT 
+                    u.id_number,
+                    u.email,
+                    u.first_name,
+                    u.last_name,
+                    u.is_verified,
+                    u.email_verified,
+                    u.last_login,
+                    u.created_at as registration_date,
+                    COUNT(f.id) as total_fines,
+                    COUNT(CASE WHEN f.status = 'unpaid' THEN 1 END) as unpaid_fines,
+                    COUNT(CASE WHEN f.status = 'paid' THEN 1 END) as paid_fines,
+                    COALESCE(SUM(f.fine_amount), 0) as total_amount,
+                    COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount,
+                    COALESCE(SUM(CASE WHEN f.status = 'paid' THEN f.paid_amount ELSE 0 END), 0) as paid_amount,
+                    MAX(f.fine_date) as latest_fine_date,
+                    MIN(f.fine_date) as earliest_fine_date
+                FROM users u
+                LEFT JOIN fines f ON u.id_number = f.student_id_number
+                ${joinClause}
+                ${whereClause}
+                GROUP BY u.id_number, u.email, u.first_name, u.last_name, u.is_verified, u.email_verified, u.last_login, u.created_at
+                ${havingClause}
+                ORDER BY unpaid_amount DESC, total_amount DESC
+            `, params);
+        } catch (queryError) {
+            console.error('SQL Query Error:', queryError);
+            console.error('Query params:', params);
+            console.error('Where clause:', whereClause);
+            console.error('Having clause:', havingClause);
+            throw queryError;
+        }
+
+        console.log('Students found:', students.length);
+        console.log('Query params:', params);
+        console.log('Where clause:', whereClause);
+        console.log('Having clause:', havingClause);
+        
+        // Debug: Log the first few students if any found
+        if (students.length > 0) {
+            console.log('First student found:', students[0]);
+        }
 
         // Get detailed overdue books for each student
         for (let student of students) {
