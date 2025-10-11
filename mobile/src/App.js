@@ -25,6 +25,9 @@ import EnhancedBottomNavigation from './components/EnhancedBottomNavigation';
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import EnhancedWelcomeScreen from './screens/EnhancedWelcomeScreen';
+import EnhancedLoginScreen from './screens/EnhancedLoginScreen';
+import EnhancedDashboardScreen from './screens/EnhancedDashboardScreen';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -1173,13 +1176,13 @@ const App = () => {
   if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
-              {currentScreen === 'dashboard' && (
-                <DashboardScreen
-                  userData={userData}
-                  onNavigate={handleNavigate}
-                  onLogout={handleLogout}
-                />
-              )}
+        {currentScreen === 'dashboard' && (
+          <EnhancedDashboardScreen
+            userData={userData}
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        )}
         {currentScreen === 'borrowedBooks' && (
           <BorrowedBooksScreen 
             userData={userData} 
@@ -1223,12 +1226,12 @@ const App = () => {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
         {currentScreen === 'welcome' && (
-          <WelcomeScreen 
+          <EnhancedWelcomeScreen 
             onNavigate={setCurrentScreen}
           />
         )}
         {currentScreen === 'login' && (
-          <LoginScreen
+          <EnhancedLoginScreen
             onLogin={(user) => {
               setUserData(user);
               setCurrentScreen('dashboard');
