@@ -65,18 +65,46 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
 
   const getOverdueBooks = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.dueDate);
-      return dueDate < today;
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      
+      // Debug logging
+      console.log('Overdue check:', {
+        bookTitle: book.title,
+        dueDate: book.due_date || book.dueDate,
+        parsedDueDate: dueDate.toISOString(),
+        today: today.toISOString(),
+        isOverdue: dueDate < today
+      });
+      
+      return dueDate < today; // Only books past their due date
     });
   };
 
   const getUpcomingDueBooks = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
     const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+    threeDaysFromNow.setHours(23, 59, 59, 999); // End of 3 days from now
+    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.dueDate);
-      return dueDate >= today && dueDate <= threeDaysFromNow;
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      
+      // Debug logging
+      console.log('Due soon check:', {
+        bookTitle: book.title,
+        dueDate: book.due_date || book.dueDate,
+        parsedDueDate: dueDate.toISOString(),
+        today: today.toISOString(),
+        threeDaysFromNow: threeDaysFromNow.toISOString(),
+        isDueSoon: dueDate >= today && dueDate <= threeDaysFromNow
+      });
+      
+      return dueDate >= today && dueDate <= threeDaysFromNow; // Books due today through 3 days
     });
   };
 
@@ -269,32 +297,57 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
                 style={styles.viewAllButton}
               />
             </View>
-            {borrowedBooks.slice(0, 3).map((book, index) => (
-              <Animatable.View
-                key={book.id}
-                animation="fadeInRight"
-                duration={600}
-                delay={1600 + (index * 100)}
-                style={styles.activityItem}
-              >
-                <ModernCard style={styles.activityCard}>
-                  <View style={styles.activityContent}>
-                    <View style={styles.activityIcon}>
-                      <Icon name="book-outline" size={20} color={ModernTheme.colors.primary} />
+            {borrowedBooks.slice(0, 3).map((book, index) => {
+              const dueDate = new Date(book.due_date || book.dueDate);
+              const today = new Date();
+              
+              // Normalize dates to start of day for accurate comparison
+              dueDate.setHours(0, 0, 0, 0);
+              today.setHours(0, 0, 0, 0);
+              
+              const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+              threeDaysFromNow.setHours(23, 59, 59, 999);
+              
+              const isOverdue = dueDate < today;
+              const isDueSoon = dueDate >= today && dueDate <= threeDaysFromNow;
+              
+              return (
+                <Animatable.View
+                  key={book.id}
+                  animation="fadeInRight"
+                  duration={600}
+                  delay={1600 + (index * 100)}
+                  style={styles.activityItem}
+                >
+                  <ModernCard style={styles.activityCard}>
+                    <View style={styles.activityContent}>
+                      <View style={[
+                        styles.activityIcon,
+                        { backgroundColor: isOverdue ? ModernTheme.colors.error + '20' : isDueSoon ? ModernTheme.colors.warning + '20' : ModernTheme.colors.primary + '20' }
+                      ]}>
+                        <Icon 
+                          name={isOverdue ? "warning-outline" : isDueSoon ? "time-outline" : "book-outline"} 
+                          size={20} 
+                          color={isOverdue ? ModernTheme.colors.error : isDueSoon ? ModernTheme.colors.warning : ModernTheme.colors.primary} 
+                        />
+                      </View>
+                      <View style={styles.activityText}>
+                        <Text style={styles.activityTitle} numberOfLines={1}>{book.title}</Text>
+                        <Text style={styles.activitySubtitle}>
+                          Due: {dueDate.toLocaleDateString()}
+                        </Text>
+                      </View>
+                      {isOverdue && (
+                        <ModernBadge text="Overdue" variant="error" size="small" />
+                      )}
+                      {isDueSoon && !isOverdue && (
+                        <ModernBadge text="Due Soon" variant="warning" size="small" />
+                      )}
                     </View>
-                    <View style={styles.activityText}>
-                      <Text style={styles.activityTitle}>{book.title}</Text>
-                      <Text style={styles.activitySubtitle}>
-                        Due: {new Date(book.dueDate).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    {new Date(book.dueDate) < new Date() && (
-                      <ModernBadge text="Overdue" variant="error" size="small" />
-                    )}
-                  </View>
-                </ModernCard>
-              </Animatable.View>
-            ))}
+                  </ModernCard>
+                </Animatable.View>
+              );
+            })}
           </Animatable.View>
         )}
       </ScrollView>

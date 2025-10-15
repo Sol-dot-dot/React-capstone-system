@@ -48,6 +48,7 @@ const ClearanceRequirements = ({ user }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentDetails, setStudentDetails] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState(new Set());
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Barcode scanner state
   const [isScanning, setIsScanning] = useState(false);
@@ -55,6 +56,31 @@ const ClearanceRequirements = ({ user }) => {
   useEffect(() => {
     loadClearanceData();
   }, [searchTerm, statusFilter]);
+
+  // Auto-refresh when window regains focus (useful after borrowing/returning books)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only refresh if we're not currently loading and have no search term
+      if (!loading && !searchTerm) {
+        loadClearanceData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loading, searchTerm]);
+
+  // Periodic auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only refresh if we're not currently loading and have no search term
+      if (!loading && !searchTerm) {
+        loadClearanceData();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [loading, searchTerm]);
 
   // Auto-focus the search input field
   useEffect(() => {
@@ -179,6 +205,7 @@ const ClearanceRequirements = ({ user }) => {
       if (response.data.success) {
         setStudents(response.data.data.students || []);
         setSummary(response.data.data.summary || {});
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error('Error loading clearance data:', error);
@@ -424,6 +451,11 @@ const ClearanceRequirements = ({ user }) => {
                     Refresh
                   </Button>
                 </div>
+                {lastUpdated && (
+                  <div className="text-xs text-slate-500 mt-2">
+                    Last updated: {lastUpdated.toLocaleTimeString()}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

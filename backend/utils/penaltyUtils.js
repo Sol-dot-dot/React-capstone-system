@@ -490,10 +490,12 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
 }
 
 // Update semester books count - increment when book is borrowed (accumulative)
-async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1) {
+async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1, connection = null) {
     try {
+        const dbConnection = connection || db;
+        
         // Increment the semester count by the specified amount (only when book is borrowed)
-        await db.execute(
+        await dbConnection.execute(
             `UPDATE semester_tracking 
              SET books_borrowed_count = books_borrowed_count + ?,
                  updated_at = CURRENT_TIMESTAMP
@@ -501,6 +503,7 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1) {
             [incrementBy, studentIdNumber]
         );
 
+        console.log(`✅ Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
         return true;
     } catch (error) {
         console.error('Error updating semester books count:', error);

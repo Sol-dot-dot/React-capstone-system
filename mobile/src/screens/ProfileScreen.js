@@ -103,13 +103,25 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     },
     {
       title: 'Currently Borrowed',
-      value: profileData?.borrowedBooks?.filter(book => new Date(book.dueDate) > new Date()).length || 0,
+      value: profileData?.borrowedBooks?.filter(book => {
+        const dueDate = new Date(book.due_date || book.dueDate);
+        const today = new Date();
+        dueDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return dueDate >= today; // Books not yet overdue
+      }).length || 0,
       icon: 'book-outline',
       color: ModernTheme.colors.accent,
     },
     {
       title: 'Overdue Books',
-      value: profileData?.borrowedBooks?.filter(book => new Date(book.dueDate) < new Date()).length || 0,
+      value: profileData?.borrowedBooks?.filter(book => {
+        const dueDate = new Date(book.due_date || book.dueDate);
+        const today = new Date();
+        dueDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        return dueDate < today; // Only books past their due date
+      }).length || 0,
       icon: 'warning-outline',
       color: ModernTheme.colors.error,
     },

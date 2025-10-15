@@ -182,7 +182,16 @@ router.get('/students-with-fines', auth, async (req, res) => {
                 COALESCE(SUM(f.fine_amount), 0) as total_amount,
                 COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount
             FROM users u
-            LEFT JOIN fines f ON u.id_number = f.student_id_number
+            LEFT JOIN (
+                SELECT 
+                    student_id_number,
+                    id,
+                    fine_amount,
+                    paid_amount,
+                    status,
+                    ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                FROM fines
+            ) f ON u.id_number = f.student_id_number AND f.rn = 1
             GROUP BY u.id_number, u.email, u.is_verified
             HAVING total_fines > 0
             ORDER BY unpaid_amount DESC
@@ -217,6 +226,13 @@ router.get('/students-detailed', auth, async (req, res) => {
         let joinClause = '';
 
         console.log('Penalty search request:', { search, status });
+
+        // Clean up any duplicate fines before fetching data
+        try {
+            await cleanupDuplicateFines();
+        } catch (cleanupError) {
+            console.warn('Warning: Could not cleanup duplicate fines:', cleanupError.message);
+        }
 
         // Debug: Check if student exists in users table
         if (search) {
@@ -299,7 +315,17 @@ router.get('/students-detailed', auth, async (req, res) => {
                     MAX(f.fine_date) as latest_fine_date,
                     MIN(f.fine_date) as earliest_fine_date
                 FROM users u
-                LEFT JOIN fines f ON u.id_number = f.student_id_number
+                LEFT JOIN (
+                    SELECT 
+                        student_id_number,
+                        id,
+                        fine_amount,
+                        paid_amount,
+                        status,
+                        fine_date,
+                        ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                    FROM fines
+                ) f ON u.id_number = f.student_id_number AND f.rn = 1
                 ${joinClause}
                 ${whereClause}
                 GROUP BY u.id_number, u.email, u.first_name, u.last_name, u.is_verified, u.email_verified, u.last_login, u.created_at
@@ -324,13 +350,14 @@ router.get('/students-detailed', auth, async (req, res) => {
             console.log('First student found:', students[0]);
         }
 
-        // Get detailed overdue books for each student
+        // Get complete book history for each student (current overdue + previously paid)
         for (let student of students) {
-            const [overdueBooks] = await pool.execute(`
+            const [bookHistory] = await pool.execute(`
                 SELECT 
                     bt.id as transaction_id,
                     bt.borrowed_date,
                     bt.due_date,
+                    bt.returned_date,
                     bt.status as transaction_status,
                     b.title,
                     b.author,
@@ -345,19 +372,62 @@ router.get('/students-detailed', auth, async (req, res) => {
                     CASE 
                         WHEN bt.status = 'overdue' THEN 'Overdue'
                         WHEN bt.status = 'borrowed' AND bt.due_date < CURDATE() THEN 'Overdue'
+                        WHEN bt.status = 'returned' AND f.status = 'paid' THEN 'Paid'
                         WHEN bt.status = 'returned' THEN 'Returned'
                         ELSE 'Borrowed'
                     END as current_status,
-                    DATEDIFF(CURDATE(), bt.due_date) as days_past_due
+                    DATEDIFF(CURDATE(), bt.due_date) as days_past_due,
+                    CASE 
+                        WHEN bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()) THEN 1
+                        WHEN bt.status = 'returned' AND f.status = 'paid' THEN 2
+                        ELSE 3
+                    END as sort_priority
                 FROM borrowing_transactions bt
                 JOIN books b ON bt.book_id = b.id
-                LEFT JOIN fines f ON bt.id = f.transaction_id
+                LEFT JOIN (
+                    SELECT 
+                        transaction_id,
+                        id,
+                        fine_amount,
+                        paid_amount,
+                        days_overdue,
+                        fine_date,
+                        status,
+                        ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                    FROM fines
+                ) f ON bt.id = f.transaction_id AND f.rn = 1
                 WHERE bt.student_id_number = ? 
-                AND (bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()))
-                ORDER BY bt.due_date ASC
+                AND (
+                    bt.status = 'overdue' 
+                    OR (bt.status = 'borrowed' AND bt.due_date < CURDATE())
+                    OR (bt.status = 'returned' AND f.status = 'paid')
+                )
+                ORDER BY sort_priority ASC, bt.due_date DESC
             `, [student.id_number]);
 
-            student.overdue_books = overdueBooks;
+            // Get payment history for each book that has payments
+            for (let book of bookHistory) {
+                if (book.fine_status === 'paid') {
+                    const [paymentHistory] = await pool.execute(`
+                        SELECT 
+                            fp.id as payment_id,
+                            fp.payment_amount,
+                            fp.payment_method,
+                            fp.notes,
+                            fp.created_at as payment_date,
+                            u.email as processed_by_admin
+                        FROM fine_payments fp
+                        JOIN fines f ON fp.fine_id = f.id
+                        LEFT JOIN users u ON fp.processed_by = u.id
+                        WHERE f.transaction_id = ?
+                        ORDER BY fp.created_at DESC
+                    `, [book.transaction_id]);
+
+                    book.payment_history = paymentHistory;
+                }
+            }
+
+            student.book_history = bookHistory;
         }
 
         res.json({
@@ -620,11 +690,47 @@ router.get('/fines/:studentId', auth, async (req, res) => {
                 DATEDIFF(CURDATE(), bt.due_date) as days_past_due
             FROM borrowing_transactions bt
             JOIN books b ON bt.book_id = b.id
-            LEFT JOIN fines f ON bt.id = f.transaction_id
+            LEFT JOIN (
+                SELECT 
+                    transaction_id,
+                    id,
+                    fine_amount,
+                    paid_amount,
+                    days_overdue,
+                    fine_date,
+                    status,
+                    ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                FROM fines
+            ) f ON bt.id = f.transaction_id AND f.rn = 1
             WHERE bt.student_id_number = ? 
             AND (bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()))
             ORDER BY bt.due_date ASC
         `, [studentId]);
+
+        // Get payment history for each overdue book
+        for (let book of overdueBooks) {
+            const [paymentHistory] = await pool.execute(`
+                SELECT 
+                    fp.id as payment_id,
+                    fp.payment_amount,
+                    fp.payment_method,
+                    fp.notes,
+                    fp.created_at as payment_date,
+                    u.email as processed_by_admin
+                FROM fine_payments fp
+                JOIN fines f ON fp.fine_id = f.id
+                JOIN borrowing_transactions bt ON f.transaction_id = bt.id
+                LEFT JOIN users u ON fp.processed_by = u.id
+                WHERE bt.student_id_number = ? 
+                AND bt.book_id = (
+                    SELECT book_id FROM borrowing_transactions WHERE id = ?
+                )
+                AND f.status = 'paid'
+                ORDER BY fp.created_at DESC
+            `, [studentId, book.transaction_id]);
+
+            book.payment_history = paymentHistory;
+        }
 
         // Calculate summary statistics
         const totalFines = fines.length;

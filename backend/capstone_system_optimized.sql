@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 10, 2025 at 01:21 PM
+-- Generation Time: Oct 12, 2025 at 09:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -354,9 +354,9 @@ INSERT INTO `fines` (`id`, `student_id_number`, `transaction_id`, `fine_amount`,
 (17, 'C22-0044', 11, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
 (18, 'C22-0044', 12, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
 (19, 'C22-0044', 12, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
-(20, 'C22-0045', 13, 125.00, 0.00, 25, '2025-09-16', 'unpaid', '2025-09-16 04:32:24', '2025-10-10 11:21:05'),
-(22, 'C22-0045', 17, 120.00, 0.00, 24, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-10 11:21:05'),
-(24, 'C22-0045', 18, 120.00, 0.00, 24, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-10 11:21:05'),
+(20, 'C22-0045', 13, 135.00, 0.00, 27, '2025-09-16', 'unpaid', '2025-09-16 04:32:24', '2025-10-12 07:16:57'),
+(22, 'C22-0045', 17, 130.00, 0.00, 26, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-12 07:16:57'),
+(24, 'C22-0045', 18, 130.00, 0.00, 26, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-12 07:16:57'),
 (26, 'C22-0044', 19, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
 (27, 'C22-0044', 19, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
 (28, 'C22-0044', 20, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
@@ -481,7 +481,9 @@ INSERT INTO `login_logs` (`id`, `user_id`, `user_type`, `login_time`, `ip_addres
 (66, 4, '', '2025-10-06 03:51:21', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
 (67, 4, '', '2025-10-06 04:07:37', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
 (68, 1, 'admin', '2025-10-10 10:15:04', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
-(69, 4, '', '2025-10-10 11:16:58', '::ffff:127.0.0.1', 'okhttp/4.9.2');
+(69, 4, '', '2025-10-10 11:16:58', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(70, 1, 'admin', '2025-10-11 09:52:49', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
+(71, 4, '', '2025-10-11 09:56:34', '::ffff:127.0.0.1', 'okhttp/4.9.2');
 
 -- --------------------------------------------------------
 
@@ -648,7 +650,7 @@ CREATE TABLE `student_borrowing_status` (
 --
 
 INSERT INTO `student_borrowing_status` (`id`, `student_id_number`, `can_borrow`, `reason`, `updated_by`, `created_at`, `updated_at`) VALUES
-(1, 'C22-0044', 1, NULL, 1, '2025-09-10 15:25:09', '2025-10-10 11:17:06'),
+(1, 'C22-0044', 1, NULL, 1, '2025-09-10 15:25:09', '2025-10-11 10:27:21'),
 (167, 'C22-0045', 0, 'Unpaid fines', 1, '2025-09-14 03:51:33', '2025-10-06 03:03:26');
 
 -- --------------------------------------------------------
@@ -745,7 +747,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 DROP TABLE IF EXISTS `barcode_lookup`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `barcode_lookup`  AS SELECT 'book' AS `type`, `b`.`id` AS `item_id`, `b`.`barcode` AS `barcode`, `b`.`number_code` AS `code`, `b`.`title` AS `name`, `b`.`author` AS `author`, `b`.`status` AS `status`, `b`.`available_copies` AS `available_copies`, `b`.`book_copies` AS `book_copies` FROM `books` AS `b` WHERE `b`.`barcode` is not NULL UNION ALLselect 'student' AS `type`,`u`.`id` AS `item_id`,`u`.`student_barcode` AS `barcode`,`u`.`id_number` AS `code`,concat(`u`.`first_name`,' ',`u`.`last_name`) AS `name`,`u`.`email` AS `author`,case when `u`.`is_verified` = 1 then 'verified' else 'unverified' end AS `status`,NULL AS `available_copies`,NULL AS `book_copies` from `users` `u` where `u`.`student_barcode` is not null and `u`.`role` = 'student'  ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `barcode_lookup`  AS SELECT 'book' AS `type`, `b`.`id` AS `item_id`, `b`.`barcode` AS `barcode`, `b`.`number_code` AS `code`, `b`.`title` AS `name`, `b`.`author` AS `author`, `b`.`status` AS `status`, `b`.`available_copies` AS `available_copies`, `b`.`book_copies` AS `book_copies` FROM `books` AS `b` WHERE `b`.`barcode` is not nullunion allselect 'student' AS `type`,`u`.`id` AS `item_id`,`u`.`student_barcode` AS `barcode`,`u`.`id_number` AS `code`,concat(`u`.`first_name`,' ',`u`.`last_name`) AS `name`,`u`.`email` AS `author`,case when `u`.`is_verified` = 1 then 'verified' else 'unverified' end AS `status`,NULL AS `available_copies`,NULL AS `book_copies` from `users` `u` where `u`.`student_barcode` is not null and `u`.`role` = 'student'  ;
 
 -- --------------------------------------------------------
 
@@ -929,7 +931,7 @@ ALTER TABLE `fine_payments`
 -- AUTO_INCREMENT for table `login_logs`
 --
 ALTER TABLE `login_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
 --
 -- AUTO_INCREMENT for table `overdue_history`
@@ -953,7 +955,7 @@ ALTER TABLE `semester_tracking`
 -- AUTO_INCREMENT for table `student_borrowing_status`
 --
 ALTER TABLE `student_borrowing_status`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=448;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=454;
 
 --
 -- AUTO_INCREMENT for table `system_settings`

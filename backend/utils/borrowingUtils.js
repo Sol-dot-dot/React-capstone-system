@@ -212,7 +212,7 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
         }
 
         // Update semester books count (increment by number of books borrowed)
-        await updateSemesterBooksCount(studentIdNumber, bookCodes.length);
+        await updateSemesterBooksCount(studentIdNumber, bookCodes.length, connection);
 
         await connection.commit();
         return {

@@ -7,9 +7,7 @@ import {
   FiChevronDown, 
   FiChevronUp,
   FiCheck,
-  FiRefreshCw,
   FiBook,
-  FiClock,
   FiAlertCircle
 } from 'react-icons/fi';
 import designSystem from '../styles/designSystem';
@@ -110,55 +108,6 @@ const PenaltyManagement = () => {
         }
     };
 
-    const processOverdueFines = async () => {
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/penalty/process-overdue', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                setMessage('Overdue fines processed successfully');
-                loadData();
-                setTimeout(() => setMessage(''), 3000);
-            } else {
-                setMessage('Error processing overdue fines');
-            }
-        } catch (error) {
-            console.error('Error processing overdue fines:', error);
-            setMessage('Error processing overdue fines');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const recalculateSemesterCounts = async () => {
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/penalty/recalculate-semester-counts', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await response.json();
-            if (data.success) {
-                setMessage(data.message);
-                loadData();
-                setTimeout(() => setMessage(''), 3000);
-            } else {
-                setMessage('Error recalculating semester counts');
-            }
-        } catch (error) {
-            console.error('Error recalculating semester counts:', error);
-            setMessage('Error recalculating semester counts');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const confirmAllPayments = async (studentId) => {
         if (!window.confirm('Are you sure you want to confirm payment for ALL unpaid fines for this student? This will return all books and allow the student to borrow again.')) {
@@ -274,22 +223,7 @@ const PenaltyManagement = () => {
                                     <FiSearch className="search-icon" />
                                 </div>
                                 <div className="action-buttons">
-                                    <button 
-                                        className="btn btn-warning"
-                                        onClick={processOverdueFines}
-                                        disabled={loading}
-                                    >
-                                        <FiRefreshCw />
-                                        Process Overdue Fines
-                                    </button>
-                                    <button 
-                                        className="btn btn-info"
-                                        onClick={recalculateSemesterCounts}
-                                        disabled={loading}
-                                    >
-                                        <FiClock />
-                                        Recalculate Semester Counts
-                                    </button>
+                                    {/* Action buttons removed */}
                                 </div>
                             </div>
                         </div>

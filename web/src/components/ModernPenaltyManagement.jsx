@@ -8,9 +8,7 @@ import {
   ChevronDown, 
   ChevronUp,
   Check,
-  RefreshCw,
   Book,
-  Clock,
   AlertCircle,
   TrendingUp,
   BarChart3,
@@ -20,6 +18,7 @@ import {
   Mail,
   Calendar,
   Eye,
+  EyeOff,
   Filter,
   Printer
 } from 'lucide-react';
@@ -49,6 +48,7 @@ const ModernPenaltyManagement = ({ user }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentFines, setStudentFines] = useState([]);
   const [expandedStudents, setExpandedStudents] = useState(new Set());
+  const [showPaidBooks, setShowPaidBooks] = useState(false);
 
   // Barcode scanner state
   const [isScanning, setIsScanning] = useState(false);
@@ -242,45 +242,6 @@ const ModernPenaltyManagement = ({ user }) => {
     }
   };
 
-  const processOverdueFines = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/penalty/process-overdue', {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setMessage('Overdue fines processed successfully!');
-        await loadStudentsWithFines();
-      }
-    } catch (error) {
-      console.error('Error processing overdue fines:', error);
-      setMessage('Error processing overdue fines');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const recalculateSemesterCounts = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/penalty/recalculate-semester', {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.data.success) {
-        setMessage('Semester counts recalculated successfully!');
-        await loadStudentsWithFines();
-      }
-    } catch (error) {
-      console.error('Error recalculating semester counts:', error);
-      setMessage('Error recalculating semester counts');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const printInvoice = (student) => {
     // Create a new window for printing
@@ -767,22 +728,6 @@ const ModernPenaltyManagement = ({ user }) => {
                       <Users className="h-4 w-4 mr-2" />
                       Load All Students
                     </Button>
-                    <Button
-                      onClick={processOverdueFines}
-                      disabled={loading}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                      Process Overdue Fines
-                    </Button>
-                    <Button
-                      onClick={recalculateSemesterCounts}
-                      disabled={loading}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Recalculate Semester Counts
-                    </Button>
                   </div>
                 </div>
 
@@ -790,7 +735,7 @@ const ModernPenaltyManagement = ({ user }) => {
                 <div className="space-y-4">
                   {loading ? (
                     <div className="text-center py-8">
-                      <RefreshCw className="h-8 w-8 text-slate-400 mx-auto mb-4 animate-spin" />
+                      <div className="h-8 w-8 border-4 border-slate-300 border-t-slate-600 rounded-full animate-spin mx-auto mb-4"></div>
                       <p className="text-slate-600">Loading student fines...</p>
                     </div>
                   ) : students.length > 0 ? (
@@ -915,39 +860,154 @@ const ModernPenaltyManagement = ({ user }) => {
                                 </div>
                               </div>
 
-                              {/* Overdue Books Section */}
-                              {student.overdue_books && student.overdue_books.length > 0 && (
+                              {/* Book History Section */}
+                              {student.book_history && student.book_history.length > 0 && (
                                 <div className="mt-4">
-                                  <h4 className="font-medium text-slate-900 mb-3 flex items-center gap-2">
-                                    <Book className="h-4 w-4" />
-                                    Overdue Books ({student.overdue_books.length})
-                                  </h4>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-medium text-slate-900 flex items-center gap-2">
+                                      <Book className="h-4 w-4" />
+                                      Book History ({student.book_history.length})
+                                    </h4>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setShowPaidBooks(!showPaidBooks)}
+                                      className="flex items-center gap-2 text-xs"
+                                    >
+                                      {showPaidBooks ? (
+                                        <>
+                                          <EyeOff className="h-3 w-3" />
+                                          Hide Paid
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye className="h-3 w-3" />
+                                          Show Paid
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
                                   <div className="space-y-3">
-                                    {student.overdue_books.map((book, bookIndex) => (
-                                      <div key={bookIndex} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    {student.book_history
+                                      .filter(book => {
+                                        // Always show overdue books, conditionally show paid books
+                                        if (book.current_status === 'Overdue') return true;
+                                        if (book.current_status === 'Paid') return showPaidBooks;
+                                        return true; // Show other statuses (like 'Returned')
+                                      })
+                                      .map((book, bookIndex) => (
+                                      <motion.div
+                                        key={book.transaction_id}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: bookIndex * 0.1 }}
+                                        className={`border rounded-lg p-3 hover:shadow-md transition-all duration-200 ${
+                                          book.current_status === 'Overdue' 
+                                            ? 'bg-red-50 border-red-200' 
+                                            : book.current_status === 'Paid'
+                                            ? 'bg-green-50 border-green-200'
+                                            : 'bg-slate-50 border-slate-200'
+                                        }`}
+                                      >
                                         <div className="flex items-start justify-between">
-                                          <div className="flex-1">
-                                            <h5 className="font-medium text-slate-900">{book.title}</h5>
-                                            <p className="text-sm text-slate-600">by {book.author}</p>
-                                            <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
-                                              <span><strong>Code:</strong> {book.number_code}</span>
-                                              <span><strong>Category:</strong> {book.category}</span>
-                                              <span><strong>Borrowed:</strong> {new Date(book.borrowed_date).toLocaleDateString()}</span>
-                                              <span><strong>Due:</strong> {new Date(book.due_date).toLocaleDateString()}</span>
+                                          <div className="flex items-center space-x-3">
+                                            <div className={`p-2 rounded-lg ${
+                                              book.current_status === 'Overdue' ? 'bg-red-100' :
+                                              book.current_status === 'Paid' ? 'bg-green-100' : 'bg-slate-100'
+                                            }`}>
+                                              <Book className={`h-4 w-4 ${
+                                                book.current_status === 'Overdue' ? 'text-red-600' :
+                                                book.current_status === 'Paid' ? 'text-green-600' : 'text-slate-600'
+                                              }`} />
+                                            </div>
+                                            <div className="flex-1">
+                                              <h5 className="font-medium text-slate-900">{book.title}</h5>
+                                              <p className="text-sm text-slate-600">by {book.author}</p>
+                                              <div className="flex items-center gap-4 mt-2 text-xs text-slate-600">
+                                                <span><strong>Code:</strong> {book.number_code}</span>
+                                                <span><strong>Category:</strong> {book.category}</span>
+                                                <span><strong>Borrowed:</strong> {new Date(book.borrowed_date).toLocaleDateString()}</span>
+                                                <span><strong>Due:</strong> {new Date(book.due_date).toLocaleDateString()}</span>
+                                                {book.returned_date && (
+                                                  <span><strong>Returned:</strong> {new Date(book.returned_date).toLocaleDateString()}</span>
+                                                )}
+                                              </div>
                                             </div>
                                           </div>
                                           <div className="text-right">
-                                            <Badge variant="destructive" className="mb-1">
-                                              {book.days_past_due} days overdue
+                                            <Badge 
+                                              variant={book.current_status === 'Overdue' ? 'destructive' : 'default'}
+                                              className={`mb-1 ${
+                                                book.current_status === 'Overdue' 
+                                                  ? 'bg-red-100 text-red-700' 
+                                                  : book.current_status === 'Paid'
+                                                  ? 'bg-green-100 text-green-700'
+                                                  : 'bg-slate-100 text-slate-700'
+                                              }`}
+                                            >
+                                              {book.current_status === 'Overdue' && (
+                                                <>
+                                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                                  {book.days_past_due} days overdue
+                                                </>
+                                              )}
+                                              {book.current_status === 'Paid' && (
+                                                <>
+                                                  <Check className="h-3 w-3 mr-1" />
+                                                  Paid
+                                                </>
+                                              )}
+                                              {book.current_status === 'Returned' && (
+                                                <>
+                                                  <Check className="h-3 w-3 mr-1" />
+                                                  Returned
+                                                </>
+                                              )}
                                             </Badge>
                                             <div className="text-sm">
                                               <p><strong>Fine:</strong> ₱{book.fine_amount || 0}</p>
                                               <p><strong>Paid:</strong> ₱{book.paid_amount || 0}</p>
-                                              <p><strong>Remaining:</strong> ₱{(book.fine_amount || 0) - (book.paid_amount || 0)}</p>
+                                              {book.current_status === 'Overdue' && (
+                                                <p><strong>Remaining:</strong> ₱{(book.fine_amount || 0) - (book.paid_amount || 0)}</p>
+                                              )}
                                             </div>
                                           </div>
                                         </div>
-                                      </div>
+
+                                        {/* Payment History for paid books */}
+                                        {book.payment_history && book.payment_history.length > 0 && (
+                                          <div className="mt-3 pt-3 border-t border-green-200">
+                                            <h6 className="text-sm font-medium text-green-700 mb-2 flex items-center gap-1">
+                                              <Check className="h-3 w-3" />
+                                              Payment History ({book.payment_history.length} payment{book.payment_history.length !== 1 ? 's' : ''})
+                                            </h6>
+                                            <div className="space-y-2">
+                                              {book.payment_history.map((payment, paymentIndex) => (
+                                                <div key={paymentIndex} className="bg-green-50 border border-green-200 rounded-lg p-2">
+                                                  <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
+                                                      <div className="flex items-center gap-2 text-xs text-green-700">
+                                                        <span><strong>Amount:</strong> ₱{payment.payment_amount}</span>
+                                                        <span><strong>Method:</strong> {payment.payment_method}</span>
+                                                        <span><strong>Date:</strong> {new Date(payment.payment_date).toLocaleDateString()}</span>
+                                                      </div>
+                                                      {payment.notes && (
+                                                        <p className="text-xs text-green-600 mt-1">{payment.notes}</p>
+                                                      )}
+                                                      {payment.processed_by_admin && (
+                                                        <p className="text-xs text-green-500 mt-1">Processed by: {payment.processed_by_admin}</p>
+                                                      )}
+                                                    </div>
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                                                      Paid
+                                                    </Badge>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </motion.div>
                                     ))}
                                   </div>
                                 </div>
@@ -1076,7 +1136,13 @@ const ModernPenaltyManagement = ({ user }) => {
                       variant="outline"
                       className="border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
                     >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                      <div className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}>
+                        {loading ? (
+                          <div className="h-4 w-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></div>
+                        ) : (
+                          <div className="h-4 w-4 border-2 border-red-600 rounded"></div>
+                        )}
+                      </div>
                       {loading ? 'Resetting...' : 'Reset Semester'}
                     </Button>
                   </div>
@@ -1094,7 +1160,7 @@ const ModernPenaltyManagement = ({ user }) => {
                       variant="outline"
                       onClick={() => loadData()}
                     >
-                      <RefreshCw className="h-4 w-4 mr-2" />
+                      <div className="h-4 w-4 mr-2 border-2 border-slate-600 rounded"></div>
                       Reset to Default
                     </Button>
                   </div>

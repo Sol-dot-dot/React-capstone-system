@@ -615,7 +615,15 @@ router.get('/overdue', auth, async (req, res) => {
             FROM borrowing_transactions bt
             JOIN users u ON bt.student_id_number = u.id_number
             JOIN books b ON bt.book_id = b.id
-            LEFT JOIN fines f ON bt.id = f.transaction_id AND f.status = 'unpaid'
+            LEFT JOIN (
+                SELECT 
+                    transaction_id,
+                    fine_amount,
+                    paid_amount,
+                    ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                FROM fines
+                WHERE status = 'unpaid'
+            ) f ON bt.id = f.transaction_id AND f.rn = 1
             WHERE bt.status = 'overdue' 
             AND bt.due_date < CURDATE()
             ${userId ? 'AND u.id = ?' : ''}
