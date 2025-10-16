@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 12, 2025 at 09:17 AM
+-- Generation Time: Oct 16, 2025 at 01:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -123,16 +123,16 @@ CREATE TABLE `books` (
 --
 
 INSERT INTO `books` (`id`, `title`, `author`, `isbn`, `number_code`, `barcode`, `category`, `publisher`, `publication_year`, `pages`, `description`, `status`, `book_copies`, `available_copies`, `created_at`, `updated_at`) VALUES
-(1, 'Introduction to Programming with Python', 'John Smith', '978-0134444321', 'IT001', 'BOOK-IT001', 'Programming', 'Pearson Education', '2023', 450, 'Comprehensive guide to Python programming for beginners. Covers variables, loops, functions, and object-oriented programming.', 'available', 3, 1, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
+(1, 'Introduction to Programming with Python', 'John Smith', '978-0134444321', 'IT001', 'BOOK-IT001', 'Programming', 'Pearson Education', '2023', 450, 'Comprehensive guide to Python programming for beginners. Covers variables, loops, functions, and object-oriented programming.', 'borrowed', 3, 0, '2025-09-10 14:39:05', '2025-10-12 07:21:10'),
 (2, 'Java: The Complete Reference', 'Herbert Schildt', '978-1260440249', 'IT002', 'BOOK-IT002', 'Programming', 'McGraw-Hill', '2022', 1200, 'Complete guide to Java programming language. Includes Java 17 features, collections, multithreading, and GUI development.', 'borrowed', 2, 0, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
-(3, 'C++ Programming: From Problem Analysis to Program Design', 'D.S. Malik', '978-1337102087', 'IT003', 'BOOK-IT003', 'Programming', 'Cengage Learning', '2023', 1400, 'Comprehensive C++ programming textbook covering data structures, algorithms, and object-oriented design principles.', 'available', 3, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
-(4, 'JavaScript: The Definitive Guide', 'David Flanagan', '978-1491952023', 'IT004', 'BOOK-IT004', 'Web Development', 'O\'Reilly Media', '2022', 1096, 'Complete reference for JavaScript programming. Covers ES6+, DOM manipulation, and modern web development practices.', 'available', 2, 1, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
+(3, 'C++ Programming: From Problem Analysis to Program Design', 'D.S. Malik', '978-1337102087', 'IT003', 'BOOK-IT003', 'Programming', 'Cengage Learning', '2023', 1400, 'Comprehensive C++ programming textbook covering data structures, algorithms, and object-oriented design principles.', 'borrowed', 3, 0, '2025-09-10 14:39:05', '2025-10-15 02:35:08'),
+(4, 'JavaScript: The Definitive Guide', 'David Flanagan', '978-1491952023', 'IT004', 'BOOK-IT004', 'Web Development', 'O\'Reilly Media', '2022', 1096, 'Complete reference for JavaScript programming. Covers ES6+, DOM manipulation, and modern web development practices.', 'borrowed', 2, 0, '2025-09-10 14:39:05', '2025-10-15 02:35:08'),
 (5, 'HTML and CSS: Design and Build Websites', 'Jon Duckett', '978-1118008188', 'IT005', 'BOOK-IT005', 'Web Development', 'Wiley', '2021', 490, 'Beautifully designed guide to HTML5 and CSS3. Perfect for beginners learning web design and development.', 'available', 1, 1, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
 (6, 'React: Up & Running', 'Stoyan Stefanov', '978-1491931820', 'IT006', 'BOOK-IT006', 'Web Development', 'O\'Reilly Media', '2022', 300, 'Learn React.js from the ground up. Covers components, hooks, state management, and modern React patterns.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
 (7, 'Node.js in Action', 'Mike Cantelon', '978-1617290572', 'IT007', 'BOOK-IT007', 'Web Development', 'Manning Publications', '2021', 400, 'Complete guide to server-side JavaScript with Node.js. Covers Express.js, databases, and deployment.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
-(8, 'Full-Stack Web Development with Vue.js and Node.js', 'Aneeta Sharma', '978-1788831147', 'IT008', 'BOOK-IT008', 'Web Development', 'Packt Publishing', '2022', 350, 'Build complete web applications using Vue.js frontend and Node.js backend with MongoDB database.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
+(8, 'Full-Stack Web Development with Vue.js and Node.js', 'Aneeta Sharma', '978-1788831147', 'IT008', 'BOOK-IT008', 'Web Development', 'Packt Publishing', '2022', 350, 'Build complete web applications using Vue.js frontend and Node.js backend with MongoDB database.', 'available', 2, 1, '2025-09-10 14:39:05', '2025-10-15 02:36:20'),
 (9, 'Database System Concepts', 'Abraham Silberschatz', '978-0078022159', 'IT009', 'BOOK-IT009', 'Database', 'McGraw-Hill', '2023', 1344, 'Comprehensive textbook on database systems. Covers relational databases, SQL, normalization, and transaction management.', 'borrowed', 2, 0, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
-(10, 'MySQL Cookbook', 'Paul DuBois', '978-1449374020', 'IT010', 'BOOK-IT010', 'Database', 'O\'Reilly Media', '2022', 800, 'Practical solutions for MySQL database administration and development. Includes performance tuning and optimization.', 'available', 3, 3, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
+(10, 'MySQL Cookbook', 'Paul DuBois', '978-1449374020', 'IT010', 'BOOK-IT010', 'Database', 'O\'Reilly Media', '2022', 800, 'Practical solutions for MySQL database administration and development. Includes performance tuning and optimization.', 'available', 3, 2, '2025-09-10 14:39:05', '2025-10-15 02:36:20'),
 (11, 'MongoDB: The Definitive Guide', 'Kristina Chodorow', '978-1491954461', 'IT011', 'BOOK-IT011', 'Database', 'O\'Reilly Media', '2021', 400, 'Complete guide to MongoDB NoSQL database. Covers document design, indexing, and aggregation pipelines.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
 (12, 'SQL for Data Analysis', 'Cathy Tanimura', '978-1492088776', 'IT012', 'BOOK-IT012', 'Database', 'O\'Reilly Media', '2022', 350, 'Advanced SQL techniques for data analysis and business intelligence. Includes window functions and complex queries.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
 (13, 'Android Programming: The Big Nerd Ranch Guide', 'Bill Phillips', '978-0135245125', 'IT013', 'BOOK-IT013', 'Mobile Development', 'Big Nerd Ranch', '2023', 600, 'Comprehensive guide to Android app development using Kotlin. Covers UI design, networking, and data persistence.', 'available', 2, 2, '2025-09-10 14:39:05', '2025-09-24 10:20:07'),
@@ -245,14 +245,25 @@ INSERT INTO `borrowing_transactions` (`id`, `student_id_number`, `book_id`, `bor
 (10, 'C22-0044', 2, '2025-09-14', '2025-09-15', '2025-09-18', 'returned', 1, 1, '2025-09-14 03:49:48', '2025-09-18 02:58:47'),
 (11, 'C22-0044', 1, '2025-09-14', '2025-09-15', '2025-09-18', 'returned', 1, 1, '2025-09-14 03:51:20', '2025-09-18 02:58:47'),
 (12, 'C22-0044', 3, '2025-09-14', '2025-09-15', '2025-09-18', 'returned', 1, 1, '2025-09-14 03:51:20', '2025-09-18 02:58:47'),
-(13, 'C22-0045', 4, '2025-09-14', '2025-09-15', NULL, 'overdue', 1, NULL, '2025-09-14 03:52:13', '2025-09-16 04:32:24'),
+(13, 'C22-0045', 4, '2025-09-14', '2025-09-15', '2025-10-15', 'returned', 1, 1, '2025-09-14 03:52:13', '2025-10-15 02:08:40'),
 (14, 'C22-0045', 5, '2025-09-14', '2025-09-15', '2025-09-14', 'returned', 1, 1, '2025-09-14 03:52:13', '2025-09-14 03:52:53'),
 (15, 'C22-0045', 6, '2025-09-14', '2025-09-16', '2025-09-15', 'returned', 1, 1, '2025-09-14 03:53:02', '2025-09-15 05:15:47'),
 (16, 'C22-0045', 9, '2025-09-15', '2025-09-16', '2025-09-15', 'returned', 1, 1, '2025-09-15 04:59:43', '2025-09-15 05:14:51'),
-(17, 'C22-0045', 9, '2025-09-15', '2025-09-16', NULL, 'overdue', 1, NULL, '2025-09-15 05:15:15', '2025-09-17 14:19:39'),
-(18, 'C22-0045', 9, '2025-09-15', '2025-09-16', NULL, 'overdue', 1, NULL, '2025-09-15 05:15:57', '2025-09-17 14:19:39'),
+(17, 'C22-0045', 9, '2025-09-15', '2025-09-16', '2025-10-15', 'returned', 1, 1, '2025-09-15 05:15:15', '2025-10-15 02:08:40'),
+(18, 'C22-0045', 9, '2025-09-15', '2025-09-16', '2025-10-15', 'returned', 1, 1, '2025-09-15 05:15:57', '2025-10-15 02:08:40'),
 (19, 'C22-0044', 2, '2025-09-18', '2025-09-19', '2025-09-24', 'returned', 1, 1, '2025-09-18 03:45:39', '2025-09-24 11:55:16'),
-(20, 'C22-0044', 1, '2025-09-18', '2025-09-19', '2025-09-24', 'returned', 1, 1, '2025-09-18 03:45:39', '2025-09-24 11:55:16');
+(20, 'C22-0044', 1, '2025-09-18', '2025-09-19', '2025-09-24', 'returned', 1, 1, '2025-09-18 03:45:39', '2025-09-24 11:55:16'),
+(21, 'C22-0044', 1, '2025-10-12', '2025-10-13', '2025-10-15', 'returned', 1, 1, '2025-10-12 07:21:10', '2025-10-15 02:26:37'),
+(22, 'C22-0044', 3, '2025-10-12', '2025-10-13', '2025-10-15', 'returned', 1, 1, '2025-10-12 07:21:10', '2025-10-15 02:26:37'),
+(23, 'C22-0045', 3, '2025-10-15', '2025-10-16', '2025-10-15', 'returned', 1, 1, '2025-10-15 02:20:48', '2025-10-15 02:21:20'),
+(24, 'C22-0045', 3, '2025-10-15', '2025-10-16', '2025-10-15', 'returned', 1, 1, '2025-10-15 02:21:48', '2025-10-15 02:22:52'),
+(25, 'C22-0044', 3, '2025-10-15', '2025-10-16', '2025-10-15', 'returned', 1, 1, '2025-10-15 02:33:56', '2025-10-15 02:34:54'),
+(26, 'C22-0044', 4, '2025-10-15', '2025-10-16', '2025-10-15', 'returned', 1, 1, '2025-10-15 02:33:56', '2025-10-15 02:34:52'),
+(27, 'C22-0044', 3, '2025-10-15', '2025-10-16', NULL, 'borrowed', 1, NULL, '2025-10-15 02:35:08', '2025-10-15 02:35:08'),
+(28, 'C22-0044', 4, '2025-10-15', '2025-10-16', NULL, 'borrowed', 1, NULL, '2025-10-15 02:35:08', '2025-10-15 02:35:08'),
+(29, 'C22-0045', 8, '2025-10-15', '2025-10-16', NULL, 'borrowed', 1, NULL, '2025-10-15 02:36:20', '2025-10-15 02:36:20'),
+(30, 'C22-0045', 10, '2025-10-15', '2025-10-16', NULL, 'borrowed', 1, NULL, '2025-10-15 02:36:20', '2025-10-15 02:36:20'),
+(31, 'C22-0044', 5, '2025-10-16', '2025-10-15', NULL, 'overdue', 1, NULL, '2025-10-16 04:18:38', '2025-10-16 04:18:38');
 
 --
 -- Triggers `borrowing_transactions`
@@ -354,13 +365,16 @@ INSERT INTO `fines` (`id`, `student_id_number`, `transaction_id`, `fine_amount`,
 (17, 'C22-0044', 11, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
 (18, 'C22-0044', 12, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
 (19, 'C22-0044', 12, 15.00, 15.00, 3, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-09-18 02:58:47'),
-(20, 'C22-0045', 13, 135.00, 0.00, 27, '2025-09-16', 'unpaid', '2025-09-16 04:32:24', '2025-10-12 07:16:57'),
-(22, 'C22-0045', 17, 130.00, 0.00, 26, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-12 07:16:57'),
-(24, 'C22-0045', 18, 130.00, 0.00, 26, '2025-09-17', 'unpaid', '2025-09-17 14:19:39', '2025-10-12 07:16:57'),
+(20, 'C22-0045', 13, 150.00, 150.00, 30, '2025-09-16', 'paid', '2025-09-16 04:32:24', '2025-10-15 02:08:40'),
+(22, 'C22-0045', 17, 145.00, 145.00, 29, '2025-09-17', 'paid', '2025-09-17 14:19:39', '2025-10-15 02:08:40'),
+(24, 'C22-0045', 18, 145.00, 145.00, 29, '2025-09-17', 'paid', '2025-09-17 14:19:39', '2025-10-15 02:08:40'),
 (26, 'C22-0044', 19, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
 (27, 'C22-0044', 19, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
 (28, 'C22-0044', 20, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
-(29, 'C22-0044', 20, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16');
+(29, 'C22-0044', 20, 25.00, 25.00, 5, '2025-09-22', 'paid', '2025-09-22 03:18:24', '2025-09-24 11:55:16'),
+(30, 'C22-0044', 21, 10.00, 10.00, 2, '2025-10-15', 'paid', '2025-10-15 01:03:30', '2025-10-15 02:26:37'),
+(32, 'C22-0044', 22, 10.00, 10.00, 2, '2025-10-15', 'paid', '2025-10-15 01:03:30', '2025-10-15 02:26:37'),
+(34, 'C22-0044', 31, 5.00, 0.00, 1, '2025-10-16', 'unpaid', '2025-10-16 04:18:38', '2025-10-16 05:40:40');
 
 -- --------------------------------------------------------
 
@@ -392,7 +406,12 @@ INSERT INTO `fine_payments` (`id`, `fine_id`, `payment_amount`, `payment_method`
 (7, 26, 25.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-09-24 11:55:16'),
 (8, 27, 25.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-09-24 11:55:16'),
 (9, 28, 25.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-09-24 11:55:16'),
-(10, 29, 25.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-09-24 11:55:16');
+(10, 29, 25.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-09-24 11:55:16'),
+(11, 20, 150.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-10-15 02:08:40'),
+(12, 22, 145.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-10-15 02:08:40'),
+(13, 24, 145.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-10-15 02:08:40'),
+(14, 30, 10.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-10-15 02:26:37'),
+(15, 32, 10.00, 'cash', 1, 'Full payment - All fines paid at once', '2025-10-15 02:26:37');
 
 -- --------------------------------------------------------
 
@@ -483,7 +502,34 @@ INSERT INTO `login_logs` (`id`, `user_id`, `user_type`, `login_time`, `ip_addres
 (68, 1, 'admin', '2025-10-10 10:15:04', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
 (69, 4, '', '2025-10-10 11:16:58', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
 (70, 1, 'admin', '2025-10-11 09:52:49', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
-(71, 4, '', '2025-10-11 09:56:34', '::ffff:127.0.0.1', 'okhttp/4.9.2');
+(71, 4, '', '2025-10-11 09:56:34', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(72, 4, '', '2025-10-12 07:19:16', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(73, 5, '', '2025-10-12 07:33:36', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(74, 5, '', '2025-10-12 07:43:53', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(75, 5, '', '2025-10-12 07:46:22', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(76, 5, '', '2025-10-12 07:47:53', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(77, 5, '', '2025-10-12 07:48:54', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(78, 5, '', '2025-10-12 07:52:15', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(79, 5, '', '2025-10-12 07:53:43', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(80, 5, '', '2025-10-12 09:15:16', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(81, 5, '', '2025-10-12 09:40:06', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(82, 1, 'admin', '2025-10-13 02:41:50', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
+(83, 4, '', '2025-10-13 02:46:54', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(84, 4, '', '2025-10-13 03:11:58', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(85, 4, '', '2025-10-13 03:21:44', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(86, 1, 'admin', '2025-10-15 01:04:07', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
+(87, 4, '', '2025-10-15 01:09:35', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(88, 5, '', '2025-10-15 01:10:29', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(89, 4, '', '2025-10-15 06:16:58', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(90, 4, '', '2025-10-15 06:22:53', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(91, 1, 'admin', '2025-10-16 03:24:39', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
+(92, 4, '', '2025-10-16 03:36:45', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(93, 4, '', '2025-10-16 03:51:46', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(94, 4, '', '2025-10-16 04:00:19', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(95, 4, '', '2025-10-16 04:10:24', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(96, 4, '', '2025-10-16 04:24:04', '::ffff:127.0.0.1', 'okhttp/4.9.2'),
+(97, 1, 'admin', '2025-10-16 04:25:50', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'),
+(98, 4, '', '2025-10-16 05:13:24', '::ffff:127.0.0.1', 'okhttp/4.9.2');
 
 -- --------------------------------------------------------
 
@@ -551,7 +597,10 @@ INSERT INTO `overdue_history` (`id`, `student_id_number`, `transaction_id`, `boo
 (11, 'C22-0045', 18, 'Database System Concepts', 'Abraham Silberschatz', 'IT009', '2025-09-14 16:00:00', '2025-09-16', NULL, 2, 10.00, 0.00, 1, '2025-09-18 02:57:37'),
 (12, 'C22-0045', 18, 'Database System Concepts', 'Abraham Silberschatz', 'IT009', '2025-09-14 16:00:00', '2025-09-16', NULL, 2, 10.00, 0.00, 1, '2025-09-18 02:57:37'),
 (16, 'C22-0044', 19, 'Java: The Complete Reference', 'Herbert Schildt', 'IT002', '2025-09-17 16:00:00', '2025-09-19', NULL, 3, 15.00, 0.00, 1, '2025-09-22 03:18:24'),
-(17, 'C22-0044', 20, 'Introduction to Programming with Python', 'John Smith', 'IT001', '2025-09-17 16:00:00', '2025-09-19', NULL, 3, 15.00, 0.00, 1, '2025-09-22 03:18:24');
+(17, 'C22-0044', 20, 'Introduction to Programming with Python', 'John Smith', 'IT001', '2025-09-17 16:00:00', '2025-09-19', NULL, 3, 15.00, 0.00, 1, '2025-09-22 03:18:24'),
+(18, 'C22-0044', 21, 'Introduction to Programming with Python', 'John Smith', 'IT001', '2025-10-11 16:00:00', '2025-10-13', NULL, 2, 10.00, 0.00, 1, '2025-10-15 01:03:30'),
+(19, 'C22-0044', 22, 'C++ Programming: From Problem Analysis to Program Design', 'D.S. Malik', 'IT003', '2025-10-11 16:00:00', '2025-10-13', NULL, 2, 10.00, 0.00, 1, '2025-10-15 01:03:30'),
+(20, 'C22-0044', 31, 'HTML and CSS: Design and Build Websites', 'Jon Duckett', 'IT005', '2025-10-15 16:00:00', '2025-10-15', NULL, 1, 5.00, 0.00, 1, '2025-10-16 04:18:40');
 
 -- --------------------------------------------------------
 
@@ -601,7 +650,11 @@ INSERT INTO `return_transactions` (`id`, `transaction_id`, `student_id_number`, 
 (18, 12, 'C22-0044', 3, '2025-09-17 16:00:00', 1, 'good', 'Overdue book returned (retroactive record)', 15.00, 'Overdue fine applied', 'Retroactive return transaction record creation', 'completed', '2025-09-18 03:08:51', '2025-09-18 03:08:51'),
 (19, 10, 'C22-0044', 2, '2025-09-17 16:00:00', 1, 'good', 'Overdue book returned (retroactive record)', 15.00, 'Overdue fine applied', 'Retroactive return transaction record creation', 'completed', '2025-09-18 03:08:51', '2025-09-18 03:08:51'),
 (20, 11, 'C22-0044', 1, '2025-09-17 16:00:00', 1, 'good', 'Overdue book returned (retroactive record)', 15.00, 'Overdue fine applied', 'Retroactive return transaction record creation', 'completed', '2025-09-18 03:08:51', '2025-09-18 03:08:51'),
-(21, 12, 'C22-0044', 3, '2025-09-17 16:00:00', 1, 'good', 'Overdue book returned (retroactive record)', 15.00, 'Overdue fine applied', 'Retroactive return transaction record creation', 'completed', '2025-09-18 03:08:51', '2025-09-18 03:08:51');
+(21, 12, 'C22-0044', 3, '2025-09-17 16:00:00', 1, 'good', 'Overdue book returned (retroactive record)', 15.00, 'Overdue fine applied', 'Retroactive return transaction record creation', 'completed', '2025-09-18 03:08:51', '2025-09-18 03:08:51'),
+(22, 23, 'C22-0045', 3, '2025-10-15 02:21:20', 1, 'good', '', 0.00, '', '', 'completed', '2025-10-15 02:21:20', '2025-10-15 02:21:20'),
+(23, 24, 'C22-0045', 3, '2025-10-15 02:22:52', 1, 'good', '', 0.00, '', '', 'completed', '2025-10-15 02:22:52', '2025-10-15 02:22:52'),
+(24, 26, 'C22-0044', 4, '2025-10-15 02:34:52', 1, 'good', '', 0.00, '', '', 'completed', '2025-10-15 02:34:52', '2025-10-15 02:34:52'),
+(25, 25, 'C22-0044', 3, '2025-10-15 02:34:54', 1, 'good', '', 0.00, '', '', 'completed', '2025-10-15 02:34:54', '2025-10-15 02:34:54');
 
 -- --------------------------------------------------------
 
@@ -626,8 +679,8 @@ CREATE TABLE `semester_tracking` (
 --
 
 INSERT INTO `semester_tracking` (`id`, `student_id_number`, `semester_start_date`, `semester_end_date`, `books_borrowed_count`, `max_books_allowed`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'C22-0044', '2025-09-18', '2026-02-18', 14, 5, 'active', '2025-09-10 15:28:47', '2025-09-18 03:45:39'),
-(2, 'C22-0045', '2025-09-15', '2026-02-15', 6, 5, 'active', '2025-09-14 03:52:13', '2025-09-15 05:15:57');
+(1, 'C22-0044', '2025-10-15', '2026-03-15', 20, 5, 'active', '2025-09-10 15:28:47', '2025-10-15 02:35:08'),
+(2, 'C22-0045', '2025-10-15', '2026-03-15', 10, 5, 'active', '2025-09-14 03:52:13', '2025-10-15 02:36:20');
 
 -- --------------------------------------------------------
 
@@ -650,8 +703,8 @@ CREATE TABLE `student_borrowing_status` (
 --
 
 INSERT INTO `student_borrowing_status` (`id`, `student_id_number`, `can_borrow`, `reason`, `updated_by`, `created_at`, `updated_at`) VALUES
-(1, 'C22-0044', 1, NULL, 1, '2025-09-10 15:25:09', '2025-10-11 10:27:21'),
-(167, 'C22-0045', 0, 'Unpaid fines', 1, '2025-09-14 03:51:33', '2025-10-06 03:03:26');
+(1, 'C22-0044', 0, 'Unpaid fines', 1, '2025-09-10 15:25:09', '2025-10-16 05:13:42'),
+(167, 'C22-0045', 1, NULL, 1, '2025-09-14 03:51:33', '2025-10-15 05:36:56');
 
 -- --------------------------------------------------------
 
@@ -913,37 +966,37 @@ ALTER TABLE `books`
 -- AUTO_INCREMENT for table `borrowing_transactions`
 --
 ALTER TABLE `borrowing_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `fines`
 --
 ALTER TABLE `fines`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `fine_payments`
 --
 ALTER TABLE `fine_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `login_logs`
 --
 ALTER TABLE `login_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
 
 --
 -- AUTO_INCREMENT for table `overdue_history`
 --
 ALTER TABLE `overdue_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `return_transactions`
 --
 ALTER TABLE `return_transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `semester_tracking`
@@ -955,7 +1008,7 @@ ALTER TABLE `semester_tracking`
 -- AUTO_INCREMENT for table `student_borrowing_status`
 --
 ALTER TABLE `student_borrowing_status`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=454;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=721;
 
 --
 -- AUTO_INCREMENT for table `system_settings`

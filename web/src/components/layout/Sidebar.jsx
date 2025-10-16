@@ -9,17 +9,17 @@ import {
   ArrowLeft,
   DollarSign, 
   FileText, 
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Search,
-  GraduationCap
+  GraduationCap,
+  BarChart3,
+  TrendingUp,
+  BookMarked
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 import { useSearch } from '../../contexts/SearchContext';
 import SearchResults from '../ui/SearchResults';
 
@@ -43,6 +43,12 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
     { icon: DollarSign, label: 'Penalty Management', path: '/penalties' },
     { icon: GraduationCap, label: 'Clearance Requirements', path: '/clearance-requirements' },
     { icon: FileText, label: 'Activity Logs', path: '/activity-logs' },
+  ];
+
+  const analyticsItems = [
+    { icon: BarChart3, label: 'Analytics Dashboard', path: '/analytics' },
+    { icon: TrendingUp, label: 'User Analytics', path: '/analytics/users' },
+    { icon: BookMarked, label: 'Book Analytics', path: '/analytics/books' },
   ];
 
   const sidebarVariants = {
@@ -230,6 +236,72 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
                         className="ml-auto"
                       >
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                </Link>
+              </motion.div>
+            );
+          })}
+
+          {/* Analytics Section */}
+          <AnimatePresence>
+            {(!isCollapsed || isMobile) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-6"
+              >
+                <div className="px-3 py-2">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Analytics
+                  </h3>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {analyticsItems.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <motion.div
+                key={item.label}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: (menuItems.length + index) * 0.1 }}
+              >
+                <Link to={item.path}>
+                  <motion.div
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-500'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <item.icon className={`h-5 w-5 ${isActive ? 'text-purple-600' : 'text-slate-500 group-hover:text-slate-700'}`} />
+                    <AnimatePresence>
+                      {(!isCollapsed || isMobile) && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="font-medium"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    {isActive && (!isCollapsed || isMobile) && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="ml-auto"
+                      >
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                       </motion.div>
                     )}
                   </motion.div>

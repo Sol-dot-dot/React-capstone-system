@@ -31,6 +31,7 @@ app.use('/api/penalty', require('./routes/penalty'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/analytics', require('./routes/analytics'));
 app.use('/', require('./routes/dashboard'));
 // app.use('/api/monitoring', require('./routes/monitoring'));
 

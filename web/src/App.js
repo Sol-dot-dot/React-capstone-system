@@ -10,7 +10,9 @@ import ReturningManagement from './components/management/ReturningManagement';
 import PenaltyManagement from './components/management/PenaltyManagement';
 import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
 import ClearanceRequirements from './components/management/ClearanceRequirements';
-import ChatbotWidget from './components/ui/ChatbotWidget';
+import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
+import UserAnalytics from './components/analytics/UserAnalytics';
+import BookAnalytics from './components/analytics/BookAnalytics';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import { SearchProvider } from './contexts/SearchContext';
@@ -20,7 +22,6 @@ import './App.css';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
-  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -226,6 +227,30 @@ function App() {
               } 
             />
             <Route 
+              path="/analytics" 
+              element={
+                isAuthenticated ? 
+                <AnalyticsDashboard user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/analytics/users" 
+              element={
+                isAuthenticated ? 
+                <UserAnalytics user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/analytics/books" 
+              element={
+                isAuthenticated ? 
+                <BookAnalytics user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
               path="/" 
               element={<Navigate to={isAuthenticated ? "/enhanced-dashboard" : "/login"} />} 
             />
@@ -248,53 +273,6 @@ function App() {
           </div>
         )}
 
-        {/* Floating Chatbot Button */}
-        {isAuthenticated && !isChatbotVisible && (
-          <button 
-            className="floating-chat-button"
-            onClick={() => setIsChatbotVisible(true)}
-            title="Ask AI Assistant"
-            style={{
-              position: 'fixed',
-              bottom: '20px',
-              right: '20px',
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              backgroundColor: designSystem.colors.primary[600],
-              color: designSystem.colors.neutral.white,
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: designSystem.shadows.lg,
-              fontSize: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: designSystem.zIndex.fixed,
-              transition: 'all 0.2s ease-in-out',
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'scale(1.1)';
-              e.target.style.backgroundColor = designSystem.colors.primary[700];
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'scale(1)';
-              e.target.style.backgroundColor = designSystem.colors.primary[600];
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2C6.48 2 2 6.48 2 12C2 13.54 2.38 14.99 3.05 16.28L2 22L7.72 20.95C9.01 21.62 10.46 22 12 22C17.52 22 22 17.52 22 12S17.52 2 12 2ZM12 20C10.74 20 9.54 19.78 8.44 19.38L8 19.15L5.2 20.05L6.1 17.25L5.87 16.81C5.47 15.71 5.25 14.51 5.25 13.25C5.25 8.13 9.13 4.25 14.25 4.25S23.25 8.13 23.25 13.25 19.37 20 14.25 20H12Z" fill="currentColor"/>
-              <circle cx="9" cy="12" r="1" fill="currentColor"/>
-              <circle cx="15" cy="12" r="1" fill="currentColor"/>
-            </svg>
-          </button>
-        )}
-
-        {/* Chatbot Widget */}
-        <ChatbotWidget 
-          isVisible={isChatbotVisible} 
-          onClose={() => setIsChatbotVisible(false)} 
-        />
       </div>
       </Router>
     </SearchProvider>

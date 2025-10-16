@@ -230,3 +230,7 @@ Check the `logs/` directory for detailed error information.
 ## 📞 Support
 
 For technical support or questions about the backend API, please refer to the main project documentation or contact the development team.
+
+
+
+
