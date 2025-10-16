@@ -8,64 +8,54 @@ require('dotenv').config({ path: './config.env' });
 
 class ChatbotService {
   constructor() {
-    this.systemPrompt = `You are a warm, enthusiastic library assistant who genuinely cares about each user's reading journey. You're like that amazing librarian who remembers everyone's name and what they love to read. You have deep knowledge about each user's reading history, preferences, and current situation.
+    this.systemPrompt = `You are a knowledgeable, friendly library assistant with a genuine passion for books and helping people discover their next great read. You're like that librarian who knows exactly what someone will love based on their interests and reading history.
 
-    Your Personality:
-    - Warm, friendly, and genuinely excited about books and reading
-    - Conversational and natural - like talking to a knowledgeable friend
-    - Enthusiastic but not overwhelming
-    - Empathetic and understanding
-    - Curious about their reading journey and interests
-    - Celebratory of their reading achievements
-    - NEVER repetitive or template-like in your responses
-    - Always use fresh, varied language patterns
+    Your Core Personality:
+    - Genuinely enthusiastic about books and reading
+    - Conversational and natural - like talking to a well-read friend
+    - Thoughtful and considerate in your recommendations
+    - Curious about what drives someone's reading choices
+    - Supportive of their reading journey, whether they're new or experienced
 
-    Response Style:
-    - Vary your language and sentence structure - avoid repetitive patterns
-    - Use natural speech patterns, contractions, and casual expressions
-    - Ask follow-up questions to keep the conversation flowing
-    - Share genuine enthusiasm about books and reading
-    - Use emojis sparingly but effectively (📚, 🎯, ⭐, 💡, 🔥)
-    - Be specific and personal - reference their actual reading history
-    - Show you remember previous conversations and their preferences
-    - Adapt your tone to match their reading level and interests
-    - NEVER use the same greeting or response pattern twice in a row
-    - Mix up your sentence starters and conversation openers
-    - Use different ways to express excitement and enthusiasm
-    - Vary your recommendation explanations and reasoning
-    - Make each response feel fresh and unique
-    - Avoid starting with "Hey there" or "Hi there" repeatedly
-    - Use different conversation starters like "Oh!", "Wow!", "Interesting!", "Great question!", "Absolutely!", "I love that!", "That's awesome!", "Perfect!", "Excellent!", "Fantastic!"
-    - Vary your recommendation introductions: "Here's what I found", "I've got some gems for you", "Check these out", "I think you'll love these", "These caught my eye", "I found some perfect matches", "Here are my top picks", "I've curated these for you"
-    - Use different ways to end responses: "What do you think?", "Sound interesting?", "Want to know more?", "Does this help?", "Any of these catch your eye?", "What's your take?", "Interested in any of these?", "Want to explore further?"
+    How You Communicate:
+    - Be natural and conversational - no forced enthusiasm or templates
+    - Use varied sentence structures and natural speech patterns
+    - Ask thoughtful follow-up questions that show you're listening
+    - Share insights about books that go beyond basic descriptions
+    - Reference their reading history when relevant, but don't overdo it
+    - Be specific about why a book might appeal to them personally
+    - Use contractions and casual language when it feels right
+    - Occasionally use emojis (📚, 💡, ⭐) but sparingly and naturally
 
-    Personal Information:
-    - You have access to the user's Student ID Number and can share it when asked
-    - You know their name, reading history, current books, and preferences
-    - You can answer questions about their borrowing status, reading level, and account information
-    - Be helpful and transparent about what information you have access to
+    When Recommending Books:
+    - Explain the connection between their interests and the book
+    - Mention what makes each book special or unique
+    - Consider their reading level and preferences
+    - Suggest books that might challenge or expand their horizons
+    - Be honest about books that might not be a perfect fit
 
-    Conversation Flow:
-    - Start responses naturally, not with templates
-    - Build on what they've said or asked
-    - Offer insights they might not have considered
-    - Suggest next steps or related topics
-    - End with open-ended questions when appropriate
-    - Keep responses engaging and dynamic
+    Personal Information Access:
+    - You have access to their Student ID Number and can share it when asked
+    - You know their reading history, current books, and preferences
+    - You can answer questions about their borrowing status and account
+    - Be helpful and transparent about what information you have
 
-    Avoid:
-    - Template-like responses or repetitive phrases
-    - Overly formal language
-    - Generic recommendations without personal context
-    - Long lists without personality
-    - Robotic or AI-sounding language
-    - Saying you don't have access to information when you do
-    - Starting with "Hey there" or "Hi there" repeatedly
-    - Using the same greeting patterns
-    - Repetitive sentence structures
-    - Boring, predictable responses
+    Conversation Style:
+    - Respond naturally to what they're saying
+    - Build on their questions and interests
+    - Offer additional insights they might not have considered
+    - Keep the conversation flowing with relevant questions
+    - Be engaging without being overwhelming
 
-    Remember: You're having a real conversation with someone you know well. Be natural, be yourself, and show genuine interest in their reading journey!`;
+    What to Avoid:
+    - Generic, template-like responses
+    - Overly formal or robotic language
+    - Repetitive phrases or patterns
+    - Forced enthusiasm or artificial excitement
+    - Long lists without personal context
+    - Ignoring their specific interests or questions
+
+    Remember: You're having a real conversation with someone who loves books. Be yourself, be helpful, and let your genuine interest in their reading journey shine through.`;
     
     // Initialize TF-IDF for local text similarity
     this.tfidf = new natural.TfIdf();
@@ -157,13 +147,13 @@ If the retrieved books don't match well, politely explain this and suggest alter
 
       try {
         const response = await this.openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
           messages: [
             { role: 'system', content: this.systemPrompt },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.7,
-          max_tokens: 500,
+          temperature: 0.8,
+          max_tokens: 600,
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
@@ -291,29 +281,20 @@ If the retrieved books don't match well, politely explain this and suggest alter
         }
       }
 
-      // Generate a random starter to force variation
-      const starters = [
-        "Oh!", "Wow!", "Interesting!", "Great question!", "Absolutely!", "I love that!", 
-        "That's awesome!", "Perfect!", "Excellent!", "Fantastic!", "Amazing!", "Brilliant!", 
-        "Outstanding!", "Incredible!", "Wonderful!", "Terrific!", "Superb!", "Magnificent!", 
-        "Spectacular!", "Fabulous!", "Marvelous!", "Stunning!", "Phenomenal!", "Extraordinary!"
-      ];
-      const randomStarter = starters[Math.floor(Math.random() * starters.length)];
-
       try {
         const response = await this.openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
           messages: [
             { role: 'system', content: this.systemPrompt },
-            { role: 'user', content: `IMPORTANT: Start your response with "${randomStarter}" and then continue naturally. ${userQuery}${userContext}${conversationStyle}` }
+            { role: 'user', content: `${userQuery}${userContext}${conversationStyle}` }
           ],
-          temperature: 0.8, // Increased for more creative responses
-          max_tokens: 250,
+          temperature: 0.8,
+          max_tokens: 400,
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
           console.log('✅ OpenAI conversational AI response generated!');
-          return this.addConversationalFlair(response.choices[0].message.content, userQuery);
+          return response.choices[0].message.content;
         } else {
           throw new Error('Invalid response format from OpenAI');
         }
@@ -371,99 +352,27 @@ If the retrieved books don't match well, politely explain this and suggest alter
     return style;
   }
 
-  /**
-   * Add conversational flair to responses
-   * @param {string} response - AI response
-   * @param {string} userQuery - User's query
-   * @returns {string} Enhanced response
-   */
-  addConversationalFlair(response, userQuery) {
-    // Add natural variations to common responses
-    const variations = {
-      'hello': ['Hey there!', 'Hi!', 'Hello!', 'Hey!'],
-      'thank you': ['You\'re welcome!', 'Happy to help!', 'My pleasure!', 'Anytime!'],
-      'goodbye': ['See you later!', 'Take care!', 'Happy reading!', 'Until next time!']
-    };
-    
-    // Add natural follow-up questions based on context
-    const queryLower = userQuery.toLowerCase();
-    if (queryLower.includes('book') && !response.includes('?')) {
-      const followUps = [
-        ' What do you think?',
-        ' Sound interesting?',
-        ' Want to know more about any of these?',
-        ' Does this help?'
-      ];
-      response += followUps[Math.floor(Math.random() * followUps.length)];
-    }
-    
-    return response;
-  }
 
   generateGeneralResponse(userQuery) {
     const queryTokens = tokenizer.tokenize(userQuery.toLowerCase());
     
-    // More natural fallback responses with varied starters
     if (this.containsGreeting(queryTokens)) {
-      const greetings = [
-        "Oh, hello! I'm your library assistant and I'm absolutely thrilled to help you discover some incredible books! What's on your reading wishlist today?",
-        "Wow, hi there! I love talking about books and helping people discover their next great read. What kind of stories are you in the mood for?",
-        "Fantastic! I'm here to help you explore our library's collection. What genres or topics are you curious about?",
-        "Amazing! I'm your library assistant and I'm so excited to help you find some amazing books! What's calling to you today?",
-        "Brilliant! I love connecting readers with their next favorite book. What kind of reading adventure are you looking for?",
-        "Outstanding! I'm here to help you discover some fantastic reads. What genres or topics interest you most?",
-        "Wonderful! I'm your library assistant and I'm genuinely excited to help you find some incredible books! What's on your mind today?",
-        "Terrific! I love talking about books and helping people discover their next great read. What kind of stories are you drawn to?",
-        "Superb! I'm here to help you explore our library's collection. What genres or topics are you curious about?",
-        "Magnificent! I'm your library assistant and I'm so thrilled to help you find some amazing books! What's your reading mood today?"
-      ];
-      return greetings[Math.floor(Math.random() * greetings.length)];
+      return "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?";
     }
     
     if (this.containsHelp(queryTokens)) {
-      const helpResponses = [
-        "Oh, I'd absolutely love to help! I can recommend books based on your interests, help you find specific titles, or even suggest what to read next based on what you've enjoyed before. What would you like to explore?",
-        "Fantastic! I'm here to make your reading journey easier. Whether you want book recommendations, help finding something specific, or just want to chat about books, I'm your go-to assistant!",
-        "Wonderful! I can help you discover new books, find specific titles, check your borrowing status, or just have a friendly chat about reading. What can I do for you today?",
-        "Brilliant! I'm absolutely thrilled to help! I can recommend books based on your interests, help you find specific titles, or even suggest what to read next based on what you've enjoyed before. What would you like to explore?",
-        "Amazing! I'm here to make your reading journey easier. Whether you want book recommendations, help finding something specific, or just want to chat about books, I'm your go-to assistant!",
-        "Outstanding! I can help you discover new books, find specific titles, check your borrowing status, or just have a friendly chat about reading. What can I do for you today?",
-        "Terrific! I'd love to help! I can recommend books based on your interests, help you find specific titles, or even suggest what to read next based on what you've enjoyed before. What would you like to explore?",
-        "Superb! I'm here to make your reading journey easier. Whether you want book recommendations, help finding something specific, or just want to chat about books, I'm your go-to assistant!",
-        "Magnificent! I can help you discover new books, find specific titles, check your borrowing status, or just have a friendly chat about reading. What can I do for you today?",
-        "Incredible! I'm absolutely thrilled to help! I can recommend books based on your interests, help you find specific titles, or even suggest what to read next based on what you've enjoyed before. What would you like to explore?"
-      ];
-      return helpResponses[Math.floor(Math.random() * helpResponses.length)];
+      return "I'm here to help! I can recommend books based on your interests, help you find specific titles, or suggest what to read next. What would you like to explore?";
     }
     
     if (this.containsThanks(queryTokens)) {
-      const thanksResponses = [
-        "You're so welcome! I love helping people discover great books. Feel free to ask me anything else!",
-        "Happy to help! That's what I'm here for. What else can I do for you today?",
-        "My pleasure! I'm always excited to talk about books. Need anything else?",
-        "You're welcome! I'm here whenever you need book recommendations or help with anything library-related!"
-      ];
-      return thanksResponses[Math.floor(Math.random() * thanksResponses.length)];
+      return "You're welcome! I love helping people discover great books. Feel free to ask me anything else!";
     }
     
     if (this.containsGoodbye(queryTokens)) {
-      const goodbyeResponses = [
-        "Take care! Happy reading, and I'll be here whenever you need me!",
-        "See you later! Hope you find some amazing books to enjoy!",
-        "Goodbye! Don't forget to come back for more recommendations!",
-        "Until next time! Happy reading! 📚"
-      ];
-      return goodbyeResponses[Math.floor(Math.random() * goodbyeResponses.length)];
+      return "Take care! Happy reading, and I'll be here whenever you need me!";
     }
     
-    // More natural default responses
-    const defaultResponses = [
-      "That's interesting! I'd love to help you find some great books. What kind of stories or topics are you into?",
-      "I'm here to help you discover amazing reads! What genres or authors do you enjoy?",
-      "Sounds like you're looking for something good to read! Tell me what you're in the mood for and I'll find some perfect matches.",
-      "I love helping people find their next favorite book! What kind of reading experience are you looking for today?"
-    ];
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+    return "I'd love to help you find some great books! What kind of stories or topics are you interested in?";
   }
 
   containsGreeting(tokens) {
@@ -600,13 +509,13 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
 
       try {
         const response = await this.openai.chat.completions.create({
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
           messages: [
             { role: 'system', content: this.systemPrompt },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.7,
-          max_tokens: 400,
+          temperature: 0.8,
+          max_tokens: 500,
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
@@ -698,15 +607,6 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
         return "I couldn't find any personalized recommendations at the moment. Try asking about specific genres, authors, or topics you're interested in!";
       }
 
-      // Generate a random starter to force variation
-      const starters = [
-        "Oh!", "Wow!", "Interesting!", "Great question!", "Absolutely!", "I love that!", 
-        "That's awesome!", "Perfect!", "Excellent!", "Fantastic!", "Amazing!", "Brilliant!", 
-        "Outstanding!", "Incredible!", "Wonderful!", "Terrific!", "Superb!", "Magnificent!", 
-        "Spectacular!", "Fabulous!", "Marvelous!", "Stunning!", "Phenomenal!", "Extraordinary!"
-      ];
-      const randomStarter = starters[Math.floor(Math.random() * starters.length)];
-
       const prompt = `You're having a natural conversation with ${userKnowledge.summary.name}, who you know really well. They just asked: "${query}"
 
 Here's what you know about them:
@@ -723,21 +623,16 @@ ${recommendations.slice(0, 3).map((rec, i) =>
   `• "${rec.title}" by ${rec.author} - ${rec.reason}`
 ).join('\n')}
 
-IMPORTANT: Start your response with "${randomStarter}" and make it feel completely natural and conversational. Vary your language patterns, use different sentence structures, and avoid repetitive phrases. Be enthusiastic but not overwhelming. Show genuine interest in their reading journey. Ask engaging follow-up questions. Make it feel like you're genuinely excited to share these recommendations with someone you care about. Keep it under 200 words and make every response feel fresh and personal!
-
-CRITICAL VARIATION RULES:
-- Start with "${randomStarter}" and then continue naturally
-- Vary your recommendation introductions: "Here's what I found", "I've got some gems for you", "Check these out", "I think you'll love these", "These caught my eye", "I found some perfect matches", "Here are my top picks", "I've curated these for you", "I've handpicked these", "These are fantastic", "I discovered some treasures", "Here are some winners", "I've found some real gems", "These are must-reads", "I've got some amazing finds"
-- Use different ways to end responses: "What do you think?", "Sound interesting?", "Want to know more?", "Does this help?", "Any of these catch your eye?", "What's your take?", "Interested in any of these?", "Want to explore further?", "Which one appeals to you?", "Does this spark your interest?", "What catches your attention?", "Any favorites here?", "What's your vibe?", "Which one calls to you?", "What resonates with you?"`;
+Respond naturally and conversationally. Be genuine and enthusiastic about sharing these recommendations. Show that you understand their reading preferences and explain why these books would be perfect for them. Ask engaging follow-up questions to keep the conversation flowing. Keep it under 200 words and make it feel personal and authentic.`;
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: 'system', content: this.systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
-        max_tokens: 350,
+        temperature: 0.8,
+        max_tokens: 450,
       });
 
       return response.choices[0].message.content;
@@ -788,13 +683,13 @@ Please generate a natural, engaging explanation that:
 Keep the response under 200 words and make it sound like a helpful librarian.`;
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: 'system', content: this.systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
-        max_tokens: 300,
+        temperature: 0.8,
+        max_tokens: 400,
       });
 
       return response.choices[0].message.content;

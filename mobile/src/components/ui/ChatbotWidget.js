@@ -48,7 +48,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hi there! I'm your library assistant and I'm excited to help you discover some amazing books! What's on your reading wishlist today?",
+      text: "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?",
       isBot: true,
       timestamp: new Date(),
       isTyping: false,
@@ -108,37 +108,19 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
 
   const generateDynamicWelcome = (userKnowledge) => {
     if (!userKnowledge) {
-      return "Hi there! I'm your library assistant and I'm excited to help you discover some amazing books! What's on your reading wishlist today?";
+      return "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?";
     }
 
     const { summary } = userKnowledge;
-    const welcomeMessages = [];
-
-    // Based on reading level
+    
+    // Simple, natural welcome based on their reading level
     if (summary.readingLevel === 'New Reader') {
-      welcomeMessages.push("Welcome to your reading journey! I'm here to help you find books that'll make you fall in love with reading. What sounds interesting to you?");
+      return `Welcome to your reading journey, ${summary.name}! I'm here to help you find books you'll love. What sounds interesting to you?`;
     } else if (summary.readingLevel === 'Expert') {
-      welcomeMessages.push(`Hey ${summary.name}! I see you're quite the bookworm with ${summary.totalBooks} books under your belt. What's your next literary adventure?`);
+      return `Hi ${summary.name}! I see you've read ${summary.totalBooks} books - that's impressive! What's your next reading adventure?`;
     } else {
-      welcomeMessages.push(`Hi ${summary.name}! I love helping readers like you discover new favorites. What kind of stories are calling to you today?`);
+      return `Hello ${summary.name}! I'd love to help you discover your next favorite book. What kind of stories are you in the mood for?`;
     }
-
-    // Based on current status
-    if (summary.currentBooks > 0) {
-      welcomeMessages.push(`I see you've got ${summary.currentBooks} book${summary.currentBooks > 1 ? 's' : ''} out right now. How are you enjoying them? Need suggestions for what to read next?`);
-    }
-
-    // Based on favorite genre
-    if (summary.favoriteGenre && summary.favoriteGenre !== 'None') {
-      welcomeMessages.push(`I know you love ${summary.favoriteGenre} books! I've got some great new titles in that genre that I think you'll absolutely love. Want to hear about them?`);
-    }
-
-    // Based on reading activity
-    if (summary.totalBooks > 10) {
-      welcomeMessages.push(`Wow, ${summary.totalBooks} books! You're on fire! 🔥 What's your next reading challenge going to be?`);
-    }
-
-    return welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
   };
 
   useEffect(() => {
@@ -214,6 +196,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           isBot: true,
           timestamp: new Date(),
           books: response.data.data.books || [],
+          showBooksAsList: response.data.data.books && response.data.data.books.length > 0,
           isTyping: false,
           // Enhanced recommendation data
           advancedRecommendations: response.data.data.advancedRecommendations || false,
@@ -290,6 +273,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           isBot: true,
           timestamp: new Date(),
           books: response.data.data.books || [],
+          showBooksAsList: response.data.data.books && response.data.data.books.length > 0,
           isTyping: false,
           isPersonalized: response.data.data.isPersonalized,
           userPreferences: response.data.data.userPreferences,
@@ -383,7 +367,8 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           {message.text}
         </Text>
         
-        {message.books && message.books.length > 0 && (
+        {/* Show books only if they're provided as separate data (for fallback cases) */}
+        {message.books && message.books.length > 0 && message.showBooksAsList && (
           <View style={styles.recommendationsContainer}>
             <Text style={styles.recommendationsTitle}>
               📚 Recommended Books

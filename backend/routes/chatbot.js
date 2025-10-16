@@ -77,10 +77,10 @@ router.post('/simple', async (req, res) => {
   try {
     const { message } = req.body;
     
-    if (!message || typeof message !== 'string' || message.length < 3) {
+    if (!message || typeof message !== 'string' || message.length < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Message is required and must be at least 3 characters'
+        message: 'Message is required and must be at least 1 character'
       });
     }
     
@@ -119,10 +119,10 @@ router.post('/recommend', async (req, res) => {
       });
     }
     
-    if (message.length < 3 || message.length > 500) {
+    if (message.length < 1 || message.length > 500) {
       return res.status(400).json({
         success: false,
-        message: 'Message must be between 3 and 500 characters'
+        message: 'Message must be between 1 and 500 characters'
       });
     }
     
@@ -180,7 +180,7 @@ router.post('/recommend', async (req, res) => {
             success: true,
             data: {
               response,
-              books: books.slice(0, 3), // Return top 3 books
+              books: [], // Don't send books array - let AI response handle it naturally
               isBookRequest,
               aiPowered: true,
               advancedRecommendations: true,
@@ -224,7 +224,7 @@ router.post('/recommend', async (req, res) => {
       success: true,
       data: {
         response,
-        books: books.slice(0, 3), // Return top 3 books
+        books: [], // Don't send books array - let AI response handle it naturally
         isBookRequest,
         aiPowered: true
       }
