@@ -16,7 +16,7 @@ import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { ModernButton, ModernInput } from '../components/ModernComponents';
+import { ModernButton, ModernInput } from '../components/ui/ModernComponents';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 

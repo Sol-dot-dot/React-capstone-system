@@ -17,11 +17,10 @@ import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
-import ModernBottomNavigation from './components/ModernBottomNavigation';
 import NotificationService from './services/NotificationService';
-import ModernChatbotWidget from './components/ModernChatbotWidget';
+import ChatbotWidget from './components/ui/ChatbotWidget';
 import { ModernTheme, ModernStyles } from './styles/ModernTheme';
-import EnhancedBottomNavigation from './components/EnhancedBottomNavigation';
+import BottomNavigation from './components/navigation/BottomNavigation';
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -1201,14 +1200,14 @@ const App = () => {
           />
         )}
         
-        {/* Enhanced Bottom Navigation */}
-        <EnhancedBottomNavigation
+        {/* Bottom Navigation */}
+        <BottomNavigation
           activeTab={activeTab}
           onTabPress={handleTabPress}
         />
 
-        {/* Modern Chatbot Widget */}
-        <ModernChatbotWidget 
+        {/* Chatbot Widget */}
+        <ChatbotWidget 
           isVisible={isChatbotVisible} 
           onClose={() => setIsChatbotVisible(false)}
           userInfo={userData}
@@ -1297,7 +1296,7 @@ const App = () => {
       </ScrollView>
 
       {/* Chatbot Widget */}
-      <ModernChatbotWidget 
+      <ChatbotWidget 
         isVisible={isChatbotVisible} 
         onClose={() => setIsChatbotVisible(false)}
         userInfo={userData}

@@ -1,27 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import EnhancedDashboard from './components/EnhancedDashboard';
-import ModernDashboard from './components/ModernDashboard';
-import UserManagement from './components/UserManagement';
-import ModernUserManagement from './components/ModernUserManagement';
-import ActivityLogs from './components/ActivityLogs';
-import ModernActivityLogs from './components/ModernActivityLogs';
-import BookManagement from './components/BookManagement';
-import ModernBookManagement from './components/ModernBookManagement';
-import BorrowingManagement from './components/BorrowingManagement';
-import ModernBorrowingManagement from './components/ModernBorrowingManagement';
-import ModernReturningManagement from './components/ModernReturningManagement';
-import PenaltyManagement from './components/PenaltyManagement';
-import ModernPenaltyManagement from './components/ModernPenaltyManagement';
-import MonitoringDashboard from './components/MonitoringDashboard';
-import ClearanceRequirements from './components/ClearanceRequirements';
-import ChatbotWidget from './components/ChatbotWidget';
-import ModernChatbotWidget from './components/ModernChatbotWidget';
-import Sidebar from './components/Sidebar';
-import TopBar from './components/TopBar';
-import ModernSidebar from './components/ModernSidebar';
-import ModernTopBar from './components/ModernTopBar';
+import LoginForm from './components/auth/LoginForm';
+import Dashboard from './components/dashboard/Dashboard';
+import UserManagement from './components/management/UserManagement';
+import ActivityLogs from './components/monitoring/ActivityLogs';
+import BookManagement from './components/management/BookManagement';
+import BorrowingManagement from './components/management/BorrowingManagement';
+import ReturningManagement from './components/management/ReturningManagement';
+import PenaltyManagement from './components/management/PenaltyManagement';
+import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
+import ClearanceRequirements from './components/management/ClearanceRequirements';
+import ChatbotWidget from './components/ui/ChatbotWidget';
+import Sidebar from './components/layout/Sidebar';
+import TopBar from './components/layout/TopBar';
 import { SearchProvider } from './contexts/SearchContext';
 import designSystem from './styles/designSystem';
 import './App.css';
@@ -99,14 +90,14 @@ function App() {
       <div style={appStyles.app}>
         {isAuthenticated ? (
           <div className="flex h-screen bg-slate-50">
-            <ModernSidebar 
+            <Sidebar 
               isCollapsed={sidebarCollapsed}
               onToggle={toggleSidebar}
               onLogout={handleLogout}
               user={user}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
-              <ModernTopBar 
+              <TopBar 
                 onToggleSidebar={toggleSidebar}
                 user={user}
                 notifications={[]}
@@ -118,7 +109,7 @@ function App() {
               element={
                 isAuthenticated ? 
                 <Navigate to="/enhanced-dashboard" /> : 
-                <Login onLogin={handleLogin} />
+                <LoginForm onLogin={handleLogin} />
               } 
             />
             <Route 
@@ -133,7 +124,7 @@ function App() {
               path="/enhanced-dashboard" 
               element={
                 isAuthenticated ? 
-                <ModernDashboard user={user} /> : 
+                <Dashboard user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -141,7 +132,7 @@ function App() {
               path="/users" 
               element={
                 isAuthenticated ? 
-                <ModernUserManagement user={user} /> : 
+                <UserManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -149,7 +140,7 @@ function App() {
               path="/books" 
               element={
                 isAuthenticated ? 
-                <ModernBookManagement user={user} /> : 
+                <BookManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -157,7 +148,7 @@ function App() {
               path="/activity-logs" 
               element={
                 isAuthenticated ? 
-                <ModernActivityLogs user={user} /> : 
+                <ActivityLogs user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -165,7 +156,7 @@ function App() {
               path="/borrowings" 
               element={
                 isAuthenticated ? 
-                <ModernBorrowingManagement user={user} /> : 
+                <BorrowingManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -173,7 +164,7 @@ function App() {
               path="/returning" 
               element={
                 isAuthenticated ? 
-                <ModernReturningManagement user={user} /> : 
+                <ReturningManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -181,7 +172,7 @@ function App() {
               path="/penalties" 
               element={
                 isAuthenticated ? 
-                <ModernPenaltyManagement user={user} /> : 
+                <PenaltyManagement user={user} /> : 
                 <Navigate to="/login" />
               } 
             />
@@ -214,7 +205,7 @@ function App() {
             <Routes>
               <Route 
                 path="/login" 
-                element={<Login onLogin={handleLogin} />} 
+                element={<LoginForm onLogin={handleLogin} />} 
               />
               <Route 
                 path="*" 
@@ -266,8 +257,8 @@ function App() {
           </button>
         )}
 
-        {/* Modern Chatbot Widget */}
-        <ModernChatbotWidget 
+        {/* Chatbot Widget */}
+        <ChatbotWidget 
           isVisible={isChatbotVisible} 
           onClose={() => setIsChatbotVisible(false)} 
         />

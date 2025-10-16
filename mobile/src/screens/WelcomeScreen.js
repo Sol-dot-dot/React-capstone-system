@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { ModernButton } from '../components/ModernComponents';
+import { ModernButton } from '../components/ui/ModernComponents';
 
 const { width, height } = Dimensions.get('window');
 
