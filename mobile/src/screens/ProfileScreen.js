@@ -336,7 +336,7 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
             onPress={handleLogout}
             variant="outline"
             size="large"
-            icon="log-out-outline"
+            icon={<Icon name="log-out-outline" size={20} color={ModernTheme.colors.error} />}
             style={styles.logoutButton}
           />
         </View>

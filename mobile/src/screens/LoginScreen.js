@@ -16,7 +16,16 @@ import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { ModernButton, ModernInput } from '../components/ui/ModernComponents';
+import { 
+  ModernButton, 
+  ModernInput, 
+  ResponsiveContainer 
+} from '../components/ui/ModernComponents';
+import { 
+  getResponsiveSpacing, 
+  getResponsiveFontSize, 
+  deviceInfo 
+} from '../utils/ResponsiveUtils';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
@@ -149,7 +158,7 @@ const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
                 size="large"
                 loading={loading}
                 disabled={loading}
-                icon="log-in-outline"
+                icon={<Icon name="log-in-outline" size={20} color="#ffffff" />}
                 style={styles.loginButton}
               />
             </View>

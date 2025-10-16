@@ -1,15 +1,20 @@
 import { StyleSheet, Dimensions } from 'react-native';
+import { 
+  deviceInfo, 
+  getResponsiveSpacing, 
+  getResponsiveFontSize, 
+  getResponsiveBorderRadius,
+  getResponsiveIconSize 
+} from '../utils/ResponsiveUtils';
 
 const { width, height } = Dimensions.get('window');
 
 export const ModernTheme = {
-  // Device dimensions
+  // Enhanced device dimensions
   dimensions: {
+    ...deviceInfo,
     width,
     height,
-    isSmallDevice: width < 375,
-    isMediumDevice: width >= 375 && width < 414,
-    isLargeDevice: width >= 414,
   },
 
   colors: {
@@ -69,82 +74,82 @@ export const ModernTheme = {
   },
   
   spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
+    xs: getResponsiveSpacing(4),
+    sm: getResponsiveSpacing(8),
+    md: getResponsiveSpacing(16),
+    lg: getResponsiveSpacing(24),
+    xl: getResponsiveSpacing(32),
+    xxl: getResponsiveSpacing(48),
   },
   
   borderRadius: {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 20,
+    sm: getResponsiveBorderRadius(8),
+    md: getResponsiveBorderRadius(12),
+    lg: getResponsiveBorderRadius(16),
+    xl: getResponsiveBorderRadius(20),
     full: 50,
   },
   
   typography: {
     h1: {
-      fontSize: 32,
+      fontSize: getResponsiveFontSize(32),
       fontWeight: '700',
       color: '#0f172a',
-      lineHeight: 40,
+      lineHeight: getResponsiveFontSize(40),
     },
     h2: {
-      fontSize: 24,
+      fontSize: getResponsiveFontSize(24),
       fontWeight: '700',
       color: '#0f172a',
-      lineHeight: 32,
+      lineHeight: getResponsiveFontSize(32),
     },
     h3: {
-      fontSize: 20,
+      fontSize: getResponsiveFontSize(20),
       fontWeight: '600',
       color: '#0f172a',
-      lineHeight: 28,
+      lineHeight: getResponsiveFontSize(28),
     },
     h4: {
-      fontSize: 18,
+      fontSize: getResponsiveFontSize(18),
       fontWeight: '600',
       color: '#0f172a',
-      lineHeight: 24,
+      lineHeight: getResponsiveFontSize(24),
     },
     body: {
-      fontSize: 16,
+      fontSize: getResponsiveFontSize(16),
       fontWeight: '400',
       color: '#0f172a',
-      lineHeight: 24,
+      lineHeight: getResponsiveFontSize(24),
     },
     bodyMedium: {
-      fontSize: 16,
+      fontSize: getResponsiveFontSize(16),
       fontWeight: '500',
       color: '#0f172a',
-      lineHeight: 24,
+      lineHeight: getResponsiveFontSize(24),
     },
     caption: {
-      fontSize: 14,
+      fontSize: getResponsiveFontSize(14),
       fontWeight: '400',
       color: '#475569',
-      lineHeight: 20,
+      lineHeight: getResponsiveFontSize(20),
     },
     captionMedium: {
-      fontSize: 14,
+      fontSize: getResponsiveFontSize(14),
       fontWeight: '500',
       color: '#475569',
-      lineHeight: 20,
+      lineHeight: getResponsiveFontSize(20),
     },
     small: {
-      fontSize: 12,
+      fontSize: getResponsiveFontSize(12),
       fontWeight: '400',
       color: '#64748b',
-      lineHeight: 16,
+      lineHeight: getResponsiveFontSize(16),
     },
     smallMedium: {
-      fontSize: 12,
+      fontSize: getResponsiveFontSize(12),
       fontWeight: '500',
       color: '#64748b',
-      lineHeight: 16,
+      lineHeight: getResponsiveFontSize(16),
     },
   },
   

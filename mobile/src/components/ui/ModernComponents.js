@@ -8,10 +8,17 @@ import {
   Dimensions,
 } from 'react-native';
 import { ModernTheme } from '../../styles/ModernTheme';
+import { 
+  getResponsiveSpacing, 
+  getResponsiveFontSize, 
+  getResponsiveBorderRadius,
+  getResponsiveIconSize,
+  deviceInfo 
+} from '../../utils/ResponsiveUtils';
 
 const { width } = Dimensions.get('window');
 
-// Modern Button Component
+// Enhanced Modern Button Component
 export const ModernButton = ({ 
   title, 
   onPress, 
@@ -19,8 +26,46 @@ export const ModernButton = ({
   textStyle, 
   disabled = false,
   variant = 'primary',
-  size = 'medium'
+  size = 'medium',
+  fullWidth = false,
+  icon = null
 }) => {
+  const getButtonSize = () => {
+    switch (size) {
+      case 'small':
+        return {
+          paddingVertical: getResponsiveSpacing(8),
+          paddingHorizontal: getResponsiveSpacing(16),
+          borderRadius: getResponsiveBorderRadius(8),
+        };
+      case 'large':
+        return {
+          paddingVertical: getResponsiveSpacing(16),
+          paddingHorizontal: getResponsiveSpacing(24),
+          borderRadius: getResponsiveBorderRadius(12),
+        };
+      default:
+        return {
+          paddingVertical: getResponsiveSpacing(12),
+          paddingHorizontal: getResponsiveSpacing(20),
+          borderRadius: getResponsiveBorderRadius(10),
+        };
+    }
+  };
+
+  const getFontSize = () => {
+    switch (size) {
+      case 'small':
+        return getResponsiveFontSize(14);
+      case 'large':
+        return getResponsiveFontSize(18);
+      default:
+        return getResponsiveFontSize(16);
+    }
+  };
+
+  const buttonSize = getButtonSize();
+  
   const buttonStyle = [
     styles.button,
     variant === 'primary' ? styles.primaryButton : 
@@ -28,7 +73,10 @@ export const ModernButton = ({
     variant === 'outline' ? styles.outlineButton :
     variant === 'danger' ? styles.dangerButton :
     styles.primaryButton, // default
-    size === 'small' ? styles.smallButton : size === 'large' ? styles.largeButton : styles.mediumButton,
+    {
+      ...buttonSize,
+      width: fullWidth ? '100%' : undefined,
+    },
     disabled && styles.disabledButton,
     style,
   ];
@@ -38,7 +86,9 @@ export const ModernButton = ({
     variant === 'secondary' && styles.secondaryButtonText,
     variant === 'outline' && styles.outlineButtonText,
     variant === 'danger' && styles.dangerButtonText,
-    size === 'small' ? styles.smallButtonText : size === 'large' ? styles.largeButtonText : styles.mediumButtonText,
+    {
+      fontSize: getFontSize(),
+    },
     disabled && styles.disabledButtonText,
     textStyle,
   ];
@@ -50,6 +100,11 @@ export const ModernButton = ({
       disabled={disabled}
       activeOpacity={0.7}
     >
+      {icon && (
+        <View style={styles.buttonIcon}>
+          {icon}
+        </View>
+      )}
       <Text style={buttonTextStyle}>{title}</Text>
     </TouchableOpacity>
   );
@@ -61,15 +116,30 @@ export const ModernCard = ({
   style, 
   variant = 'default',
   padding = 'medium',
-  shadow = true 
+  shadow = true,
+  fullWidth = false
 }) => {
+  const getPadding = () => {
+    switch (padding) {
+      case 'small':
+        return getResponsiveSpacing(12);
+      case 'large':
+        return getResponsiveSpacing(24);
+      default:
+        return getResponsiveSpacing(16);
+    }
+  };
+
   const cardStyle = [
     styles.card,
     variant === 'elevated' && styles.elevatedCard,
     variant === 'outlined' && styles.outlinedCard,
     variant === 'glass' && styles.glassCard,
-    padding === 'small' && styles.smallPadding,
-    padding === 'large' && styles.largePadding,
+    {
+      padding: getPadding(),
+      width: fullWidth ? '100%' : undefined,
+      borderRadius: getResponsiveBorderRadius(12),
+    },
     shadow && styles.cardShadow,
     style,
   ];
@@ -89,27 +159,58 @@ export const ModernBadge = ({
   textStyle,
   size = 'medium'
 }) => {
+  const getBadgeSize = () => {
+    switch (size) {
+      case 'small':
+        return {
+          paddingHorizontal: getResponsiveSpacing(8),
+          paddingVertical: getResponsiveSpacing(4),
+          borderRadius: getResponsiveBorderRadius(12),
+        };
+      case 'large':
+        return {
+          paddingHorizontal: getResponsiveSpacing(16),
+          paddingVertical: getResponsiveSpacing(8),
+          borderRadius: getResponsiveBorderRadius(16),
+        };
+      default:
+        return {
+          paddingHorizontal: getResponsiveSpacing(12),
+          paddingVertical: getResponsiveSpacing(6),
+          borderRadius: getResponsiveBorderRadius(14),
+        };
+    }
+  };
+
+  const getFontSize = () => {
+    switch (size) {
+      case 'small':
+        return getResponsiveFontSize(10);
+      case 'large':
+        return getResponsiveFontSize(14);
+      default:
+        return getResponsiveFontSize(12);
+    }
+  };
+
+  const badgeSize = getBadgeSize();
+  
   const badgeStyle = [
     styles.badge,
-    size === 'small' && styles.smallBadge,
-    size === 'large' && styles.largeBadge,
     variant === 'success' && styles.successBadge,
     variant === 'warning' && styles.warningBadge,
     variant === 'error' && styles.errorBadge,
     variant === 'info' && styles.infoBadge,
     variant === 'primary' && styles.primaryBadge,
+    badgeSize,
     style,
   ];
 
   const badgeTextStyle = [
     styles.badgeText,
-    size === 'small' && styles.smallBadgeText,
-    size === 'large' && styles.largeBadgeText,
-    variant === 'success' && styles.successBadgeText,
-    variant === 'warning' && styles.warningBadgeText,
-    variant === 'error' && styles.errorBadgeText,
-    variant === 'info' && styles.infoBadgeText,
-    variant === 'primary' && styles.primaryBadgeText,
+    {
+      fontSize: getFontSize(),
+    },
     textStyle,
   ];
 
@@ -130,14 +231,49 @@ export const ModernInput = ({
   style,
   label,
   error,
+  size = 'medium',
+  fullWidth = false,
   ...props
 }) => {
+  const getInputSize = () => {
+    switch (size) {
+      case 'small':
+        return {
+          paddingVertical: getResponsiveSpacing(8),
+          paddingHorizontal: getResponsiveSpacing(12),
+          borderRadius: getResponsiveBorderRadius(8),
+          fontSize: getResponsiveFontSize(14),
+        };
+      case 'large':
+        return {
+          paddingVertical: getResponsiveSpacing(16),
+          paddingHorizontal: getResponsiveSpacing(16),
+          borderRadius: getResponsiveBorderRadius(12),
+          fontSize: getResponsiveFontSize(18),
+        };
+      default:
+        return {
+          paddingVertical: getResponsiveSpacing(12),
+          paddingHorizontal: getResponsiveSpacing(14),
+          borderRadius: getResponsiveBorderRadius(10),
+          fontSize: getResponsiveFontSize(16),
+        };
+    }
+  };
+
+  const inputSize = getInputSize();
+
   return (
-    <View style={styles.inputContainer}>
-      {label && <Text style={styles.inputLabel}>{label}</Text>}
+    <View style={[styles.inputContainer, fullWidth && { width: '100%' }]}>
+      {label && (
+        <Text style={[styles.inputLabel, { fontSize: getResponsiveFontSize(14) }]}>
+          {label}
+        </Text>
+      )}
       <TextInput
         style={[
           styles.input,
+          inputSize,
           error && styles.inputError,
           style
         ]}
@@ -149,7 +285,11 @@ export const ModernInput = ({
         placeholderTextColor={ModernTheme.colors.textSecondary}
         {...props}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Text style={[styles.errorText, { fontSize: getResponsiveFontSize(12) }]}>
+          {error}
+        </Text>
+      )}
     </View>
   );
 };
@@ -169,11 +309,82 @@ export const StatisticsCard = ({
           {icon}
         </View>
         <View style={styles.statisticsText}>
-          <Text style={styles.statisticsValue}>{value}</Text>
-          <Text style={styles.statisticsTitle}>{title}</Text>
+          <Text style={[styles.statisticsValue, { fontSize: getResponsiveFontSize(24) }]}>
+            {value}
+          </Text>
+          <Text style={[styles.statisticsTitle, { fontSize: getResponsiveFontSize(14) }]}>
+            {title}
+          </Text>
         </View>
       </View>
     </ModernCard>
+  );
+};
+
+// New: Responsive Grid Component
+export const ResponsiveGrid = ({ 
+  children, 
+  columns = null,
+  spacing = 16,
+  style 
+}) => {
+  const { getResponsiveGridColumns } = require('../../utils/ResponsiveUtils');
+  const gridColumns = columns || getResponsiveGridColumns();
+  const responsiveSpacing = getResponsiveSpacing(spacing);
+  
+  const gridStyle = {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginHorizontal: -responsiveSpacing / 2,
+  };
+
+  const itemStyle = {
+    width: `${100 / gridColumns}%`,
+    paddingHorizontal: responsiveSpacing / 2,
+    marginBottom: responsiveSpacing,
+  };
+
+  return (
+    <View style={[gridStyle, style]}>
+      {React.Children.map(children, (child, index) => (
+        <View key={index} style={itemStyle}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
+};
+
+// New: Responsive Container Component
+export const ResponsiveContainer = ({ 
+  children, 
+  padding = 'medium',
+  maxWidth = null,
+  style 
+}) => {
+  const getPadding = () => {
+    switch (padding) {
+      case 'small':
+        return getResponsiveSpacing(12);
+      case 'large':
+        return getResponsiveSpacing(24);
+      default:
+        return getResponsiveSpacing(16);
+    }
+  };
+
+  const containerStyle = {
+    padding: getPadding(),
+    width: '100%',
+    maxWidth: maxWidth || (deviceInfo.isTablet ? 800 : '100%'),
+    alignSelf: 'center',
+  };
+
+  return (
+    <View style={[containerStyle, style]}>
+      {children}
+    </View>
   );
 };
 
@@ -233,6 +444,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    minHeight: 48,
+    minWidth: 120,
   },
   primaryButton: {
     backgroundColor: ModernTheme.colors.primary,
@@ -294,12 +507,15 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     color: ModernTheme.colors.textMuted,
   },
+  buttonIcon: {
+    marginRight: getResponsiveSpacing(8),
+  },
 
   // Card Styles
   card: {
     backgroundColor: ModernTheme.colors.background,
-    borderRadius: 16,
-    marginVertical: 4,
+    borderRadius: getResponsiveBorderRadius(16),
+    marginVertical: getResponsiveSpacing(4),
   },
   elevatedCard: {
     shadowColor: ModernTheme.colors.gray[900],
@@ -340,9 +556,9 @@ const styles = StyleSheet.create({
 
   // Badge Styles
   badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: getResponsiveSpacing(12),
+    paddingVertical: getResponsiveSpacing(6),
+    borderRadius: getResponsiveBorderRadius(16),
     alignSelf: 'flex-start',
   },
   smallBadge: {
@@ -371,7 +587,7 @@ const styles = StyleSheet.create({
     backgroundColor: ModernTheme.colors.primary + '15',
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: getResponsiveFontSize(12),
     fontWeight: '600',
     color: ModernTheme.colors.primary,
   },
@@ -399,38 +615,38 @@ const styles = StyleSheet.create({
 
   // Input Styles
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: getResponsiveSpacing(16),
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: getResponsiveFontSize(14),
     fontWeight: '600',
     color: ModernTheme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: getResponsiveSpacing(8),
   },
   input: {
     borderWidth: 1.5,
     borderColor: ModernTheme.colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: getResponsiveBorderRadius(12),
+    paddingHorizontal: getResponsiveSpacing(16),
+    paddingVertical: getResponsiveSpacing(14),
+    fontSize: getResponsiveFontSize(16),
     backgroundColor: ModernTheme.colors.background,
     color: ModernTheme.colors.textPrimary,
-    minHeight: 52,
+    minHeight: getResponsiveSpacing(52),
   },
   inputError: {
     borderColor: ModernTheme.colors.error,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: getResponsiveFontSize(12),
     color: ModernTheme.colors.error,
-    marginTop: 4,
+    marginTop: getResponsiveSpacing(4),
   },
 
   // Statistics Card Styles
   statisticsCard: {
-    padding: 16,
-    marginVertical: 6,
+    padding: getResponsiveSpacing(16),
+    marginVertical: getResponsiveSpacing(6),
   },
   statisticsContent: {
     flexDirection: 'row',

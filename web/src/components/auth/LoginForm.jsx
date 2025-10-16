@@ -39,7 +39,7 @@ const Login = ({ onLogin }) => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen flex items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8"
       style={{
         backgroundImage: "url('/loginbackground.jpg')",
         backgroundSize: "cover",
@@ -58,7 +58,7 @@ const Login = ({ onLogin }) => {
           top: 0,
           left: "50%",
           transform: "translateX(-50%)",
-          width: "500px", // Adjust width as needed
+          width: "min(500px, 90vw)", // Responsive width
           height: "100%",
           backgroundColor: "rgba(248, 250, 252, 0.7)", // Gray background with transparency
           backdropFilter: "blur(-20px)", // Blur effect - Change this value to control blur intensity
@@ -77,18 +77,18 @@ const Login = ({ onLogin }) => {
           justifyContent: "center"
         }}
       >
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <img 
             src="/smc-logo.png" 
             alt="SMC Logo" 
-            className="h-24 w-auto mx-auto mb-6"
+            className="h-20 sm:h-24 w-auto mx-auto mb-4 sm:mb-6"
             style={{
-              height: '150px',
+              height: 'clamp(80px, 12vw, 150px)',
               width: 'auto',
-              marginTop: '-150px',
-              marginBottom: '45px',
+              marginTop: 'clamp(-80px, -12vw, -150px)',
+              marginBottom: 'clamp(20px, 4vw, 45px)',
             }}
             onError={(e) => {
               e.target.style.display = 'none';
@@ -97,17 +97,17 @@ const Login = ({ onLogin }) => {
         </div>
         
         <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-          <CardHeader className="space-y-3 pb-8">
-            <CardTitle className="text-3xl font-bold text-center text-slate-800">
+          <CardHeader className="space-y-3 pb-6 sm:pb-8">
+            <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800">
               SMC Library System
             </CardTitle>
-            <CardDescription className="text-center text-slate-600 text-base">
+            <CardDescription className="text-center text-slate-600 text-sm sm:text-base">
               St. Michael&apos;s College Library Management
             </CardDescription>
             <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"></div>
           </CardHeader>
           
-          <CardContent className="px-8 pb-8">
+          <CardContent className="px-6 sm:px-8 pb-6 sm:pb-8">
             {error && (
               <div className="mb-6 p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>

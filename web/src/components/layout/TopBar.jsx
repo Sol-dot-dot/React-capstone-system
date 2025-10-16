@@ -18,7 +18,7 @@ import { useSearch } from '../../contexts/SearchContext';
 import SearchResults from '../ui/SearchResults';
 import axios from 'axios';
 
-const ModernTopBar = ({ onToggleSidebar, user }) => {
+const ModernTopBar = ({ onToggleSidebar, user, isMobile }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -119,37 +119,39 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
         </div>
 
         {/* Center Section - Search */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search books, users, or activities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setShowResults(true)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-slate-50 focus:bg-white transition-colors"
-            />
-            {isSearching && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              </div>
-            )}
-            
-            {/* Search Results */}
-            <SearchResults
-              searchQuery={searchQuery}
-              searchResults={searchResults}
-              isSearching={isSearching}
-              showResults={showResults}
-              onClose={() => setShowResults(false)}
-              onItemClick={(type, item) => {
-                // Navigation is handled in SearchResults component
-                console.log('Search item clicked:', type, item);
-              }}
-            />
+        {!isMobile && (
+          <div className="flex-1 max-w-md mx-8">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search books, users, or activities..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowResults(true)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-slate-50 focus:bg-white transition-colors"
+              />
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                </div>
+              )}
+              
+              {/* Search Results */}
+              <SearchResults
+                searchQuery={searchQuery}
+                searchResults={searchResults}
+                isSearching={isSearching}
+                showResults={showResults}
+                onClose={() => setShowResults(false)}
+                onItemClick={(type, item) => {
+                  // Navigation is handled in SearchResults component
+                  console.log('Search item clicked:', type, item);
+                }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right Section */}
         <div className="flex items-center space-x-4">
@@ -267,12 +269,14 @@ const ModernTopBar = ({ onToggleSidebar, user }) => {
                   {user?.username?.charAt(0).toUpperCase() || 'A'}
                 </AvatarFallback>
               </Avatar>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-slate-900">
-                  {user?.username || 'Administrator'}
-                </p>
-                <p className="text-xs text-slate-500">Admin</p>
-              </div>
+              {!isMobile && (
+                <div className="text-left">
+                  <p className="text-sm font-medium text-slate-900">
+                    {user?.username || 'Administrator'}
+                  </p>
+                  <p className="text-xs text-slate-500">Admin</p>
+                </div>
+              )}
               <ChevronDown className="h-4 w-4 text-slate-400" />
             </Button>
 

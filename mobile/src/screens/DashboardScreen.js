@@ -13,7 +13,20 @@ import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { ModernButton, ModernCard, ModernBadge } from '../components/ui/ModernComponents';
+import { 
+  getResponsiveSpacing, 
+  getResponsiveFontSize, 
+  deviceInfo,
+  getResponsiveLayout 
+} from '../utils/ResponsiveUtils';
+import { 
+  ModernButton, 
+  ModernCard, 
+  ModernBadge, 
+  StatisticsCard, 
+  ResponsiveGrid, 
+  ResponsiveContainer 
+} from '../components/ui/ModernComponents';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
@@ -212,6 +225,7 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
           />
         }
       >
+        <ResponsiveContainer padding="large">
         {/* Header */}
         <Animatable.View
           animation="fadeInDown"
@@ -233,33 +247,27 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
           delay={200}
           style={styles.statsContainer}
         >
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <View style={styles.statsGrid}>
+          <Text style={[styles.sectionTitle, { fontSize: getResponsiveFontSize(20) }]}>
+            Overview
+          </Text>
+          <ResponsiveGrid columns={deviceInfo.isTablet ? 4 : 2} spacing={16}>
             {stats.map((stat, index) => (
               <Animatable.View
                 key={stat.title}
                 animation="fadeInUp"
                 duration={600}
                 delay={400 + (index * 100)}
-                style={styles.statItem}
               >
-                <ModernCard
-                  onPress={stat.onPress}
+                <StatisticsCard
+                  title={stat.title}
+                  value={stat.value}
+                  icon={<Icon name={stat.icon} size={getResponsiveFontSize(24)} color={stat.color} />}
+                  color={stat.color}
                   style={[styles.statCard, { borderLeftColor: stat.color, borderLeftWidth: 4 }]}
-                >
-                  <View style={styles.statContent}>
-                    <View style={[styles.statIcon, { backgroundColor: stat.color + '20' }]}>
-                      <Icon name={stat.icon} size={24} color={stat.color} />
-                    </View>
-                    <View style={styles.statText}>
-                      <Text style={styles.statValue}>{stat.value}</Text>
-                      <Text style={styles.statLabel}>{stat.title}</Text>
-                    </View>
-                  </View>
-                </ModernCard>
+                />
               </Animatable.View>
             ))}
-          </View>
+          </ResponsiveGrid>
         </Animatable.View>
 
         {/* Quick Actions */}
@@ -269,29 +277,35 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
           delay={800}
           style={styles.quickActionsContainer}
         >
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
+          <Text style={[styles.sectionTitle, { fontSize: getResponsiveFontSize(20) }]}>
+            Quick Actions
+          </Text>
+          <ResponsiveGrid columns={deviceInfo.isTablet ? 4 : 2} spacing={16}>
             {quickActions.map((action, index) => (
               <Animatable.View
                 key={action.title}
                 animation="fadeInUp"
                 duration={600}
                 delay={1000 + (index * 100)}
-                style={styles.quickActionItem}
               >
                 <ModernCard
                   onPress={action.onPress}
                   style={styles.quickActionCard}
+                  fullWidth
                 >
                   <View style={[styles.quickActionIcon, { backgroundColor: action.color + '20' }]}>
-                    <Icon name={action.icon} size={28} color={action.color} />
+                    <Icon name={action.icon} size={getResponsiveFontSize(28)} color={action.color} />
                   </View>
-                  <Text style={styles.quickActionTitle}>{action.title}</Text>
-                  <Text style={styles.quickActionSubtitle}>{action.subtitle}</Text>
+                  <Text style={[styles.quickActionTitle, { fontSize: getResponsiveFontSize(16) }]}>
+                    {action.title}
+                  </Text>
+                  <Text style={[styles.quickActionSubtitle, { fontSize: getResponsiveFontSize(12) }]}>
+                    {action.subtitle}
+                  </Text>
                 </ModernCard>
               </Animatable.View>
             ))}
-          </View>
+          </ResponsiveGrid>
         </Animatable.View>
 
         {/* Recent Activity */}
@@ -369,6 +383,7 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
             })}
           </Animatable.View>
         )}
+        </ResponsiveContainer>
       </ScrollView>
     </View>
   );
@@ -388,9 +403,8 @@ const styles = StyleSheet.create({
     backgroundColor: ModernTheme.colors.backgroundGradient[0],
   },
   scrollContent: {
-    paddingHorizontal: ModernTheme.spacing.lg,
-    paddingTop: 60,
-    paddingBottom: 120, // Account for bottom navigation
+    paddingTop: getResponsiveSpacing(60),
+    paddingBottom: getResponsiveSpacing(120), // Account for bottom navigation
   },
   header: {
     marginBottom: ModernTheme.spacing.xl,
@@ -406,10 +420,12 @@ const styles = StyleSheet.create({
   greeting: {
     ...ModernTheme.typography.body,
     color: ModernTheme.colors.textSecondary,
+    fontSize: getResponsiveFontSize(16),
   },
   userName: {
     ...ModernTheme.typography.h2,
     color: ModernTheme.colors.textPrimary,
+    fontSize: getResponsiveFontSize(24),
   },
   sectionTitle: {
     ...ModernTheme.typography.h3,

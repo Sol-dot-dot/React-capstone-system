@@ -12,7 +12,18 @@ import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { ModernButton, ModernCard, ModernBadge } from '../components/ui/ModernComponents';
+import { 
+  ModernButton, 
+  ModernCard, 
+  ModernBadge, 
+  ResponsiveContainer,
+  ResponsiveGrid 
+} from '../components/ui/ModernComponents';
+import { 
+  getResponsiveSpacing, 
+  getResponsiveFontSize, 
+  deviceInfo 
+} from '../utils/ResponsiveUtils';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 

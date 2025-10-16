@@ -262,7 +262,7 @@ const ModernBookManagement = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -271,18 +271,18 @@ const ModernBookManagement = ({ user }) => {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
                 Book Management
               </h1>
-              <p className="text-slate-600 text-lg">
+              <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
                 Manage your library's book collection and inventory
               </p>
             </div>
             <Button 
               onClick={() => setShowAddForm(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add New Book
@@ -362,7 +362,8 @@ const ModernBookManagement = ({ user }) => {
                 </div>
               )}
               
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-200">
@@ -463,6 +464,91 @@ const ModernBookManagement = ({ user }) => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {filteredBooks.map((book, index) => (
+                  <motion.div
+                    key={book.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+                      highlightBookId === book.id ? 'bg-blue-50 border-blue-200' : ''
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-slate-900 text-lg">{book.title}</h3>
+                        <p className="text-slate-600">by {book.author}</p>
+                        <p className="text-sm text-slate-500">ISBN: {book.isbn}</p>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        <Badge 
+                          variant={book.status === 'available' ? 'default' : 'secondary'}
+                          className={
+                            book.status === 'available' 
+                              ? 'bg-green-100 text-green-700' 
+                              : book.status === 'borrowed'
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-red-100 text-red-700'
+                          }
+                        >
+                          {book.status === 'available' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {book.status === 'borrowed' && <Clock className="h-3 w-3 mr-1" />}
+                          {book.status === 'maintenance' && <AlertCircle className="h-3 w-3 mr-1" />}
+                          {book.status.charAt(0).toUpperCase() + book.status.slice(1)}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          <Tag className="h-3 w-3 mr-1" />
+                          {book.category}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-slate-500">Barcode</p>
+                          <p className="font-mono">{book.barcode || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500">Number Code</p>
+                          <p className="font-mono">{book.number_code || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <User className="h-4 w-4" />
+                          {book.added_by || 'admin'}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBook(book);
+                              setFormData(book);
+                              setShowEditForm(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteBook(book.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
               
               {filteredBooks.length === 0 && (

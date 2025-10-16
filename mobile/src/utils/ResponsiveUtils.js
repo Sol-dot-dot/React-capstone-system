@@ -6,21 +6,57 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BASE_WIDTH = 390;
 const BASE_HEIGHT = 844;
 
-// Responsive scaling functions
+// Enhanced device detection
+export const deviceInfo = {
+  width: SCREEN_WIDTH,
+  height: SCREEN_HEIGHT,
+  pixelRatio: PixelRatio.get(),
+  fontScale: PixelRatio.getFontScale(),
+  isSmallDevice: SCREEN_WIDTH < 375,
+  isMediumDevice: SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 414,
+  isLargeDevice: SCREEN_WIDTH >= 414 && SCREEN_WIDTH < 768,
+  isTablet: SCREEN_WIDTH >= 768,
+  isLandscape: SCREEN_WIDTH > SCREEN_HEIGHT,
+  isPortrait: SCREEN_WIDTH < SCREEN_HEIGHT,
+};
+
+// Enhanced responsive scaling functions
 export const scale = (size) => {
-  return (SCREEN_WIDTH / BASE_WIDTH) * size;
+  const scaledSize = (SCREEN_WIDTH / BASE_WIDTH) * size;
+  // Limit scaling to prevent extreme sizes
+  return Math.max(size * 0.8, Math.min(size * 1.5, scaledSize));
 };
 
 export const verticalScale = (size) => {
-  return (SCREEN_HEIGHT / BASE_HEIGHT) * size;
+  const scaledSize = (SCREEN_HEIGHT / BASE_HEIGHT) * size;
+  // Limit scaling to prevent extreme sizes
+  return Math.max(size * 0.8, Math.min(size * 1.5, scaledSize));
 };
 
 export const moderateScale = (size, factor = 0.5) => {
   return size + (scale(size) - size) * factor;
 };
 
-// Font scaling
+// Enhanced font scaling with better control
 export const scaleFont = (size) => {
+  const scaledSize = scale(size);
+  const fontScale = PixelRatio.getFontScale();
+  
+  // Adjust for device font scale settings
+  let adjustedSize = scaledSize / fontScale;
+  
+  // Apply device-specific adjustments
+  if (deviceInfo.isSmallDevice) {
+    adjustedSize *= 0.9;
+  } else if (deviceInfo.isTablet) {
+    adjustedSize *= 1.1;
+  }
+  
+  return Math.round(adjustedSize);
+};
+
+// Legacy font scaling (kept for backward compatibility)
+export const legacyScaleFont = (size) => {
   const newSize = scale(size);
   if (PixelRatio.get() < 3) {
     return newSize * 0.95;
@@ -36,20 +72,20 @@ export const isTablet = SCREEN_WIDTH >= 768;
 
 // Responsive spacing
 export const getResponsiveSpacing = (baseSpacing) => {
-  if (isSmallDevice) {
+  if (deviceInfo.isSmallDevice) {
     return baseSpacing * 0.8;
-  } else if (isLargeDevice) {
-    return baseSpacing * 1.2;
+  } else if (deviceInfo.isTablet) {
+    return baseSpacing * 1.3;
   }
   return baseSpacing;
 };
 
 // Responsive font sizes
 export const getResponsiveFontSize = (baseSize) => {
-  if (isSmallDevice) {
+  if (deviceInfo.isSmallDevice) {
     return baseSize * 0.9;
-  } else if (isLargeDevice) {
-    return baseSize * 1.1;
+  } else if (deviceInfo.isTablet) {
+    return baseSize * 1.15;
   }
   return baseSize;
 };
@@ -73,9 +109,9 @@ export const getCardWidth = (containerPadding = 32) => {
 
 // Responsive padding
 export const getResponsivePadding = (basePadding) => {
-  if (isSmallDevice) {
+  if (deviceInfo.isSmallDevice) {
     return basePadding * 0.8;
-  } else if (isLargeDevice) {
+  } else if (deviceInfo.isTablet) {
     return basePadding * 1.2;
   }
   return basePadding;
@@ -114,7 +150,7 @@ export const isBreakpoint = (breakpoint) => {
   }
 };
 
-// Responsive styles helper
+// Enhanced responsive styles helper
 export const createResponsiveStyle = (styles) => {
   return {
     ...styles,
@@ -127,22 +163,98 @@ export const createResponsiveStyle = (styles) => {
   };
 };
 
+// Advanced responsive utilities
+export const getResponsiveValue = (small, medium, large, tablet) => {
+  if (deviceInfo.isTablet) return tablet || large;
+  if (deviceInfo.isLargeDevice) return large;
+  if (deviceInfo.isMediumDevice) return medium;
+  return small;
+};
+
+// Responsive grid system
+export const getResponsiveGridColumns = () => {
+  if (deviceInfo.isTablet) return 3;
+  if (deviceInfo.isLargeDevice) return 2;
+  return 2;
+};
+
+// Responsive card dimensions
+export const getResponsiveCardDimensions = () => {
+  const columns = getResponsiveGridColumns();
+  const containerPadding = getResponsivePadding(32);
+  const gap = getResponsivePadding(16);
+  
+  const availableWidth = SCREEN_WIDTH - (containerPadding * 2);
+  const cardWidth = (availableWidth - (gap * (columns - 1))) / columns;
+  
+  return {
+    width: cardWidth,
+    height: cardWidth * 1.2, // Maintain aspect ratio
+    columns,
+  };
+};
+
+
+
+// Responsive icon size
+export const getResponsiveIconSize = (baseSize) => {
+  if (deviceInfo.isSmallDevice) return baseSize * 0.9;
+  if (deviceInfo.isTablet) return baseSize * 1.2;
+  return baseSize;
+};
+
+// Responsive border radius
+export const getResponsiveBorderRadius = (baseRadius) => {
+  if (deviceInfo.isSmallDevice) return baseRadius * 0.8;
+  if (deviceInfo.isTablet) return baseRadius * 1.2;
+  return baseRadius;
+};
+
+// Layout helpers
+export const getResponsiveLayout = () => {
+  return {
+    containerPadding: getResponsivePadding(20),
+    cardPadding: getResponsivePadding(16),
+    sectionSpacing: getResponsivePadding(24),
+    itemSpacing: getResponsivePadding(12),
+  };
+};
+
 export default {
+  // Core scaling functions
   scale,
   verticalScale,
   moderateScale,
   scaleFont,
+  legacyScaleFont,
+  
+  // Device detection
+  deviceInfo,
   isSmallDevice,
   isMediumDevice,
   isLargeDevice,
   isTablet,
+  
+  // Responsive utilities
   getResponsiveSpacing,
   getResponsiveFontSize,
-  getGridColumns,
-  getCardWidth,
+  getResponsiveIconSize,
+  getResponsiveBorderRadius,
   getResponsivePadding,
+  getResponsiveValue,
+  getResponsiveLayout,
+  
+  // Grid and layout
+  getGridColumns,
+  getResponsiveGridColumns,
+  getCardWidth,
+  getResponsiveCardDimensions,
+  
+  // Screen info
   screenDimensions,
   breakpoints,
   isBreakpoint,
+  
+  // Style helpers
   createResponsiveStyle,
 };

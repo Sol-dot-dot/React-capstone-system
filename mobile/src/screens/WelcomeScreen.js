@@ -13,6 +13,7 @@ import {
 // import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
 import { ModernButton } from '../components/ui/ModernComponents';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -91,7 +92,7 @@ const WelcomeScreen = ({ onNavigate }) => {
             variant="primary"
             size="medium"
             style={styles.primaryButton}
-            icon="log-in-outline"
+            icon={<Icon name="log-in-outline" size={20} color="#ffffff" />}
           />
           
           <ModernButton
@@ -100,7 +101,7 @@ const WelcomeScreen = ({ onNavigate }) => {
             variant="secondary"
             size="medium"
             style={styles.secondaryButton}
-            icon="person-add-outline"
+            icon={<Icon name="person-add-outline" size={20} color={ModernTheme.colors.primary} />}
           />
         </View>
       </ScrollView>
@@ -166,15 +167,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: ModernTheme.spacing.md,
   },
   actionSection: {
-    gap: ModernTheme.spacing.md,
     marginTop: ModernTheme.spacing.lg,
   },
   primaryButton: {
     ...ModernTheme.shadows.elevated,
+    minHeight: 48,
+    width: '100%',
   },
   secondaryButton: {
     borderColor: ModernTheme.colors.primary,
     backgroundColor: ModernTheme.colors.surface,
+    marginTop: ModernTheme.spacing.md,
+    minHeight: 48,
+    width: '100%',
     ...ModernTheme.shadows.button,
   },
 });

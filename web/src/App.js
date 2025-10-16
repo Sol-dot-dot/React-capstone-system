@@ -22,6 +22,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [isChatbotVisible, setIsChatbotVisible] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -31,6 +33,22 @@ function App() {
       setIsAuthenticated(true);
       setUser(JSON.parse(userData));
     }
+  }, []);
+
+  // Handle responsive behavior
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarCollapsed(true);
+        setSidebarOpen(false);
+      }
+    };
+
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   const handleLogin = (token, userData) => {
@@ -48,7 +66,11 @@ function App() {
   };
 
   const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
+    if (isMobile) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
   };
 
   const appStyles = {
@@ -89,9 +111,19 @@ function App() {
       <Router>
       <div style={appStyles.app}>
         {isAuthenticated ? (
-          <div className="flex h-screen bg-slate-50">
+          <div className="flex h-screen bg-slate-50 relative">
+            {/* Mobile Overlay */}
+            {isMobile && sidebarOpen && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            
             <Sidebar 
               isCollapsed={sidebarCollapsed}
+              isMobile={isMobile}
+              isOpen={sidebarOpen}
               onToggle={toggleSidebar}
               onLogout={handleLogout}
               user={user}
@@ -101,6 +133,7 @@ function App() {
                 onToggleSidebar={toggleSidebar}
                 user={user}
                 notifications={[]}
+                isMobile={isMobile}
               />
               <main className="flex-1 overflow-auto">
           <Routes>

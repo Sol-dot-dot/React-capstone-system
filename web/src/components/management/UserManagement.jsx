@@ -248,7 +248,7 @@ const ModernUserManagement = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -257,18 +257,18 @@ const ModernUserManagement = ({ user }) => {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
                 User Management
               </h1>
-              <p className="text-slate-600 text-lg">
+              <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
                 Manage and monitor user accounts and verification status
               </p>
             </div>
             <Button 
               onClick={fetchUsers}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -349,19 +349,19 @@ const ModernUserManagement = ({ user }) => {
                       highlightUserId === user.id_number ? 'bg-green-50 border-green-200' : ''
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center space-x-4">
                         <Avatar className="h-12 w-12">
                           <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
                             {user.id_number.slice(-2)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <h3 className="font-semibold text-slate-900">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 truncate">
                             {user.id_number}
                           </h3>
-                          <p className="text-sm text-slate-600">{user.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-slate-600 truncate">{user.email}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge 
                               variant={user.is_verified ? "default" : "secondary"}
                               className={user.is_verified ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}
@@ -386,22 +386,22 @@ const ModernUserManagement = ({ user }) => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => updateUserVerification(user.id_number, !user.is_verified)}
-                          className={user.is_verified ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"}
+                          className={`${user.is_verified ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"} text-xs sm:text-sm`}
                         >
                           {user.is_verified ? (
                             <>
-                              <UserX className="h-4 w-4 mr-1" />
-                              Unverify
+                              <UserX className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Unverify</span>
                             </>
                           ) : (
                             <>
-                              <UserCheck className="h-4 w-4 mr-1" />
-                              Verify
+                              <UserCheck className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Verify</span>
                             </>
                           )}
                         </Button>

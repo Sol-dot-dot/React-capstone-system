@@ -23,7 +23,7 @@ import { Separator } from '../ui/separator';
 import { useSearch } from '../../contexts/SearchContext';
 import SearchResults from '../ui/SearchResults';
 
-const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
+const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user }) => {
   const location = useLocation();
   const { 
     searchQuery, 
@@ -47,7 +47,9 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
 
   const sidebarVariants = {
     expanded: { width: 280 },
-    collapsed: { width: 80 }
+    collapsed: { width: 80 },
+    mobile: { x: 0 },
+    mobileHidden: { x: -280 }
   };
 
   const itemVariants = {
@@ -58,15 +60,22 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
   return (
     <motion.aside
       variants={sidebarVariants}
-      animate={isCollapsed ? "collapsed" : "expanded"}
-      className="fixed left-0 top-0 h-full bg-white border-r border-slate-200 shadow-lg z-50"
+      animate={
+        isMobile 
+          ? (isOpen ? "mobile" : "mobileHidden")
+          : (isCollapsed ? "collapsed" : "expanded")
+      }
+      className={`
+        fixed left-0 top-0 h-full bg-white border-r border-slate-200 shadow-lg z-50
+        ${isMobile ? 'w-80' : ''}
+      `}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <AnimatePresence>
-              {!isCollapsed && (
+              {(!isCollapsed || isMobile) && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -97,7 +106,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
             
             {/* Collapsed Logo */}
             <AnimatePresence>
-              {isCollapsed && (
+              {isCollapsed && !isMobile && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -139,7 +148,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
 
         {/* Search Bar */}
         <AnimatePresence>
-          {!isCollapsed && (
+          {(!isCollapsed || isMobile) && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -203,7 +212,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
                   >
                     <item.icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-slate-500 group-hover:text-slate-700'}`} />
                     <AnimatePresence>
-                      {!isCollapsed && (
+                      {(!isCollapsed || isMobile) && (
                         <motion.span
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -214,7 +223,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
                         </motion.span>
                       )}
                     </AnimatePresence>
-                    {isActive && !isCollapsed && (
+                    {isActive && (!isCollapsed || isMobile) && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -233,7 +242,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
         {/* User Section */}
         <div className="p-4 border-t border-slate-200">
           <AnimatePresence>
-            {!isCollapsed && (
+            {(!isCollapsed || isMobile) && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -272,7 +281,7 @@ const ModernSidebar = ({ isCollapsed, onToggle, onLogout, user }) => {
 
           {/* Collapsed User Section */}
           <AnimatePresence>
-            {isCollapsed && (
+            {isCollapsed && !isMobile && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

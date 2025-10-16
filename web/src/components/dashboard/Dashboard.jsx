@@ -103,20 +103,20 @@ const ModernDashboard = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="mb-8 flex justify-between items-center"
+          className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
               SMC Library Management Dashboard
             </h1>
-            <p className="text-slate-600 text-lg">
+            <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
               St. Michael's College Library System - Comprehensive Overview
             </p>
           </div>
@@ -124,7 +124,7 @@ const ModernDashboard = ({ user }) => {
             onClick={fetchDashboardStats}
             variant="outline"
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full sm:w-auto"
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
