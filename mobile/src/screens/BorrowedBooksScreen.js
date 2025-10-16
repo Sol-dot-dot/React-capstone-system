@@ -50,9 +50,51 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     setRefreshing(false);
   };
 
-  const getBookStatus = (dueDate) => {
+  const getBookStatus = (book) => {
+    // Use the dueStatus from backend if available
+    if (book.dueStatus) {
+      switch (book.dueStatus) {
+        case 'overdue':
+          return { 
+            status: 'overdue', 
+            color: ModernTheme.colors.error, 
+            text: `${book.daysUntilDue} day${book.daysUntilDue !== 1 ? 's' : ''} overdue`,
+            days: book.daysUntilDue
+          };
+        case 'today':
+          return { 
+            status: 'due-soon', 
+            color: ModernTheme.colors.warning, 
+            text: 'Due today',
+            days: 0
+          };
+        case 'tomorrow':
+          return { 
+            status: 'due-soon', 
+            color: ModernTheme.colors.warning, 
+            text: 'Due tomorrow',
+            days: 1
+          };
+        case 'near':
+          return { 
+            status: 'due-soon', 
+            color: ModernTheme.colors.warning, 
+            text: `${book.daysUntilDue} days left`,
+            days: book.daysUntilDue
+          };
+        default:
+          return { 
+            status: 'active', 
+            color: ModernTheme.colors.success, 
+            text: 'Active',
+            days: book.daysUntilDue
+          };
+      }
+    }
+    
+    // Fallback calculation
     const today = new Date();
-    const due = new Date(dueDate);
+    const due = new Date(book.due_date || book.dueDate);
     const diffTime = due - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -81,45 +123,36 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
   };
 
   const getOverdueBooks = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.due_date || book.dueDate);
-      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      // Use the dueStatus from backend if available, otherwise calculate
+      if (book.dueStatus) {
+        return book.dueStatus === 'overdue';
+      }
       
-      // Debug logging
-      console.log('BorrowedBooks Overdue check:', {
-        bookTitle: book.title,
-        dueDate: book.due_date || book.dueDate,
-        parsedDueDate: dueDate.toISOString(),
-        today: today.toISOString(),
-        isOverdue: dueDate < today
-      });
+      // Fallback calculation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
       
       return dueDate < today; // Only books past their due date
     });
   };
 
   const getDueSoonBooks = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-    const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
-    threeDaysFromNow.setHours(23, 59, 59, 999); // End of 3 days from now
-    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.due_date || book.dueDate);
-      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      // Use the dueStatus from backend if available, otherwise calculate
+      if (book.dueStatus) {
+        return book.dueStatus === 'today' || book.dueStatus === 'tomorrow' || book.dueStatus === 'near';
+      }
       
-      // Debug logging
-      console.log('BorrowedBooks Due soon check:', {
-        bookTitle: book.title,
-        dueDate: book.due_date || book.dueDate,
-        parsedDueDate: dueDate.toISOString(),
-        today: today.toISOString(),
-        threeDaysFromNow: threeDaysFromNow.toISOString(),
-        isDueSoon: dueDate >= today && dueDate <= threeDaysFromNow
-      });
+      // Fallback calculation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+      threeDaysFromNow.setHours(23, 59, 59, 999);
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
       
       return dueDate >= today && dueDate <= threeDaysFromNow; // Books due today through 3 days
     });
@@ -135,7 +168,7 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
   };
 
   const renderBookCard = (book, index) => {
-    const status = getBookStatus(book.due_date || book.dueDate);
+    const status = getBookStatus(book);
     const dueDate = new Date(book.due_date || book.dueDate);
     const borrowDate = new Date(book.borrowed_date || book.borrowDate);
 
@@ -147,10 +180,7 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
         delay={index * 100}
         style={styles.bookCardContainer}
       >
-        <ModernCard style={[
-          styles.bookCard,
-          status.status === 'overdue' && styles.overdueCard
-        ]}>
+        <ModernCard style={styles.bookCard}>
           <View style={styles.bookHeader}>
             <View style={styles.bookInfo}>
               <Text style={styles.bookTitle} numberOfLines={2}>
@@ -240,13 +270,6 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <ModernButton
-            title="←"
-            onPress={onBack}
-            variant="outline"
-            size="small"
-            style={styles.backButton}
-          />
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>My Borrowed Books</Text>
             <Text style={styles.headerSubtitle}>
@@ -344,13 +367,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 0,
-    marginRight: ModernTheme.spacing.md,
-  },
   headerText: {
     flex: 1,
   },
@@ -407,11 +423,6 @@ const styles = StyleSheet.create({
   },
   bookCard: {
     padding: ModernTheme.spacing.lg,
-  },
-  overdueCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: ModernTheme.colors.error,
-    backgroundColor: ModernTheme.colors.error + '05',
   },
   bookHeader: {
     flexDirection: 'row',

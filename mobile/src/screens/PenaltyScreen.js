@@ -35,7 +35,26 @@ const PenaltyScreen = ({ userData, onBack }) => {
       );
 
       if (response.data.success) {
-        setPenalties(response.data.data.penalties || []);
+        // Backend returns 'fines' not 'penalties'
+        const fines = response.data.data.fines || [];
+        
+        // Transform fines data to match the expected penalty structure
+        const transformedPenalties = fines.map(fine => ({
+          id: fine.id,
+          reason: `Overdue book: ${fine.title}`,
+          bookTitle: fine.title,
+          amount: parseFloat(fine.fine_amount) - parseFloat(fine.paid_amount || 0), // Outstanding amount
+          status: fine.status,
+          dueDate: fine.due_date,
+          createdAt: fine.fine_date,
+          daysOverdue: fine.days_overdue,
+          bookCode: fine.number_code,
+          author: fine.author,
+          borrowedDate: fine.borrowed_date,
+          returnedDate: fine.returned_date
+        }));
+        
+        setPenalties(transformedPenalties);
       }
     } catch (error) {
       console.error('Error loading penalties:', error);
@@ -82,6 +101,7 @@ const PenaltyScreen = ({ userData, onBack }) => {
     const status = getPenaltyStatus(penalty);
     const dueDate = new Date(penalty.dueDate);
     const createdDate = new Date(penalty.createdAt);
+    const borrowedDate = new Date(penalty.borrowedDate);
 
     return (
       <Animatable.View
@@ -95,10 +115,10 @@ const PenaltyScreen = ({ userData, onBack }) => {
           <View style={styles.penaltyHeader}>
             <View style={styles.penaltyInfo}>
               <Text style={styles.penaltyTitle} numberOfLines={2}>
-                {penalty.reason}
+                {penalty.bookTitle}
               </Text>
               <Text style={styles.penaltyBook} numberOfLines={1}>
-                Book: {penalty.bookTitle}
+                by {penalty.author} • Code: {penalty.bookCode}
               </Text>
             </View>
             <ModernBadge
@@ -112,13 +132,13 @@ const PenaltyScreen = ({ userData, onBack }) => {
             <View style={styles.detailItem}>
               <Icon name="cash-outline" size={16} color={ModernTheme.colors.textTertiary} />
               <Text style={styles.detailText}>
-                Amount: ₱{penalty.amount.toFixed(2)}
+                Fine Amount: ₱{penalty.amount.toFixed(2)}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Icon name="calendar-outline" size={16} color={ModernTheme.colors.textTertiary} />
               <Text style={styles.detailText}>
-                Created: {createdDate.toLocaleDateString()}
+                Borrowed: {borrowedDate.toLocaleDateString()}
               </Text>
             </View>
             <View style={styles.detailItem}>
@@ -127,23 +147,20 @@ const PenaltyScreen = ({ userData, onBack }) => {
                 Due: {dueDate.toLocaleDateString()}
               </Text>
             </View>
+            <View style={styles.detailItem}>
+              <Icon name="alert-circle-outline" size={16} color={ModernTheme.colors.textTertiary} />
+              <Text style={styles.detailText}>
+                Days Overdue: {penalty.daysOverdue} day{penalty.daysOverdue !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Icon name="document-text-outline" size={16} color={ModernTheme.colors.textTertiary} />
+              <Text style={styles.detailText}>
+                Fine Created: {createdDate.toLocaleDateString()}
+              </Text>
+            </View>
           </View>
 
-          {penalty.status !== 'paid' && (
-            <View style={styles.paymentSection}>
-              <ModernButton
-                title="Pay Now"
-                onPress={() => {
-                  // Handle payment logic here
-                  console.log('Payment for penalty:', penalty.id);
-                }}
-                variant="primary"
-                size="small"
-                icon="card-outline"
-                style={styles.payButton}
-              />
-            </View>
-          )}
         </ModernCard>
       </Animatable.View>
     );
@@ -179,13 +196,6 @@ const PenaltyScreen = ({ userData, onBack }) => {
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <ModernButton
-            title="←"
-            onPress={onBack}
-            variant="outline"
-            size="small"
-            style={styles.backButton}
-          />
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Penalty Information</Text>
             <Text style={styles.headerSubtitle}>
@@ -274,13 +284,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 0,
-    marginRight: ModernTheme.spacing.md,
-  },
   headerText: {
     flex: 1,
   },
@@ -364,12 +367,6 @@ const styles = StyleSheet.create({
     ...ModernTheme.typography.caption,
     color: ModernTheme.colors.textSecondary,
     marginLeft: ModernTheme.spacing.sm,
-  },
-  paymentSection: {
-    alignItems: 'flex-end',
-  },
-  payButton: {
-    paddingHorizontal: ModernTheme.spacing.lg,
   },
   emptyState: {
     alignItems: 'center',

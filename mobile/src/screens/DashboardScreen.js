@@ -7,6 +7,7 @@ import {
   StatusBar,
   ScrollView,
   RefreshControl,
+  AppState,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -28,6 +29,18 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
     loadDashboardData();
   }, []);
 
+  // Refresh data when app comes back to foreground
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        loadDashboardData();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, []);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -41,7 +54,26 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
       }
 
       if (penaltiesResponse.data.success) {
-        setPenalties(penaltiesResponse.data.data.penalties || []);
+        // Backend returns 'fines' not 'penalties'
+        const fines = penaltiesResponse.data.data.fines || [];
+        
+        // Transform fines data to match the expected penalty structure
+        const transformedPenalties = fines.map(fine => ({
+          id: fine.id,
+          reason: `Overdue book: ${fine.title}`,
+          bookTitle: fine.title,
+          amount: parseFloat(fine.fine_amount) - parseFloat(fine.paid_amount || 0), // Outstanding amount
+          status: fine.status,
+          dueDate: fine.due_date,
+          createdAt: fine.fine_date,
+          daysOverdue: fine.days_overdue,
+          bookCode: fine.number_code,
+          author: fine.author,
+          borrowedDate: fine.borrowed_date,
+          returnedDate: fine.returned_date
+        }));
+        
+        setPenalties(transformedPenalties);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -64,45 +96,36 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
   };
 
   const getOverdueBooks = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.due_date || book.dueDate);
-      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      // Use the dueStatus from backend if available, otherwise calculate
+      if (book.dueStatus) {
+        return book.dueStatus === 'overdue';
+      }
       
-      // Debug logging
-      console.log('Overdue check:', {
-        bookTitle: book.title,
-        dueDate: book.due_date || book.dueDate,
-        parsedDueDate: dueDate.toISOString(),
-        today: today.toISOString(),
-        isOverdue: dueDate < today
-      });
+      // Fallback calculation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
       
       return dueDate < today; // Only books past their due date
     });
   };
 
   const getUpcomingDueBooks = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-    const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
-    threeDaysFromNow.setHours(23, 59, 59, 999); // End of 3 days from now
-    
     return borrowedBooks.filter(book => {
-      const dueDate = new Date(book.due_date || book.dueDate);
-      dueDate.setHours(0, 0, 0, 0); // Start of due date
+      // Use the dueStatus from backend if available, otherwise calculate
+      if (book.dueStatus) {
+        return book.dueStatus === 'today' || book.dueStatus === 'tomorrow' || book.dueStatus === 'near';
+      }
       
-      // Debug logging
-      console.log('Due soon check:', {
-        bookTitle: book.title,
-        dueDate: book.due_date || book.dueDate,
-        parsedDueDate: dueDate.toISOString(),
-        today: today.toISOString(),
-        threeDaysFromNow: threeDaysFromNow.toISOString(),
-        isDueSoon: dueDate >= today && dueDate <= threeDaysFromNow
-      });
+      // Fallback calculation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+      threeDaysFromNow.setHours(23, 59, 59, 999);
+      const dueDate = new Date(book.due_date || book.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
       
       return dueDate >= today && dueDate <= threeDaysFromNow; // Books due today through 3 days
     });
@@ -200,14 +223,6 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
               <Text style={styles.greeting}>{getGreeting()},</Text>
               <Text style={styles.userName}>{userData.firstName || userData.idNumber}</Text>
             </View>
-            <ModernButton
-              title=""
-              onPress={onLogout}
-              variant="outline"
-              size="small"
-              icon="log-out-outline"
-              style={styles.logoutButton}
-            />
           </View>
         </Animatable.View>
 
@@ -289,27 +304,31 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
           >
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
-              <ModernButton
-                title="View All"
-                onPress={() => onNavigate('borrowedBooks')}
-                variant="outline"
-                size="small"
-                style={styles.viewAllButton}
-              />
             </View>
             {borrowedBooks.slice(0, 3).map((book, index) => {
               const dueDate = new Date(book.due_date || book.dueDate);
-              const today = new Date();
               
-              // Normalize dates to start of day for accurate comparison
-              dueDate.setHours(0, 0, 0, 0);
-              today.setHours(0, 0, 0, 0);
+              // Use dueStatus from backend if available, otherwise calculate
+              let isOverdue = false;
+              let isDueSoon = false;
               
-              const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
-              threeDaysFromNow.setHours(23, 59, 59, 999);
-              
-              const isOverdue = dueDate < today;
-              const isDueSoon = dueDate >= today && dueDate <= threeDaysFromNow;
+              if (book.dueStatus) {
+                isOverdue = book.dueStatus === 'overdue';
+                isDueSoon = book.dueStatus === 'today' || book.dueStatus === 'tomorrow' || book.dueStatus === 'near';
+              } else {
+                // Fallback calculation
+                const today = new Date();
+                
+                // Normalize dates to start of day for accurate comparison
+                dueDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+                
+                const threeDaysFromNow = new Date(today.getTime() + (3 * 24 * 60 * 60 * 1000));
+                threeDaysFromNow.setHours(23, 59, 59, 999);
+                
+                isOverdue = dueDate < today;
+                isDueSoon = dueDate >= today && dueDate <= threeDaysFromNow;
+              }
               
               return (
                 <Animatable.View
@@ -391,12 +410,6 @@ const styles = StyleSheet.create({
   userName: {
     ...ModernTheme.typography.h2,
     color: ModernTheme.colors.textPrimary,
-  },
-  logoutButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 0,
   },
   sectionTitle: {
     ...ModernTheme.typography.h3,
@@ -486,9 +499,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: ModernTheme.spacing.lg,
-  },
-  viewAllButton: {
-    paddingHorizontal: ModernTheme.spacing.md,
   },
   activityItem: {
     marginBottom: ModernTheme.spacing.sm,

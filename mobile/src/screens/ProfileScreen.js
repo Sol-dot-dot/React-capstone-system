@@ -8,6 +8,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  AppState,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -27,6 +28,18 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     loadProfileData();
   }, []);
 
+  // Refresh data when app comes back to foreground
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        loadProfileData();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, []);
+
   const loadProfileData = async () => {
     try {
       setLoading(true);
@@ -37,10 +50,27 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
       ]);
 
       if (profileResponse.data.success) {
+        // Transform fines data to match expected penalty structure
+        const fines = penaltiesResponse.data.success ? penaltiesResponse.data.data.fines || [] : [];
+        const transformedPenalties = fines.map(fine => ({
+          id: fine.id,
+          reason: `Overdue book: ${fine.title}`,
+          bookTitle: fine.title,
+          amount: parseFloat(fine.fine_amount) - parseFloat(fine.paid_amount || 0),
+          status: fine.status,
+          dueDate: fine.due_date,
+          createdAt: fine.fine_date,
+          daysOverdue: fine.days_overdue,
+          bookCode: fine.number_code,
+          author: fine.author,
+          borrowedDate: fine.borrowed_date,
+          returnedDate: fine.returned_date
+        }));
+
         setProfileData({
           ...profileResponse.data.user,
           borrowedBooks: borrowedResponse.data.success ? borrowedResponse.data.data.borrowedBooks : [],
-          penalties: penaltiesResponse.data.success ? penaltiesResponse.data.data.penalties : [],
+          penalties: transformedPenalties,
         });
       }
     } catch (error) {
@@ -104,6 +134,11 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     {
       title: 'Currently Borrowed',
       value: profileData?.borrowedBooks?.filter(book => {
+        // Use dueStatus from backend if available, otherwise calculate
+        if (book.dueStatus) {
+          return book.dueStatus !== 'returned';
+        }
+        // Fallback calculation
         const dueDate = new Date(book.due_date || book.dueDate);
         const today = new Date();
         dueDate.setHours(0, 0, 0, 0);
@@ -116,6 +151,11 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     {
       title: 'Overdue Books',
       value: profileData?.borrowedBooks?.filter(book => {
+        // Use dueStatus from backend if available, otherwise calculate
+        if (book.dueStatus) {
+          return book.dueStatus === 'overdue';
+        }
+        // Fallback calculation
         const dueDate = new Date(book.due_date || book.dueDate);
         const today = new Date();
         dueDate.setHours(0, 0, 0, 0);
@@ -167,24 +207,10 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <ModernButton
-            title="←"
-            onPress={onBack}
-            variant="secondary"
-            size="small"
-            style={styles.backButton}
-          />
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Profile</Text>
             <Text style={styles.headerSubtitle}>Manage your account</Text>
           </View>
-          <ModernButton
-            title="↻"
-            onPress={onRefresh}
-            variant="secondary"
-            size="small"
-            style={styles.refreshButton}
-          />
         </View>
       </View>
 
@@ -341,16 +367,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 0,
-    backgroundColor: ModernTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: ModernTheme.colors.border,
-    ...ModernTheme.shadows.button,
   },
   refreshButton: {
     width: 44,
