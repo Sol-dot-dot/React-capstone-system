@@ -132,6 +132,7 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden">
               <TopBar 
                 onToggleSidebar={toggleSidebar}
+                onLogout={handleLogout}
                 user={user}
                 notifications={[]}
                 isMobile={isMobile}

@@ -928,5 +928,63 @@ router.get('/user/:idNumber', async (req, res) => {
     }
 });
 
+// GET /api/borrowing/user/:idNumber/semester-count - Get user's semester book count
+router.get('/user/:idNumber/semester-count', async (req, res) => {
+    try {
+        const { idNumber } = req.params;
+
+        // Get semester tracking data
+        const [semesterData] = await pool.execute(`
+            SELECT 
+                books_borrowed_count,
+                max_books_allowed,
+                status as semester_status
+            FROM semester_tracking 
+            WHERE student_id_number = ? 
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [idNumber]);
+
+        if (semesterData.length === 0) {
+            // If no semester tracking data, return 0
+            return res.json({
+                success: true,
+                data: {
+                    booksThisSemester: 0,
+                    requiredBooks: 20,
+                    booksRemaining: 20,
+                    clearanceStatus: 'needs_improvement'
+                }
+            });
+        }
+
+        const semester = semesterData[0];
+        const booksThisSemester = semester.books_borrowed_count || 0;
+        const requiredBooks = 20; // Standard semester requirement is 20 books
+        const booksRemaining = Math.max(0, requiredBooks - booksThisSemester);
+        
+        const clearanceStatus = booksThisSemester >= requiredBooks ? 'completed' : 
+                               booksThisSemester >= Math.ceil(requiredBooks * 0.75) ? 'near_completion' :
+                               booksThisSemester >= Math.ceil(requiredBooks * 0.5) ? 'in_progress' : 'needs_improvement';
+
+        res.json({
+            success: true,
+            data: {
+                booksThisSemester,
+                requiredBooks,
+                booksRemaining,
+                clearanceStatus
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching semester count:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch semester count'
+        });
+    }
+});
+
 module.exports = router;
 

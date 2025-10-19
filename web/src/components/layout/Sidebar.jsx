@@ -195,7 +195,7 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
         </AnimatePresence>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto sidebar-scroll">
           {menuItems.map((item, index) => {
             const isActive = location.pathname === item.path;
             return (

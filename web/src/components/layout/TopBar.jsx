@@ -18,7 +18,7 @@ import { useSearch } from '../../contexts/SearchContext';
 import SearchResults from '../ui/SearchResults';
 import axios from 'axios';
 
-const ModernTopBar = ({ onToggleSidebar, user, isMobile }) => {
+const ModernTopBar = ({ onToggleSidebar, onLogout, user, isMobile }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -316,7 +316,11 @@ const ModernTopBar = ({ onToggleSidebar, user, isMobile }) => {
                           Preferences
                         </Button>
                         <Separator className="my-2" />
-                        <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={onLogout}
+                        >
                           Logout
                         </Button>
                       </div>

@@ -301,7 +301,7 @@ const ModernPenaltyManagement = ({ user }) => {
           }
           .invoice-details {
             text-align: right;
-            color: #6b7280;
+            color: #000000;
           }
           .invoice-details p {
             margin: 5px 0;
@@ -318,12 +318,12 @@ const ModernPenaltyManagement = ({ user }) => {
           }
           .section-title {
             font-weight: bold;
-            color: #374151;
+            color: #000000;
             margin-bottom: 10px;
             font-size: 16px;
           }
           .section-content {
-            color: #6b7280;
+            color: #000000;
             line-height: 1.5;
           }
           .items-table {
@@ -336,13 +336,22 @@ const ModernPenaltyManagement = ({ user }) => {
             padding: 15px 10px;
             text-align: left;
             font-weight: bold;
-            color: #374151;
+            color: #000000;
             border-bottom: 2px solid #e5e7eb;
           }
           .items-table td {
             padding: 15px 10px;
             border-bottom: 1px solid #e5e7eb;
-            color: #6b7280;
+            color: #000000;
+            vertical-align: top;
+          }
+          .items-table td:first-child {
+            width: 60%;
+            max-width: 400px;
+          }
+          .items-table td:not(:first-child) {
+            width: 13%;
+            text-align: right;
           }
           .items-table tr:nth-child(even) {
             background-color: #f9fafb;
@@ -359,10 +368,10 @@ const ModernPenaltyManagement = ({ user }) => {
           }
           .summary-label {
             font-weight: bold;
-            color: #374151;
+            color: #000000;
           }
           .summary-value {
-            color: #6b7280;
+            color: #000000;
             min-width: 100px;
             text-align: right;
           }
@@ -372,12 +381,12 @@ const ModernPenaltyManagement = ({ user }) => {
             margin-top: 10px;
             font-size: 18px;
             font-weight: bold;
-            color: #374151;
+            color: #000000;
           }
           .signature {
             text-align: center;
             margin-top: 50px;
-            color: #6b7280;
+            color: #000000;
             font-style: italic;
           }
           @media print {
@@ -393,8 +402,8 @@ const ModernPenaltyManagement = ({ user }) => {
               <h1 class="invoice-title">INVOICE</h1>
             </div>
             <div class="invoice-details">
+              <p><strong>ISSUE DATE:</strong> ${invoiceDate}</p>
               <p><strong>INVOICE NO:</strong> ${invoiceNumber}</p>
-              <p><strong>DATE:</strong> ${invoiceDate}</p>
               <p><strong>DUE DATE:</strong> ${dueDateFormatted}</p>
             </div>
           </div>
@@ -426,21 +435,37 @@ const ModernPenaltyManagement = ({ user }) => {
               </tr>
             </thead>
             <tbody>
-              ${student.overdue_books && student.overdue_books.length > 0 ? 
-                student.overdue_books.map(book => `
-                  <tr>
-                    <td>Overdue Book: ${book.title} by ${book.author}</td>
-                    <td>₱${book.fine_amount || 0}</td>
-                    <td>1</td>
-                    <td>₱${book.fine_amount || 0}</td>
-                  </tr>
-                `).join('') : 
-                `<tr>
-                  <td>Library Penalty Fees</td>
-                  <td>₱${student.unpaid_amount || 0}</td>
-                  <td>1</td>
-                  <td>₱${student.unpaid_amount || 0}</td>
-                </tr>`
+              ${student.book_history && student.book_history.length > 0 ? 
+                student.book_history
+                  .filter(book => book.current_status === 'Overdue' && book.fine_status === 'unpaid')
+                  .map(book => `
+                    <tr>
+                      <td>
+                        <div style="font-weight: bold; color: #000000;">${book.title}</div>
+                        <div style="font-size: 12px; color: #000000; margin-top: 2px;">by ${book.author}</div>
+                        <div style="font-size: 11px; color: #000000; margin-top: 2px;">Code: ${book.number_code || 'N/A'} | Category: ${book.category || 'N/A'}</div>
+                        <div style="font-size: 11px; color: #000000;">Borrowed: ${book.borrowed_date} | Due: ${book.due_date}</div>
+                        <div style="font-size: 11px; color: #000000; font-weight: bold;">Status: ${book.days_past_due || 0} days overdue</div>
+                      </td>
+                      <td style="text-align: right; font-weight: bold; color: #000000;">₱${(book.fine_amount || 0) - (book.paid_amount || 0)}</td>
+                      <td style="text-align: center;">1</td>
+                      <td style="text-align: right; font-weight: bold; color: #000000;">₱${(book.fine_amount || 0) - (book.paid_amount || 0)}</td>
+                    </tr>
+                  `).join('') : 
+                (student.unpaid_amount > 0 ? 
+                  `<tr>
+                    <td style="font-style: italic; color: #000000;">Library Penalty Fees (General)</td>
+                    <td style="text-align: right; font-weight: bold; color: #000000;">₱${student.unpaid_amount}</td>
+                    <td style="text-align: center;">1</td>
+                    <td style="text-align: right; font-weight: bold; color: #000000;">₱${student.unpaid_amount}</td>
+                  </tr>` :
+                  `<tr>
+                    <td style="font-style: italic; color: #000000;">No overdue books found</td>
+                    <td style="text-align: right;">₱0.00</td>
+                    <td style="text-align: center;">0</td>
+                    <td style="text-align: right;">₱0.00</td>
+                  </tr>`
+                )
               }
             </tbody>
           </table>

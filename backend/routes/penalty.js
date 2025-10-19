@@ -2109,4 +2109,101 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
     }
 });
 
+// GET /api/penalty/user/:idNumber/clearance - Get user's clearance status
+router.get('/user/:idNumber/clearance', auth, async (req, res) => {
+    try {
+        const { idNumber } = req.params;
+        
+        console.log('Clearance endpoint called for:', idNumber);
+        console.log('User from token:', req.user);
+        
+        // Verify user can access this data
+        if (req.user.type !== 'admin' && req.user.idNumber !== idNumber) {
+            console.log('Access denied for user:', req.user.idNumber, 'requesting:', idNumber);
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only view your own clearance status.'
+            });
+        }
+
+        // Get user's semester tracking
+        const [semesterTracking] = await pool.execute(`
+            SELECT 
+                books_borrowed_count,
+                max_books_allowed,
+                status as semester_status,
+                created_at as semester_created,
+                updated_at as semester_updated
+            FROM semester_tracking
+            WHERE student_id_number = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [idNumber]);
+
+        // Get current semester books count from semester_tracking table
+        const [currentBooks] = await pool.execute(`
+            SELECT books_borrowed_count as books_this_semester
+            FROM semester_tracking 
+            WHERE student_id_number = ? 
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [idNumber]);
+
+        // Get fines info
+        const [finesInfo] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total_fines,
+                SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount,
+                COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_fines
+            FROM fines 
+            WHERE student_id_number = ?
+        `, [idNumber]);
+
+        const booksThisSemester = currentBooks[0]?.books_this_semester || 0;
+        
+        // Get max books allowed from semester tracking
+        const [maxBooksData] = await pool.execute(`
+            SELECT max_books_allowed
+            FROM semester_tracking 
+            WHERE student_id_number = ? 
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [idNumber]);
+        
+        const requiredBooks = maxBooksData[0]?.max_books_allowed || 20;
+        const booksRemaining = Math.max(0, requiredBooks - booksThisSemester);
+        
+        console.log('Clearance data for', idNumber, ':', {
+            booksThisSemester,
+            requiredBooks,
+            booksRemaining
+        });
+        
+        const clearanceStatus = booksThisSemester >= requiredBooks ? 'completed' : 
+                               booksThisSemester >= 15 ? 'near_completion' :
+                               booksThisSemester >= 10 ? 'in_progress' : 'needs_improvement';
+
+        res.json({
+            success: true,
+            data: {
+                booksThisSemester: booksThisSemester,
+                requiredBooks: requiredBooks,
+                booksRemaining: booksRemaining,
+                clearanceStatus: clearanceStatus,
+                unpaidFines: finesInfo[0]?.unpaid_amount || 0,
+                clearanceMessage: booksThisSemester >= requiredBooks ? 
+                    'Eligible for Clearance' : 
+                    `${booksRemaining} books remaining to complete clearance requirements`
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching user clearance status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch clearance status'
+        });
+    }
+});
+
 module.exports = router;

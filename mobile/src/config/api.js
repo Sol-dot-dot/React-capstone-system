@@ -52,6 +52,11 @@ const API_CONFIG = {
     PENALTY: {
       GET_USER_PENALTIES: (idNumber) => `/api/penalty/user/${idNumber}`,
     },
+
+    // Clearance endpoints
+    CLEARANCE: {
+      GET_USER_CLEARANCE_STATUS: (idNumber) => `/api/penalty/user/${idNumber}/clearance`,
+    },
   },
 
   // Request timeout (in milliseconds)

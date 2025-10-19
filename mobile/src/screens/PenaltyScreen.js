@@ -33,6 +33,7 @@ const PenaltyScreen = ({ userData, onBack }) => {
   const [penalties, setPenalties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     loadPenalties();
@@ -108,6 +109,14 @@ const PenaltyScreen = ({ userData, onBack }) => {
     }, 0);
   };
 
+  const getCurrentPenalties = () => {
+    return penalties.filter(penalty => penalty.status !== 'paid');
+  };
+
+  const getHistoricalPenalties = () => {
+    return penalties.filter(penalty => penalty.status === 'paid');
+  };
+
   const renderPenaltyCard = (penalty, index) => {
     const status = getPenaltyStatus(penalty);
     const dueDate = new Date(penalty.dueDate);
@@ -170,6 +179,14 @@ const PenaltyScreen = ({ userData, onBack }) => {
                 Fine Created: {createdDate.toLocaleDateString()}
               </Text>
             </View>
+            {penalty.status === 'paid' && penalty.returnedDate && (
+              <View style={styles.detailItem}>
+                <Icon name="checkmark-circle-outline" size={16} color={ModernTheme.colors.success} />
+                <Text style={[styles.detailText, { color: ModernTheme.colors.success }]}>
+                  Paid: {new Date(penalty.returnedDate).toLocaleDateString()}
+                </Text>
+              </View>
+            )}
           </View>
 
         </ModernCard>
@@ -262,10 +279,55 @@ const PenaltyScreen = ({ userData, onBack }) => {
               </View>
             </Animatable.View>
 
-            {/* Penalties List */}
-            <View style={styles.penaltiesContainer}>
-              {penalties.map((penalty, index) => renderPenaltyCard(penalty, index))}
-            </View>
+            {/* Current Penalties */}
+            {getCurrentPenalties().length > 0 && (
+              <View style={styles.penaltiesContainer}>
+                <Text style={styles.sectionTitle}>Current Penalties</Text>
+                {getCurrentPenalties().map((penalty, index) => renderPenaltyCard(penalty, index))}
+              </View>
+            )}
+
+            {/* History Toggle */}
+            <Animatable.View
+              animation="fadeInUp"
+              duration={600}
+              delay={400}
+              style={styles.historyToggleContainer}
+            >
+              <ModernButton
+                title={showHistory ? "Hide History" : "View History"}
+                onPress={() => setShowHistory(!showHistory)}
+                variant="outline"
+                size="medium"
+                icon={<Icon name={showHistory ? "chevron-up-outline" : "time-outline"} size={20} color={ModernTheme.colors.primary} />}
+                style={styles.historyToggleButton}
+              />
+            </Animatable.View>
+
+            {/* Historical Penalties */}
+            {showHistory && (
+              <Animatable.View
+                animation="fadeInUp"
+                duration={600}
+                style={styles.historyContainer}
+              >
+                <View style={styles.historyHeader}>
+                  <Icon name="time-outline" size={20} color="#3b82f6" />
+                  <Text style={[styles.sectionTitle, { marginLeft: ModernTheme.spacing.sm, marginBottom: 0 }]}>Payment History</Text>
+                </View>
+                {getHistoricalPenalties().length > 0 ? (
+                  getHistoricalPenalties().map((penalty, index) => renderPenaltyCard(penalty, index))
+                ) : (
+                  <View style={styles.emptyHistoryState}>
+                    <Icon name="time-outline" size={48} color="#94a3b8" />
+                    <Text style={styles.emptyHistoryTitle}>No Payment History</Text>
+                    <Text style={styles.emptyHistorySubtitle}>
+                      You haven't paid any penalties yet. Once you pay a penalty, it will appear here.
+                    </Text>
+                  </View>
+                )}
+              </Animatable.View>
+            )}
           </>
         )}
       </ScrollView>
@@ -339,6 +401,68 @@ const styles = StyleSheet.create({
   },
   penaltiesContainer: {
     marginBottom: ModernTheme.spacing.xl,
+  },
+  sectionTitle: {
+    ...ModernTheme.typography.h3,
+    color: ModernTheme.colors.textPrimary,
+    marginBottom: ModernTheme.spacing.lg,
+    fontWeight: '600',
+  },
+  historyToggleContainer: {
+    marginBottom: ModernTheme.spacing.lg,
+    alignItems: 'center',
+  },
+  historyToggleButton: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderWidth: 2,
+    shadowColor: '#3b82f6',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  historyContainer: {
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: ModernTheme.spacing.lg,
+  },
+  emptyHistoryState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ModernTheme.spacing.xxl,
+    paddingHorizontal: ModernTheme.spacing.lg,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    marginTop: ModernTheme.spacing.md,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  emptyHistoryTitle: {
+    ...ModernTheme.typography.h4,
+    color: '#475569',
+    marginTop: ModernTheme.spacing.md,
+    marginBottom: ModernTheme.spacing.sm,
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  emptyHistorySubtitle: {
+    ...ModernTheme.typography.body,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontSize: 14,
+    fontWeight: '500',
   },
   penaltyCardContainer: {
     marginBottom: ModernTheme.spacing.md,

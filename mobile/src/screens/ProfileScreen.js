@@ -124,78 +124,7 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
     }
   };
 
-  const stats = [
-    {
-      title: 'Books Borrowed',
-      value: profileData?.borrowedBooks?.length || 0,
-      icon: 'library-outline',
-      color: ModernTheme.colors.primary,
-    },
-    {
-      title: 'Currently Borrowed',
-      value: profileData?.borrowedBooks?.filter(book => {
-        // Use dueStatus from backend if available, otherwise calculate
-        if (book.dueStatus) {
-          return book.dueStatus !== 'returned';
-        }
-        // Fallback calculation
-        const dueDate = new Date(book.due_date || book.dueDate);
-        const today = new Date();
-        dueDate.setHours(0, 0, 0, 0);
-        today.setHours(0, 0, 0, 0);
-        return dueDate >= today; // Books not yet overdue
-      }).length || 0,
-      icon: 'book-outline',
-      color: ModernTheme.colors.accent,
-    },
-    {
-      title: 'Overdue Books',
-      value: profileData?.borrowedBooks?.filter(book => {
-        // Use dueStatus from backend if available, otherwise calculate
-        if (book.dueStatus) {
-          return book.dueStatus === 'overdue';
-        }
-        // Fallback calculation
-        const dueDate = new Date(book.due_date || book.dueDate);
-        const today = new Date();
-        dueDate.setHours(0, 0, 0, 0);
-        today.setHours(0, 0, 0, 0);
-        return dueDate < today; // Only books past their due date
-      }).length || 0,
-      icon: 'warning-outline',
-      color: ModernTheme.colors.error,
-    },
-    {
-      title: 'Penalties',
-      value: profileData?.penalties?.filter(penalty => penalty.status !== 'paid').length || 0,
-      icon: 'card-outline',
-      color: ModernTheme.colors.warning,
-    },
-  ];
 
-  const quickActions = [
-    {
-      title: 'Change Password',
-      subtitle: 'Update your password',
-      icon: 'lock-closed-outline',
-      color: ModernTheme.colors.primary,
-      onPress: () => onNavigate('changePassword'),
-    },
-    {
-      title: 'Notification Settings',
-      subtitle: 'Manage notifications',
-      icon: 'notifications-outline',
-      color: ModernTheme.colors.accent,
-      onPress: () => onNavigate('notificationSettings'),
-    },
-    {
-      title: 'Help & Support',
-      subtitle: 'Get assistance',
-      icon: 'help-circle-outline',
-      color: ModernTheme.colors.success,
-      onPress: () => onNavigate('help'),
-    },
-  ];
 
   return (
     <View style={styles.container}>
@@ -255,50 +184,7 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
           </ModernCard>
         </View>
 
-        {/* Statistics */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Statistics</Text>
-          <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={stat.title} style={styles.statItem}>
-                <ModernCard style={styles.statCard}>
-                  <View style={styles.statContent}>
-                    <View style={[styles.statIcon, { backgroundColor: stat.color + '20' }]}>
-                      <Icon name={stat.icon} size={24} color={stat.color} />
-                    </View>
-                    <View style={styles.statText}>
-                      <Text style={styles.statValue}>{stat.value}</Text>
-                      <Text style={styles.statLabel}>{stat.title}</Text>
-                    </View>
-                  </View>
-                </ModernCard>
-              </View>
-            ))}
-          </View>
-        </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          {quickActions.map((action, index) => (
-            <ModernCard
-              key={action.title}
-              onPress={action.onPress}
-              style={styles.actionCard}
-            >
-              <View style={styles.actionContent}>
-                <View style={[styles.actionIcon, { backgroundColor: action.color + '20' }]}>
-                  <Icon name={action.icon} size={24} color={action.color} />
-                </View>
-                <View style={styles.actionText}>
-                  <Text style={styles.actionTitle}>{action.title}</Text>
-                  <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
-                </View>
-                <Icon name="chevron-forward-outline" size={20} color={ModernTheme.colors.textTertiary} />
-              </View>
-            </ModernCard>
-          ))}
-        </View>
 
         {/* Account Information */}
         <View style={styles.accountSection}>
@@ -310,7 +196,9 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
             </View>
             <View style={styles.accountItem}>
               <Text style={styles.accountLabel}>Email</Text>
-              <Text style={styles.accountValue}>{userData.email}</Text>
+              <Text style={styles.accountValue} numberOfLines={2} ellipsizeMode="middle">
+                {userData.email}
+              </Text>
             </View>
             <View style={styles.accountItem}>
               <Text style={styles.accountLabel}>Account Status</Text>
@@ -323,7 +211,8 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
             <View style={styles.accountItem}>
               <Text style={styles.accountLabel}>Member Since</Text>
               <Text style={styles.accountValue}>
-                {userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : 'N/A'}
+                {profileData?.createdAt ? new Date(profileData.createdAt).toLocaleDateString() : 
+                 userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : 'N/A'}
               </Text>
             </View>
           </ModernCard>
@@ -453,77 +342,6 @@ const styles = StyleSheet.create({
     color: ModernTheme.colors.textPrimary,
     marginBottom: ModernTheme.spacing.lg,
   },
-  statsSection: {
-    marginBottom: ModernTheme.spacing.xl,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    width: '48%',
-    marginBottom: ModernTheme.spacing.md,
-  },
-  statCard: {
-    padding: ModernTheme.spacing.lg,
-  },
-  statContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: ModernTheme.spacing.md,
-  },
-  statText: {
-    flex: 1,
-  },
-  statValue: {
-    ...ModernTheme.typography.h2,
-    color: ModernTheme.colors.textPrimary,
-    marginBottom: ModernTheme.spacing.xs,
-  },
-  statLabel: {
-    ...ModernTheme.typography.caption,
-    color: ModernTheme.colors.textSecondary,
-  },
-  quickActionsSection: {
-    marginBottom: ModernTheme.spacing.xl,
-  },
-  actionCard: {
-    padding: ModernTheme.spacing.lg,
-    marginBottom: ModernTheme.spacing.sm,
-  },
-  actionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: ModernTheme.spacing.lg,
-  },
-  actionText: {
-    flex: 1,
-  },
-  actionTitle: {
-    ...ModernTheme.typography.bodyMedium,
-    color: ModernTheme.colors.textPrimary,
-    marginBottom: ModernTheme.spacing.xs,
-    fontWeight: '600',
-  },
-  actionSubtitle: {
-    ...ModernTheme.typography.caption,
-    color: ModernTheme.colors.textSecondary,
-  },
   accountSection: {
     marginBottom: ModernTheme.spacing.xl,
   },
@@ -533,19 +351,25 @@ const styles = StyleSheet.create({
   accountItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: ModernTheme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: ModernTheme.colors.border,
+    minHeight: 50,
   },
   accountLabel: {
     ...ModernTheme.typography.body,
     color: ModernTheme.colors.textSecondary,
+    flex: 0,
+    minWidth: 100,
   },
   accountValue: {
     ...ModernTheme.typography.bodyMedium,
     color: ModernTheme.colors.textPrimary,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: ModernTheme.spacing.md,
   },
   logoutSection: {
     marginBottom: ModernTheme.spacing.xl,
