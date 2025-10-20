@@ -4,6 +4,7 @@ const chatbotService = require('../utils/chatbotService');
 const vectorDBService = require('../utils/vectorDBService');
 const readingHistoryService = require('../utils/readingHistoryService');
 const userKnowledgeService = require('../services/userKnowledgeService');
+const db = require('../config/database');
 const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 
@@ -12,6 +13,114 @@ vectorDBService.initialize().catch(error => {
   console.error('❌ Failed to initialize vector database:', error.message);
   console.error('🚨 Chatbot will not work until AI embeddings are generated successfully');
 });
+
+// Add: helper to validate that candidate books exist in DB
+async function filterBooksInDb(books) {
+  try {
+    if (!Array.isArray(books) || books.length === 0) return [];
+    const ids = books
+      .map(b => b?.id)
+      .filter(id => typeof id === 'number' || (typeof id === 'string' && id !== ''));
+    if (ids.length === 0) return [];
+    const placeholders = ids.map(() => '?').join(',');
+    const [rows] = await db.execute(
+      `SELECT id, title, author, category, description, status FROM books WHERE id IN (${placeholders})`,
+      ids
+    );
+    const order = new Map(ids.map((id, i) => [String(id), i]));
+    return rows.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
+  } catch (e) {
+    console.error('❌ Error filtering books against DB:', e.message);
+    return [];
+  }
+}
+
+// Build a strictly DB-grounded response message from validated books
+function buildSafeRecommendationsMessage(books, query = '') {
+  if (!Array.isArray(books) || books.length === 0) {
+    return query
+      ? `I couldn't find books in our catalog that match "${query}". Can you specify an author, category, or keywords so I can search again?`
+      : `I couldn't find matching books in our catalog right now. Tell me a category, author, or topic and I'll search again.`;
+  }
+
+  const lines = books.map((b, i) => `${i + 1}. "${b.title}" by ${b.author}${b.category ? ` (${b.category})` : ''}`);
+  let intro = query
+    ? `Here ${books.length === 1 ? 'is' : 'are'} ${books.length} book${books.length === 1 ? '' : 's'} in our catalog related to "${query}":`
+    : `Here ${books.length === 1 ? 'is' : 'are'} ${books.length} book${books.length === 1 ? '' : 's'} currently in our catalog:`;
+  return `${intro}
+
+${lines.join('\n')}
+
+Want more like these or a different topic?`;
+}
+
+// Rank and filter books strictly against the user's query to improve topical accuracy
+function rankBooksAgainstQuery(books, query = '') {
+  if (!Array.isArray(books) || books.length === 0) return [];
+  const q = (query || '').toLowerCase();
+  const stop = new Set(['the','a','an','about','me','some','books','book','recommend','suggest','find','on','for','to','of','and','or']);
+  const rawTokens = q
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t && !stop.has(t));
+
+  // very light stemming/normalization for plurals and common variants
+  const normalizeToken = (t) => {
+    if (t.endsWith('ies') && t.length > 4) return t.slice(0, -3) + 'y';
+    if (t.endsWith('es') && t.length > 3) return t.slice(0, -2);
+    if (t.endsWith('s') && t.length > 3) return t.slice(0, -1);
+    return t;
+  };
+  const tokens = rawTokens.map(normalizeToken);
+
+  const synonymPairs = [
+    ['mobile', ['mobile','android','ios','react native','flutter','kotlin','swift']],
+    ['web', ['web','website','websites','web development','html','css','javascript','react','node','frontend','backend']],
+    ['cybersecurity', ['security','cybersecurity','hacking','ethical hacking','defense']],
+  ];
+
+  const expanded = new Set(tokens);
+  tokens.forEach(t => {
+    synonymPairs.forEach(([key, list]) => {
+      if (t === key || key.includes(t) || t.includes(key)) {
+        list.forEach(s => expanded.add(s));
+      }
+    });
+  });
+  const terms = Array.from(expanded);
+
+  const scored = books.map(b => {
+    const title = (b.title || '').toLowerCase();
+    const category = (b.category || '').toLowerCase();
+    const desc = (b.description || '').toLowerCase();
+    let score = 0;
+    for (const term of terms) {
+      if (!term) continue;
+      if (title.includes(term)) score += 3;
+      if (category.includes(term)) score += 2;
+      if (desc.includes(term)) score += 1;
+    }
+    return { ...b, _score: score };
+  });
+
+  // Require at least minimal relevance if query had any meaningful tokens
+  const hasTerms = terms.length > 0;
+  let filtered = hasTerms ? scored.filter(b => b._score > 0) : scored;
+  // If nothing matched, fall back to best title/category contains on normalized tokens
+  if (filtered.length === 0 && hasTerms) {
+    filtered = scored
+      .map(b => {
+        const title = (b.title || '').toLowerCase();
+        const cat = (b.category || '').toLowerCase();
+        const extra = tokens.some(t => title.includes(t) || cat.includes(t)) ? 1 : 0;
+        return { ...b, _score: extra };
+      })
+      .filter(b => b._score > 0);
+  }
+  return filtered
+    .sort((a, b) => b._score - a._score || String(a.title).localeCompare(String(b.title)))
+    .map(({ _score, ...rest }) => rest);
+}
 
 // Simple test endpoint to verify chatbot is working
 router.get('/test', (req, res) => {
@@ -69,6 +178,41 @@ router.get('/status', async (req, res) => {
       message: 'Failed to get chatbot status',
       error: error.message
     });
+  }
+});
+
+// Vector DB integrity report
+router.get('/vector-integrity', async (req, res) => {
+  try {
+    if (!vectorDBService.isInitialized) {
+      // Attempt lazy init to ensure fresh data
+      await vectorDBService.initialize();
+    }
+    const report = vectorDBService.getIntegrityReport();
+    res.json({ success: true, data: report });
+  } catch (error) {
+    console.error('❌ Error generating vector integrity report:', error);
+    res.status(500).json({ success: false, message: 'Failed to build integrity report', error: error.message });
+  }
+});
+
+// Debug: show what the chatbot vector DB sees from the database
+router.get('/debug-books', async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT COUNT(*) AS c FROM books');
+    const total = rows?.[0]?.c || 0;
+    const sample = (vectorDBService.books || []).slice(0, 20).map(b => ({ id: b.id, title: b.title, author: b.author, status: b.status }));
+    res.json({
+      success: true,
+      data: {
+        dbBookCount: total,
+        vectorBooksCount: vectorDBService.books?.length || 0,
+        sample
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error in /debug-books:', error);
+    res.status(500).json({ success: false, message: 'Failed to get debug books', error: error.message });
   }
 });
 
@@ -153,7 +297,7 @@ router.post('/recommend', async (req, res) => {
     }
     
     // Check if message is asking for book recommendations
-    const isBookRequest = /book|recommend|suggest|find|search|read|novel|story|author|category/i.test(message);
+    const isBookRequest = /\b(book|books|recommend|suggest|find|search|read|novel|story|author|category|title)\b/i.test(message);
     
     let response;
     let books = [];
@@ -165,8 +309,10 @@ router.post('/recommend', async (req, res) => {
           console.log('🚀 Using advanced hybrid recommendations');
           const advancedResult = await chatbotService.generateAdvancedRecommendations(studentIdNumber, message, 5);
           
-          response = advancedResult.aiExplanation || advancedResult.explanation;
-          books = advancedResult.recommendations || [];
+          // Validate returned books against DB and improve topical accuracy
+          books = await filterBooksInDb(advancedResult.recommendations || []);
+          books = rankBooksAgainstQuery(books, message).slice(0, 5);
+          response = buildSafeRecommendationsMessage(books, message);
           
           // Add additional metadata
           const metadata = {
@@ -180,7 +326,7 @@ router.post('/recommend', async (req, res) => {
             success: true,
             data: {
               response,
-              books: [], // Don't send books array - let AI response handle it naturally
+              books, // DB-validated books only
               isBookRequest,
               aiPowered: true,
               advancedRecommendations: true,
@@ -189,14 +335,11 @@ router.post('/recommend', async (req, res) => {
           });
           return;
         } else {
-          // Fallback to original vector search for non-authenticated users
-          books = await vectorDBService.searchSimilarBooks(message, 5);
-          
-          if (books.length > 0) {
-            response = await chatbotService.generateRecommendation(message, books, studentIdNumber);
-          } else {
-            response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
-          }
+          // Fallback to original vector search for non-authenticated users (only available books)
+          books = await vectorDBService.searchSimilarBooks(message, 10);
+          books = await filterBooksInDb(books);
+          books = rankBooksAgainstQuery(books, message).slice(0, 5);
+          response = buildSafeRecommendationsMessage(books, message);
         }
       } catch (searchError) {
         console.error('❌ Error in book search:', searchError.message);
@@ -209,7 +352,19 @@ router.post('/recommend', async (req, res) => {
       try {
         // Add conversation context to the message
         const contextualMessage = chatbotService.addConversationContext(message, conversationHistory);
-        response = await chatbotService.getGeneralResponse(contextualMessage, studentIdNumber);
+        // Intercept factual queries we can answer from DB to avoid hallucination
+        const lower = message.toLowerCase();
+        if (/how many books|total books|books does this library have/.test(lower)) {
+          try {
+            const [rows] = await db.execute(`SELECT COUNT(*) AS c FROM books`);
+            const total = rows?.[0]?.c || 0;
+            response = `We currently have ${total} book${total === 1 ? '' : 's'} in the catalog.`;
+          } catch (e) {
+            response = "I couldn't fetch the total count right now.";
+          }
+        } else {
+          response = await chatbotService.getGeneralResponse(contextualMessage, studentIdNumber);
+        }
       } catch (chatError) {
         console.error('❌ Error generating chat response:', chatError.message);
         return res.status(500).json({
@@ -224,7 +379,7 @@ router.post('/recommend', async (req, res) => {
       success: true,
       data: {
         response,
-        books: [], // Don't send books array - let AI response handle it naturally
+        books, // DB-validated books only
         isBookRequest,
         aiPowered: true
       }

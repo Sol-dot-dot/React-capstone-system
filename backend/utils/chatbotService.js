@@ -10,6 +10,12 @@ class ChatbotService {
   constructor() {
     this.systemPrompt = `You are a knowledgeable, friendly library assistant with a genuine passion for books and helping people discover their next great read. You're like that librarian who knows exactly what someone will love based on their interests and reading history.
 
+    CRITICAL RULES (Anti-hallucination):
+    - Use ONLY information explicitly provided to you in the current prompt/context (book context, user context, or explicit numeric stats passed in).
+    - If a fact (numbers, titles, availability, policies, dates, counts) is not provided, say you don't know and ask a clarifying question. DO NOT guess or invent.
+    - Recommend ONLY books that appear in the provided book context list. Never invent titles or authors.
+    - When uncertain, respond conservatively with "I don't have that information yet" and propose next steps (e.g., refine search).
+
     Your Core Personality:
     - Genuinely enthusiastic about books and reading
     - Conversational and natural - like talking to a well-read friend
@@ -74,7 +80,7 @@ class ChatbotService {
       console.log('🚀 Generating OpenAI embedding...');
       
       const response = await this.openai.embeddings.create({
-        model: "text-embedding-3-small",
+        model: "text-embedding-3-large",
         input: text,
       });
       
@@ -132,18 +138,21 @@ Use this information to make more personalized recommendations that align with t
 
       const prompt = `User Query: "${userQuery}"
 
-Retrieved Book Context from Library Database:
+Retrieved Book Context from Library Database (the ONLY books you may reference):
 ${bookContext}${personalizationContext}
 
-Please provide a natural, conversational response that:
+STRICT INSTRUCTIONS:
+- You MUST ONLY mention and recommend books that appear in the "Retrieved Book Context" list above.
+- Do NOT invent or add any titles, authors, or works that are not in that list.
+- If nothing in the context is a good match, say so and ask a clarifying follow‑up instead of proposing external titles.
+
+Now provide a natural, conversational response that:
 1. Acknowledges the user's request
-2. Recommends specific books from the retrieved context
+2. Recommends specific books from the retrieved context only
 3. Explains why each recommended book matches their interests
 4. Mentions the category and key appeal of each book
 5. ${userPreferences ? 'References their reading history and preferences when relevant' : 'Keeps the tone friendly and encouraging'}
-6. Suggests how the books relate to their reading patterns (if user has history)
-
-If the retrieved books don't match well, politely explain this and suggest alternative approaches.`;
+6. Suggests how the books relate to their reading patterns (if user has history)`;
 
       try {
         const response = await this.openai.chat.completions.create({
@@ -622,6 +631,10 @@ I found these great books for them:
 ${recommendations.slice(0, 3).map((rec, i) => 
   `• "${rec.title}" by ${rec.author} - ${rec.reason}`
 ).join('\n')}
+
+STRICT INSTRUCTIONS:
+- ONLY mention the specific books listed above. Do NOT invent or add any titles that are not in the list.
+- If you need to talk about more options, ask a clarifying question instead of naming unlisted books.
 
 Respond naturally and conversationally. Be genuine and enthusiastic about sharing these recommendations. Show that you understand their reading preferences and explain why these books would be perfect for them. Ask engaging follow-up questions to keep the conversation flowing. Keep it under 200 words and make it feel personal and authentic.`;
 

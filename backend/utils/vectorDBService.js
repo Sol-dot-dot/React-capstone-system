@@ -8,6 +8,7 @@ class VectorDBService {
     this.embeddings = [];
     this.isInitialized = false;
     this.useRealEmbeddings = false;
+    this.integrityReport = null;
   }
 
   async initialize() {
@@ -21,6 +22,7 @@ class VectorDBService {
       const [books] = await db.execute(`
         SELECT id, title, author, category, description, status
         FROM books
+        WHERE status = 'available'
       `);
 
       if (books.length === 0) {
@@ -53,6 +55,17 @@ class VectorDBService {
 
       console.log(`📚 Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
 
+      // Prune any embeddings that no longer exist in DB
+      const dbBookIds = new Set(this.books.map(b => b.id));
+      const allStored = vectorStorage.getAllEmbeddings();
+      const orphaned = allStored.filter(e => !dbBookIds.has(e.bookId));
+      if (orphaned.length > 0) {
+        console.log(`🧹 Removing ${orphaned.length} embeddings not present in DB...`);
+        for (const e of orphaned) {
+          await vectorStorage.removeEmbedding(e.bookId);
+        }
+      }
+
       // Generate OpenAI embeddings for new books
       if (booksNeedingEmbeddings.length > 0) {
         console.log('🚀 Generating OpenAI embeddings for new books...');
@@ -61,10 +74,11 @@ class VectorDBService {
             const book = booksNeedingEmbeddings[i];
             console.log(`📚 Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
             
-            const text = `${book.title} ${book.author} ${book.category} ${book.description}`;
+            const text = `${book.title || ''}\n${book.author || ''}\n${book.category || ''}\n${book.description || ''}`.trim();
             const embedding = await chatbotService.generateEmbedding(text);
             
-            if (embedding && Array.isArray(embedding) && embedding.length === 1536) {
+            // Accept any valid embedding length (model-dependent)
+            if (embedding && Array.isArray(embedding) && embedding.length > 0) {
               // Save to persistent storage
               await vectorStorage.saveEmbedding(book.id, embedding, {
                 title: book.title,
@@ -76,7 +90,7 @@ class VectorDBService {
               existingEmbeddings.push(embedding);
               console.log(`✅ OpenAI embedding generated and saved for: ${book.title}`);
             } else {
-              throw new Error(`Invalid OpenAI embedding for book: ${book.title} (expected 1536 dimensions, got ${embedding ? embedding.length : 'null'})`);
+              throw new Error(`Invalid OpenAI embedding for book: ${book.title} (got ${embedding ? embedding.length : 'null'})`);
             }
           }
         } catch (error) {
@@ -100,6 +114,9 @@ class VectorDBService {
       } else {
         throw new Error(`Only loaded ${this.embeddings.length} embeddings for ${this.books.length} books`);
       }
+
+      // Build integrity report comparing DB books and stored metadata
+      this.integrityReport = this.buildIntegrityReport();
 
       console.log(`OpenAI-powered similarity database initialized with ${this.books.length} books`);
       this.isInitialized = true;
@@ -191,6 +208,58 @@ class VectorDBService {
       console.error('Error refreshing similarity database:', error);
       throw error;
     }
+  }
+
+  buildIntegrityReport() {
+    try {
+      const dbBookIds = new Set(this.books.map(b => b.id));
+      const storageEntries = vectorStorage.getAllEmbeddings();
+
+      const storageIds = new Set(storageEntries.map(e => e.bookId));
+
+      const orphanedInStorage = storageEntries
+        .filter(e => !dbBookIds.has(e.bookId))
+        .map(e => ({ bookId: e.bookId, metadata: e.metadata || null }));
+
+      const missingEmbeddings = this.books
+        .filter(b => !storageIds.has(b.id))
+        .map(b => ({ id: b.id, title: b.title, author: b.author, status: b.status }));
+
+      const metadataMismatches = [];
+      for (const book of this.books) {
+        const meta = vectorStorage.getMetadata(book.id);
+        if (meta) {
+          const titleMismatch = meta.title && meta.title !== book.title;
+          const authorMismatch = meta.author && meta.author !== book.author;
+          if (titleMismatch || authorMismatch) {
+            metadataMismatches.push({
+              id: book.id,
+              db: { title: book.title, author: book.author },
+              storage: { title: meta.title, author: meta.author }
+            });
+          }
+        }
+      }
+
+      return {
+        totals: {
+          dbBooks: this.books.length,
+          storageEmbeddings: this.embeddings.length,
+          storageEntries: storageEntries.length
+        },
+        orphanedInStorage,
+        missingEmbeddings,
+        metadataMismatches,
+        ok: orphanedInStorage.length === 0 && metadataMismatches.length === 0
+      };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+
+  getIntegrityReport() {
+    this.integrityReport = this.buildIntegrityReport();
+    return this.integrityReport;
   }
 
 

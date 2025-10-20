@@ -2,12 +2,12 @@
 // Change the IP address here to easily switch between development and production environments
 
 const API_CONFIG = {
-  // Base URL - Choose the appropriate one for your setup
-  // BASE_URL: 'https://api.sdd-ds.org', // Production backend
-  BASE_URL: 'http://10.0.2.2:5000', // Android emulator - for development
-  // BASE_URL: 'http://localhost:5000', // For web development
-  // BASE_URL: 'http://192.168.254.100:5000', // For physical device (your computer's IP)
-  // BASE_URL: 'http://172.21.112.1:5000', // Alternative IP for physical device
+  // Base URL - Change this IP address to match your backend server
+  BASE_URL: 'http://10.0.2.2:5000', // Android emulator - this is working
+  // BASE_URL: 'http://localhost:5000', // Try localhost first
+  //BASE_URL: 'http://172.27.128.1:5000', // Add http:// // For physical device (replace with your computer's IP)
+  // BASE_URL: 'https://your-production-domain.com', // For production
+
   // API Endpoints
   ENDPOINTS: {
     // Authentication endpoints
@@ -51,11 +51,6 @@ const API_CONFIG = {
     // Penalty endpoints
     PENALTY: {
       GET_USER_PENALTIES: (idNumber) => `/api/penalty/user/${idNumber}`,
-    },
-
-    // Clearance endpoints
-    CLEARANCE: {
-      GET_USER_CLEARANCE_STATUS: (idNumber) => `/api/penalty/user/${idNumber}/clearance`,
     },
   },
 

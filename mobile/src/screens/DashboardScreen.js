@@ -101,18 +101,18 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
         console.log('Using real semester data:', semesterResponse.data.data);
         setClearanceData(semesterResponse.data.data);
       } else {
-        console.log('Using fallback data, borrowed books:', borrowedBooks.length);
-        console.log('Semester response error:', semesterResponse?.data || 'No response');
-        // Use real semester data from database - get from semester_tracking table
-        // For now, use a hardcoded value based on the database data we saw
-        const realSemesterCount = 10; // This should come from semester_tracking.books_borrowed_count
+        // No mock numbers: gracefully fall back to data derived from actual borrowed books
+        console.log('Semester endpoint unavailable; deriving progress from borrowed books list.');
+        const derivedCount = Array.isArray(borrowedResponse?.data?.data?.borrowedBooks)
+          ? borrowedResponse.data.data.borrowedBooks.length
+          : borrowedBooks.length;
         setClearanceData({
-          booksThisSemester: realSemesterCount,
+          booksThisSemester: derivedCount,
           requiredBooks: 20,
-          booksRemaining: Math.max(0, 20 - realSemesterCount),
-          clearanceStatus: realSemesterCount >= 20 ? 'completed' : 
-                          realSemesterCount >= 15 ? 'near_completion' :
-                          realSemesterCount >= 10 ? 'in_progress' : 'needs_improvement'
+          booksRemaining: Math.max(0, 20 - derivedCount),
+          clearanceStatus: derivedCount >= 20 ? 'completed' : 
+                          derivedCount >= 15 ? 'near_completion' :
+                          derivedCount >= 10 ? 'in_progress' : 'needs_improvement'
         });
       }
     } catch (error) {
