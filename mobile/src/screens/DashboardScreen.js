@@ -297,43 +297,7 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
           </ResponsiveGrid>
         </Animatable.View>
 
-        {/* Quick Actions */}
-        <Animatable.View
-          animation="fadeInUp"
-          duration={800}
-          delay={800}
-          style={styles.quickActionsContainer}
-        >
-          <Text style={[styles.sectionTitle, { fontSize: getResponsiveFontSize(20) }]}>
-            Quick Actions
-          </Text>
-          <ResponsiveGrid columns={deviceInfo.isTablet ? 4 : 2} spacing={16}>
-            {quickActions.map((action, index) => (
-              <Animatable.View
-                key={action.title}
-                animation="fadeInUp"
-                duration={600}
-                delay={1000 + (index * 100)}
-              >
-                <ModernCard
-                  onPress={action.onPress}
-                  style={styles.quickActionCard}
-                  fullWidth
-                >
-                  <View style={[styles.quickActionIcon, { backgroundColor: action.color + '20' }]}>
-                    <Icon name={action.icon} size={getResponsiveFontSize(28)} color={action.color} />
-                  </View>
-                  <Text style={[styles.quickActionTitle, { fontSize: getResponsiveFontSize(16) }]}>
-                    {action.title}
-                  </Text>
-                  <Text style={[styles.quickActionSubtitle, { fontSize: getResponsiveFontSize(12) }]}>
-                    {action.subtitle}
-                  </Text>
-                </ModernCard>
-              </Animatable.View>
-            ))}
-          </ResponsiveGrid>
-        </Animatable.View>
+        {/* Quick Actions - removed as requested */}
 
         {/* Semester Books Requirement Progress */}
         <Animatable.View

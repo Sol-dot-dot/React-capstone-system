@@ -59,6 +59,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [userKnowledge, setUserKnowledge] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showExplain, setShowExplain] = useState(false);
   const scrollViewRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const typingAnim = useRef(new Animated.Value(0)).current;
@@ -168,7 +169,8 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
 
       const requestData = {
         message: inputText.trim(),
-        conversationHistory: conversationHistory
+        conversationHistory: conversationHistory,
+        explain: showExplain,
       };
       
       // Add student ID for personalized recommendations if available
@@ -203,6 +205,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           metadata: response.data.data.metadata || null,
           recommendationEngine: response.data.data.metadata?.recommendationEngine || 'basic',
           confidence: response.data.data.metadata?.confidence || 0,
+          reasoning: response.data.data.reasoning,
         };
 
         setMessages(prev => [...prev, botMessage]);
@@ -387,6 +390,28 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           </View>
         )}
         
+        {/* Optional reasoning */}
+        {showExplain && message.reasoning && (
+          <View style={styles.reasoningContainer}>
+            <Text style={styles.reasoningTitle}>How I matched your query</Text>
+            {Array.isArray(message.reasoning.tokens) && message.reasoning.tokens.length > 0 && (
+              <Text style={styles.reasoningText}>Tokens: {message.reasoning.tokens.join(', ')}</Text>
+            )}
+            {Array.isArray(message.reasoning.expandedTerms) && message.reasoning.expandedTerms.length > 0 && (
+              <Text style={styles.reasoningText}>Expanded: {message.reasoning.expandedTerms.join(', ')}</Text>
+            )}
+            {Array.isArray(message.reasoning.scored) && message.reasoning.scored.length > 0 && (
+              <View style={{ marginTop: 6 }}>
+                {message.reasoning.scored.slice(0, 5).map((s, i) => (
+                  <Text key={i} style={styles.reasoningText}>
+                    {`• ${s.title} (score ${s.score})`}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+        
         <Text style={styles.timestamp}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
@@ -425,6 +450,12 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           </View>
         </View>
         <View style={styles.headerRight}>
+          <TouchableOpacity 
+            onPress={() => setShowExplain(!showExplain)}
+            style={[styles.profileButton, { marginRight: 8, backgroundColor: showExplain ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'}]}
+          >
+            <Icon name="message-circle" size={20} color="#ffffff" />
+          </TouchableOpacity>
           {userKnowledge && (
             <TouchableOpacity 
               onPress={() => setShowUserProfile(!showUserProfile)} 
@@ -759,6 +790,23 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  reasoningContainer: {
+    marginTop: ModernTheme.spacing.sm,
+    padding: ModernTheme.spacing.sm,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+  },
+  reasoningTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ModernTheme.colors.text,
+    marginBottom: 4,
+  },
+  reasoningText: {
+    fontSize: 11,
+    color: ModernTheme.colors.textSecondary,
+    marginTop: 2,
   },
   userProfileContainer: {
     backgroundColor: '#f8f9fa',

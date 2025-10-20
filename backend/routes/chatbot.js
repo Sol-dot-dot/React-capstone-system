@@ -56,7 +56,7 @@ Want more like these or a different topic?`;
 
 // Rank and filter books strictly against the user's query to improve topical accuracy
 function rankBooksAgainstQuery(books, query = '') {
-  if (!Array.isArray(books) || books.length === 0) return [];
+  if (!Array.isArray(books) || books.length === 0) return { ranked: [], explanation: { query, tokens: [], expandedTerms: [], scored: [] } };
   const q = (query || '').toLowerCase();
   const stop = new Set(['the','a','an','about','me','some','books','book','recommend','suggest','find','on','for','to','of','and','or']);
   const rawTokens = q
@@ -94,13 +94,16 @@ function rankBooksAgainstQuery(books, query = '') {
     const category = (b.category || '').toLowerCase();
     const desc = (b.description || '').toLowerCase();
     let score = 0;
+    let titleHits = [];
+    let categoryHits = [];
+    let descHits = [];
     for (const term of terms) {
       if (!term) continue;
-      if (title.includes(term)) score += 3;
-      if (category.includes(term)) score += 2;
-      if (desc.includes(term)) score += 1;
+      if (title.includes(term)) { score += 3; titleHits.push(term); }
+      if (category.includes(term)) { score += 2; categoryHits.push(term); }
+      if (desc.includes(term)) { score += 1; descHits.push(term); }
     }
-    return { ...b, _score: score };
+    return { ...b, _score: score, _matches: { title: Array.from(new Set(titleHits)), category: Array.from(new Set(categoryHits)), description: Array.from(new Set(descHits)) } };
   });
 
   // Require at least minimal relevance if query had any meaningful tokens
@@ -113,13 +116,21 @@ function rankBooksAgainstQuery(books, query = '') {
         const title = (b.title || '').toLowerCase();
         const cat = (b.category || '').toLowerCase();
         const extra = tokens.some(t => title.includes(t) || cat.includes(t)) ? 1 : 0;
-        return { ...b, _score: extra };
+        return { ...b, _score: extra, _matches: b._matches };
       })
       .filter(b => b._score > 0);
   }
-  return filtered
-    .sort((a, b) => b._score - a._score || String(a.title).localeCompare(String(b.title)))
-    .map(({ _score, ...rest }) => rest);
+  const ranked = filtered
+    .sort((a, b) => b._score - a._score || String(a.title).localeCompare(String(b.title)));
+
+  const explanation = {
+    query,
+    tokens,
+    expandedTerms: terms,
+    scored: ranked.slice(0, 10).map(b => ({ id: b.id, title: b.title, score: b._score, matches: b._matches }))
+  };
+
+  return { ranked: ranked.map(({ _score, _matches, ...rest }) => rest), explanation };
 }
 
 // Simple test endpoint to verify chatbot is working
@@ -253,7 +264,7 @@ router.post('/simple', async (req, res) => {
 // Chat with chatbot and get book recommendations
 router.post('/recommend', async (req, res) => {
   try {
-    const { message, studentIdNumber, conversationHistory = [] } = req.body;
+    const { message, studentIdNumber, conversationHistory = [], explain = false } = req.body;
     
     // Manual validation
     if (!message || typeof message !== 'string') {
@@ -311,7 +322,8 @@ router.post('/recommend', async (req, res) => {
           
           // Validate returned books against DB and improve topical accuracy
           books = await filterBooksInDb(advancedResult.recommendations || []);
-          books = rankBooksAgainstQuery(books, message).slice(0, 5);
+          const rankedAdv = rankBooksAgainstQuery(books, message);
+          books = rankedAdv.ranked.slice(0, 5);
           response = buildSafeRecommendationsMessage(books, message);
           
           // Add additional metadata
@@ -330,7 +342,8 @@ router.post('/recommend', async (req, res) => {
               isBookRequest,
               aiPowered: true,
               advancedRecommendations: true,
-              metadata
+              metadata,
+              reasoning: explain ? rankedAdv.explanation : undefined
             }
           });
           return;
@@ -338,7 +351,8 @@ router.post('/recommend', async (req, res) => {
           // Fallback to original vector search for non-authenticated users (only available books)
           books = await vectorDBService.searchSimilarBooks(message, 10);
           books = await filterBooksInDb(books);
-          books = rankBooksAgainstQuery(books, message).slice(0, 5);
+          const ranked = rankBooksAgainstQuery(books, message);
+          books = ranked.ranked.slice(0, 5);
           response = buildSafeRecommendationsMessage(books, message);
         }
       } catch (searchError) {

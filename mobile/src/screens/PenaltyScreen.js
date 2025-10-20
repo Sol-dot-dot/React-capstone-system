@@ -254,29 +254,17 @@ const PenaltyScreen = ({ userData, onBack }) => {
               animation="fadeInUp"
               duration={600}
               delay={200}
-              style={styles.summaryContainer}
+              style={[styles.summaryContainer, { alignItems: 'center' }]}
             >
-              <View style={styles.summaryGrid}>
-                <ModernCard style={[styles.summaryCard, { borderLeftColor: ModernTheme.colors.error, borderLeftWidth: 4 }]}>
-                  <View style={styles.summaryContent}>
-                    <Icon name="cash-outline" size={24} color={ModernTheme.colors.error} />
-                    <View style={styles.summaryText}>
-                      <Text style={styles.summaryValue}>₱{getTotalAmount().toFixed(2)}</Text>
-                      <Text style={styles.summaryLabel}>Outstanding</Text>
-                    </View>
+              <ModernCard style={[styles.summaryCard, { borderLeftColor: ModernTheme.colors.error, borderLeftWidth: 4, width: '70%' }]}> 
+                <View style={[styles.summaryContent, { justifyContent: 'center' }]}>
+                  <Icon name="cash-outline" size={24} color={ModernTheme.colors.error} />
+                  <View style={styles.summaryText}>
+                    <Text style={styles.summaryValue}>₱{getTotalAmount().toFixed(2)}</Text>
+                    <Text style={styles.summaryLabel}>Outstanding</Text>
                   </View>
-                </ModernCard>
-
-                <ModernCard style={[styles.summaryCard, { borderLeftColor: ModernTheme.colors.success, borderLeftWidth: 4 }]}>
-                  <View style={styles.summaryContent}>
-                    <Icon name="checkmark-circle-outline" size={24} color={ModernTheme.colors.success} />
-                    <View style={styles.summaryText}>
-                      <Text style={styles.summaryValue}>₱{getPaidAmount().toFixed(2)}</Text>
-                      <Text style={styles.summaryLabel}>Paid</Text>
-                    </View>
-                  </View>
-                </ModernCard>
-              </View>
+                </View>
+              </ModernCard>
             </Animatable.View>
 
             {/* Current Penalties */}
@@ -287,22 +275,7 @@ const PenaltyScreen = ({ userData, onBack }) => {
               </View>
             )}
 
-            {/* History Toggle */}
-            <Animatable.View
-              animation="fadeInUp"
-              duration={600}
-              delay={400}
-              style={styles.historyToggleContainer}
-            >
-              <ModernButton
-                title={showHistory ? "Hide History" : "View History"}
-                onPress={() => setShowHistory(!showHistory)}
-                variant="outline"
-                size="medium"
-                icon={<Icon name={showHistory ? "chevron-up-outline" : "time-outline"} size={20} color={ModernTheme.colors.primary} />}
-                style={styles.historyToggleButton}
-              />
-            </Animatable.View>
+            {/* History Toggle removed as requested */}
 
             {/* Historical Penalties */}
             {showHistory && (

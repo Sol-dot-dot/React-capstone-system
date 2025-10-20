@@ -208,6 +208,11 @@ export const ModernBadge = ({
 
   const badgeTextStyle = [
     styles.badgeText,
+    variant === 'success' && styles.successBadgeText,
+    variant === 'warning' && styles.warningBadgeText,
+    variant === 'error' && styles.errorBadgeText,
+    variant === 'info' && styles.infoBadgeText,
+    variant === 'primary' && styles.primaryBadgeText,
     {
       fontSize: getFontSize(),
     },
