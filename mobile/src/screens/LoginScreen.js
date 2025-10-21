@@ -36,12 +36,15 @@ const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loginStep, setLoginStep] = useState('idle'); // 'idle', 'validating', 'authenticating', 'success'
 
   const handleLogin = async () => {
     // Clear previous errors
     setErrors({});
 
-    // Validation
+    // Step 1: Validation
+    setLoginStep('validating');
+    
     const newErrors = {};
     if (!idNumber) {
       newErrors.idNumber = 'ID Number is required';
@@ -55,26 +58,106 @@ const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setLoginStep('idle');
       return;
     }
 
+    // Step 2: Authentication
+    setLoginStep('authenticating');
     setLoading(true);
+    
     try {
       const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_LOGIN')), {
         idNumber,
         password,
+      }, {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
       if (response.data.success) {
-        onLogin(response.data.user);
+        setLoginStep('success');
+        // Small delay for better UX
+        setTimeout(() => {
+          onLogin(response.data.user);
+        }, 300);
       }
     } catch (error) {
-      Alert.alert(
-        'Login Failed',
-        error.response?.data?.message || 'An error occurred during login'
-      );
+      setLoginStep('idle');
+      
+      let errorMessage = 'An error occurred during login';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Connection timeout. Please check your internet connection and try again.';
+      } else if (error.response?.status === 401) {
+        errorMessage = error.response.data.message || 'Invalid credentials. Please check your ID and password.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Account not verified. Please check your email and verify your account.';
+      } else if (error.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again in a few moments.';
+      } else if (!error.response) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getLoginButtonText = () => {
+    switch (loginStep) {
+      case 'validating':
+        return 'Validating...';
+      case 'authenticating':
+        return 'Signing In...';
+      case 'success':
+        return 'Success!';
+      default:
+        return 'Sign In';
+    }
+  };
+
+  const getLoginButtonIcon = () => {
+    switch (loginStep) {
+      case 'validating':
+        return <Icon name="checkmark-circle-outline" size={20} color="#ffffff" />;
+      case 'authenticating':
+        return <Icon name="log-in-outline" size={20} color="#ffffff" />;
+      case 'success':
+        return <Icon name="checkmark-circle" size={20} color="#ffffff" />;
+      default:
+        return <Icon name="log-in-outline" size={20} color="#ffffff" />;
+    }
+  };
+
+  const getProgressWidth = () => {
+    switch (loginStep) {
+      case 'validating':
+        return '33%';
+      case 'authenticating':
+        return '66%';
+      case 'success':
+        return '100%';
+      default:
+        return '0%';
+    }
+  };
+
+  const getProgressText = () => {
+    switch (loginStep) {
+      case 'validating':
+        return 'Validating credentials...';
+      case 'authenticating':
+        return 'Authenticating with server...';
+      case 'success':
+        return 'Login successful! Redirecting...';
+      default:
+        return '';
     }
   };
 
@@ -152,16 +235,30 @@ const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
 
             <View style={styles.loginButtonContainer}>
               <ModernButton
-                title={loading ? "Signing In..." : "Sign In"}
+                title={getLoginButtonText()}
                 onPress={handleLogin}
                 variant="primary"
                 size="large"
                 loading={loading}
-                disabled={loading}
-                icon={<Icon name="log-in-outline" size={20} color="#ffffff" />}
-                style={styles.loginButton}
+                disabled={loading || loginStep === 'validating'}
+                icon={getLoginButtonIcon()}
+                style={[styles.loginButton, loginStep === 'success' && styles.successButton]}
               />
             </View>
+            
+            {/* Loading Progress Indicator */}
+            {loginStep !== 'idle' && (
+              <Animatable.View 
+                animation="fadeInUp" 
+                duration={300}
+                style={styles.progressContainer}
+              >
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: getProgressWidth() }]} />
+                </View>
+                <Text style={styles.progressText}>{getProgressText()}</Text>
+              </Animatable.View>
+            )}
           </View>
 
           {/* Footer */}
@@ -278,6 +375,33 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Loading Progress Styles
+  progressContainer: {
+    marginTop: ModernTheme.spacing.lg,
+    paddingHorizontal: ModernTheme.spacing.md,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: ModernTheme.colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: ModernTheme.spacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: ModernTheme.colors.primary,
+    borderRadius: 2,
+    transition: 'width 0.3s ease',
+  },
+  progressText: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    textAlign: 'center',
+    fontSize: 12,
+  },
+  successButton: {
+    backgroundColor: ModernTheme.colors.success,
   },
 });
 

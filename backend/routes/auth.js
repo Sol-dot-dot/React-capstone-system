@@ -393,8 +393,9 @@ router.post('/user/login', [
 
         const { idNumber, password } = req.body;
 
+        // Optimized query - only select necessary fields for login
         const [users] = await pool.execute(
-            'SELECT * FROM users WHERE id_number = ?',
+            'SELECT id, id_number, password_hash, is_verified, first_name, last_name, email FROM users WHERE id_number = ?',
             [idNumber]
         );
 
@@ -414,11 +415,13 @@ router.post('/user/login', [
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Log user login
-        await pool.execute(
+        // Log user login (async, don't wait for completion)
+        pool.execute(
             'INSERT INTO login_logs (user_id, user_type, ip_address, user_agent) VALUES (?, ?, ?, ?)',
             [user.id, 'student', req.ip, req.get('User-Agent')]
-        );
+        ).catch(error => {
+            console.error('Login log error (non-critical):', error);
+        });
 
         const token = jwt.sign(
             { id: user.id, idNumber: user.id_number, type: 'user' },
