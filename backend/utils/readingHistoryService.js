@@ -91,7 +91,11 @@ class ReadingHistoryService {
           b.description,
           b.publication_year,
           b.publisher,
-          b.status
+          b.status,
+          b.available_copies,
+          b.book_copies,
+          b.number_code,
+          b.isbn
         FROM books b
         WHERE b.status = 'available'
         ORDER BY b.title

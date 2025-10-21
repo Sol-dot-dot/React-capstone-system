@@ -15,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -61,7 +62,7 @@ const ForgotPasswordScreen = ({ onBack, onNavigate, onEmailSubmit }) => {
 
     try {
       setLoading(true);
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/request-password-reset', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_REQUEST_PASSWORD_RESET')), {
         email,
       });
 

@@ -261,6 +261,124 @@ router.post('/simple', async (req, res) => {
   }
 });
 
+// Enhanced book request detection function
+function detectBookRequest(message) {
+  const query = message.toLowerCase();
+  
+  // Direct book-related keywords
+  const bookKeywords = [
+    'book', 'books', 'novel', 'novels', 'story', 'stories', 'read', 'reading',
+    'author', 'authors', 'writer', 'writers', 'title', 'titles', 'genre', 'genres',
+    'category', 'categories', 'fiction', 'non-fiction', 'nonfiction', 'biography',
+    'autobiography', 'memoir', 'textbook', 'textbooks', 'manual', 'manuals',
+    'guide', 'guides', 'tutorial', 'tutorials', 'reference', 'references'
+  ];
+  
+  // Recommendation keywords
+  const recommendationKeywords = [
+    'recommend', 'recommendation', 'recommendations', 'suggest', 'suggestion',
+    'suggestions', 'advise', 'advice', 'what should', 'what to read', 'what book',
+    'find me', 'help me find', 'looking for', 'search for', 'searching for',
+    'need a book', 'want a book', 'good book', 'best book', 'favorite book',
+    'popular book', 'trending book', 'new book', 'latest book'
+  ];
+  
+  // Subject/topic keywords that might relate to books
+  const subjectKeywords = [
+    'learn', 'learning', 'study', 'studying', 'education', 'academic',
+    'programming', 'coding', 'development', 'web', 'mobile', 'app', 'software',
+    'design', 'art', 'history', 'science', 'technology', 'business',
+    'psychology', 'philosophy', 'literature', 'poetry', 'drama', 'theater',
+    'music', 'film', 'cinema', 'photography', 'cooking', 'travel', 'health',
+    'fitness', 'sports', 'gaming', 'comics', 'manga', 'anime'
+  ];
+  
+  // Question patterns that might be about books
+  const questionPatterns = [
+    /what.*book/i,
+    /which.*book/i,
+    /how.*learn/i,
+    /where.*find/i,
+    /can.*recommend/i,
+    /do.*have/i,
+    /is.*available/i,
+    /show.*me/i,
+    /give.*me/i,
+    /any.*good/i
+  ];
+  
+  // Check for direct book keywords
+  const hasBookKeywords = bookKeywords.some(keyword => query.includes(keyword));
+  
+  // Check for recommendation keywords
+  const hasRecommendationKeywords = recommendationKeywords.some(keyword => query.includes(keyword));
+  
+  // Check for subject keywords (but only if combined with other indicators)
+  const hasSubjectKeywords = subjectKeywords.some(keyword => query.includes(keyword));
+  
+  // Check for question patterns
+  const hasQuestionPatterns = questionPatterns.some(pattern => pattern.test(query));
+  
+  // Check for specific phrases that indicate book interest
+  const bookPhrases = [
+    'what to read', 'what should i read', 'book about', 'books on',
+    'learn about', 'study about', 'read about', 'interested in',
+    'curious about', 'want to know', 'need to learn', 'help with'
+  ];
+  
+  const hasBookPhrases = bookPhrases.some(phrase => query.includes(phrase));
+  
+  // Decision logic: more flexible detection
+  if (hasBookKeywords || hasRecommendationKeywords || hasBookPhrases) {
+    return true;
+  }
+  
+  // If it has subject keywords AND is a question/request, likely about books
+  if (hasSubjectKeywords && (hasQuestionPatterns || query.includes('?'))) {
+    return true;
+  }
+  
+  // If it's a general question about learning/studying, likely wants book recommendations
+  if (query.includes('learn') || query.includes('study') || query.includes('education')) {
+    return true;
+  }
+  
+  // If it's asking for help with a specific topic, likely wants books
+  if (query.includes('help') && (hasSubjectKeywords || query.includes('with'))) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Validate that books actually exist in the database
+async function validateBooksInDatabase(books) {
+  if (!books || books.length === 0) return [];
+  
+  try {
+    const bookIds = books.map(book => book.id).filter(id => id);
+    if (bookIds.length === 0) return [];
+    
+    const placeholders = bookIds.map(() => '?').join(',');
+    const [existingBooks] = await db.execute(
+      `SELECT id, title, author, status, available_copies FROM books WHERE id IN (${placeholders})`,
+      bookIds
+    );
+    
+    // Filter to only include books that actually exist in DB
+    const validBooks = books.filter(book => 
+      existingBooks.some(dbBook => dbBook.id === book.id)
+    );
+    
+    console.log(`✅ Validated ${validBooks.length}/${books.length} books exist in database`);
+    return validBooks;
+    
+  } catch (error) {
+    console.error('❌ Error validating books in database:', error);
+    return []; // Return empty array if validation fails
+  }
+}
+
 // Chat with chatbot and get book recommendations
 router.post('/recommend', async (req, res) => {
   try {
@@ -307,8 +425,8 @@ router.post('/recommend', async (req, res) => {
       });
     }
     
-    // Check if message is asking for book recommendations
-    const isBookRequest = /\b(book|books|recommend|suggest|find|search|read|novel|story|author|category|title)\b/i.test(message);
+    // Enhanced book request detection - more flexible and intelligent
+    const isBookRequest = this.detectBookRequest(message);
     
     let response;
     let books = [];
@@ -324,6 +442,9 @@ router.post('/recommend', async (req, res) => {
           books = await filterBooksInDb(advancedResult.recommendations || []);
           const rankedAdv = rankBooksAgainstQuery(books, message);
           books = rankedAdv.ranked.slice(0, 5);
+          
+          // Double-check that all books exist in database
+          books = await this.validateBooksInDatabase(books);
           response = buildSafeRecommendationsMessage(books, message);
           
           // Add additional metadata
@@ -353,6 +474,9 @@ router.post('/recommend', async (req, res) => {
           books = await filterBooksInDb(books);
           const ranked = rankBooksAgainstQuery(books, message);
           books = ranked.ranked.slice(0, 5);
+          
+          // Validate books exist in database
+          books = await validateBooksInDatabase(books);
           response = buildSafeRecommendationsMessage(books, message);
         }
       } catch (searchError) {
@@ -377,7 +501,7 @@ router.post('/recommend', async (req, res) => {
             response = "I couldn't fetch the total count right now.";
           }
         } else {
-          response = await chatbotService.getGeneralResponse(contextualMessage, studentIdNumber);
+          response = await chatbotService.getEnhancedGeneralResponse(contextualMessage, studentIdNumber);
         }
       } catch (chatError) {
         console.error('❌ Error generating chat response:', chatError.message);

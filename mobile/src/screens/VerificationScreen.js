@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const VerificationScreen = ({ onNavigate, onBack, userData }) => {
   const [verificationCode, setVerificationCode] = useState('');
@@ -32,7 +33,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
       
       // Step 3: Verify Email Code
       console.log('Step 3: Verifying email code...');
-      const verifyResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/verify-code', {
+      const verifyResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_VERIFY_CODE')), {
         idNumber: userData.idNumber,
         email: userData.email,
         verificationCode: verificationCode,
@@ -45,7 +46,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
 
       // Step 4: Complete Registration with Password
       console.log('Step 4: Completing registration...');
-      const completeResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/complete-registration', {
+      const completeResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_COMPLETE_REGISTRATION')), {
         userId: userData.userId,
         password: userData.password,
       });
@@ -79,7 +80,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
       setLoading(true);
       
       // Resend verification code
-      const response = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_CHECK_EMAIL')), {
         idNumber: userData.idNumber,
         email: userData.email,
       });

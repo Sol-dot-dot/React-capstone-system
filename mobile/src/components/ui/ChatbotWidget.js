@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ScrollView,
   StyleSheet,
   Animated,
@@ -59,7 +60,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [userKnowledge, setUserKnowledge] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [showExplain, setShowExplain] = useState(false);
   const scrollViewRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const typingAnim = useRef(new Animated.Value(0)).current;
@@ -170,7 +170,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       const requestData = {
         message: inputText.trim(),
         conversationHistory: conversationHistory,
-        explain: showExplain,
       };
       
       // Add student ID for personalized recommendations if available
@@ -205,7 +204,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           metadata: response.data.data.metadata || null,
           recommendationEngine: response.data.data.metadata?.recommendationEngine || 'basic',
           confidence: response.data.data.metadata?.confidence || 0,
-          reasoning: response.data.data.reasoning,
         };
 
         setMessages(prev => [...prev, botMessage]);
@@ -390,28 +388,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           </View>
         )}
         
-        {/* Optional reasoning */}
-        {showExplain && message.reasoning && (
-          <View style={styles.reasoningContainer}>
-            <Text style={styles.reasoningTitle}>How I matched your query</Text>
-            {Array.isArray(message.reasoning.tokens) && message.reasoning.tokens.length > 0 && (
-              <Text style={styles.reasoningText}>Tokens: {message.reasoning.tokens.join(', ')}</Text>
-            )}
-            {Array.isArray(message.reasoning.expandedTerms) && message.reasoning.expandedTerms.length > 0 && (
-              <Text style={styles.reasoningText}>Expanded: {message.reasoning.expandedTerms.join(', ')}</Text>
-            )}
-            {Array.isArray(message.reasoning.scored) && message.reasoning.scored.length > 0 && (
-              <View style={{ marginTop: 6 }}>
-                {message.reasoning.scored.slice(0, 5).map((s, i) => (
-                  <Text key={i} style={styles.reasoningText}>
-                    {`• ${s.title} (score ${s.score})`}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-        
         <Text style={styles.timestamp}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
@@ -428,47 +404,46 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   if (!isVisible) return null;
 
   return (
-    <Animated.View style={[
-      styles.container,
-      {
-        transform: [{
-          translateY: slideAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [400, 0],
-          })
-        }]
-      }
-    ]}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.botAvatarLarge}>
-            <Icon name="user" size={24} color="#ffffff" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>Library Assistant</Text>
-            <Text style={styles.headerSubtitle}>AI-Powered Recommendations</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity 
-            onPress={() => setShowExplain(!showExplain)}
-            style={[styles.profileButton, { marginRight: 8, backgroundColor: showExplain ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'}]}
-          >
-            <Icon name="message-circle" size={20} color="#ffffff" />
-          </TouchableOpacity>
-          {userKnowledge && (
-            <TouchableOpacity 
-              onPress={() => setShowUserProfile(!showUserProfile)} 
-              style={styles.profileButton}
-            >
-              <Icon name="user" size={20} color="#ffffff" />
+    <View style={styles.overlay}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.backgroundTouchArea} />
+      </TouchableWithoutFeedback>
+      <Animated.View style={[
+        styles.container,
+        {
+          transform: [{
+            translateY: slideAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [400, 0],
+            })
+          }]
+        }
+      ]}>
+        <View style={styles.contentWrapper}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.headerLeft}>
+              <View style={styles.botAvatarLarge}>
+                <Icon name="user" size={24} color="#ffffff" />
+              </View>
+              <View>
+                <Text style={styles.headerTitle}>Library Assistant</Text>
+                <Text style={styles.headerSubtitle}>AI-Powered Recommendations</Text>
+              </View>
             </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Icon name="x" size={20} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+            <View style={styles.headerRight}>
+              {userKnowledge && (
+                <TouchableOpacity 
+                  onPress={() => setShowUserProfile(!showUserProfile)} 
+                  style={styles.profileButton}
+                >
+                  <Icon name="user" size={20} color="#ffffff" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Icon name="x" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          </View>
 
       {/* User Profile Display */}
       {showUserProfile && userKnowledge && (
@@ -512,19 +487,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         {isTyping && renderTypingIndicator()}
       </ScrollView>
 
-      {/* Personalized Recommendations Button */}
-      {userInfo && (userInfo.id_number || userInfo.idNumber) && (
-        <View style={styles.personalizedButtonContainer}>
-          <TouchableOpacity
-            style={[styles.personalizedButton, isLoading && styles.personalizedButtonDisabled]}
-            onPress={getPersonalizedRecommendations}
-            disabled={isLoading}
-          >
-            <Icon name="book" size={16} color="#ffffff" />
-            <Text style={styles.personalizedButtonText}>Get Personalized Recommendations</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <View style={styles.inputContainer}>
         <View style={styles.inputWrapper}>
@@ -550,7 +512,9 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           </TouchableOpacity>
         </View>
       </View>
+        </View>
     </Animated.View>
+    </View>
   );
 
   const handleFeedback = async (messageId, feedback) => {
@@ -578,6 +542,22 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  backgroundTouchArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
   container: {
     position: 'absolute',
     bottom: 0,
@@ -588,6 +568,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: ModernTheme.borderRadius.xl,
     borderTopRightRadius: ModernTheme.borderRadius.xl,
     ...ModernTheme.shadows.card,
+  },
+  contentWrapper: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -602,6 +585,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   botAvatarLarge: {
     width: 40,
@@ -790,23 +775,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  reasoningContainer: {
-    marginTop: ModernTheme.spacing.sm,
-    padding: ModernTheme.spacing.sm,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 8,
-  },
-  reasoningTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: ModernTheme.colors.text,
-    marginBottom: 4,
-  },
-  reasoningText: {
-    fontSize: 11,
-    color: ModernTheme.colors.textSecondary,
-    marginTop: 2,
   },
   userProfileContainer: {
     backgroundColor: '#f8f9fa',

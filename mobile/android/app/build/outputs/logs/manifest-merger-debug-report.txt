@@ -129,7 +129,7 @@ MERGED from [com.facebook.soloader:soloader:0.10.5] C:\Users\rhodc\.gradle\cache
 	android:name
 		ADDED from C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
 		ADDED from C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
-activity#com.capstonemobile.MainActivity
+activity#com.smclibraryapp.MainActivity
 ADDED from C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
 	android:label
 		ADDED from C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:14:9-41
@@ -327,7 +327,7 @@ ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-
 		ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
 	android:name
 		ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
-permission#com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+permission#com.smclibraryapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
 		ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
@@ -337,7 +337,7 @@ uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
-uses-permission#com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission#com.smclibraryapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:22-94

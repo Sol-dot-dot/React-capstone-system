@@ -1,6 +1,6 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-3    package="com.capstonemobile"
+3    package="com.smclibraryapp"
 4    android:versionCode="1"
 5    android:versionName="1.0" >
 6
@@ -20,18 +20,18 @@
 14
 15    <permission
 15-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
-16        android:name="com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+16        android:name="com.smclibraryapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 16-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
 17        android:protectionLevel="signature" />
 17-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
 18
-19    <uses-permission android:name="com.capstonemobile.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+19    <uses-permission android:name="com.smclibraryapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 19-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
 19-->[androidx.core:core:1.10.1] C:\Users\rhodc\.gradle\caches\transforms-3\ec57d087d7be3ca91eb28eba80fceda7\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
 20
 21    <application
 21-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:5:5-24:19
-22        android:name="com.capstonemobile.MainApplication"
+22        android:name="com.smclibraryapp.MainApplication"
 22-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:6:7-38
 23        android:allowBackup="false"
 23-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:10:7-34
@@ -57,7 +57,7 @@
 34-->C:\clone-local\React-capstone-system\mobile\android\app\src\debug\AndroidManifest.xml:11:84-108
 35        <activity
 35-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:12:7-23:18
-36            android:name="com.capstonemobile.MainActivity"
+36            android:name="com.smclibraryapp.MainActivity"
 36-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:13:9-37
 37            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
 37-->C:\clone-local\React-capstone-system\mobile\android\app\src\main\AndroidManifest.xml:15:9-118
@@ -85,7 +85,7 @@
 49-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:26:9-34:20
 50            android:name="androidx.startup.InitializationProvider"
 50-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:27:13-67
-51            android:authorities="com.capstonemobile.androidx-startup"
+51            android:authorities="com.smclibraryapp.androidx-startup"
 51-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:28:13-68
 52            android:exported="false" >
 52-->[androidx.emoji2:emoji2:1.0.0] C:\Users\rhodc\.gradle\caches\transforms-3\e59e8edff51749fc11b9120f711cce5e\transformed\jetified-emoji2-1.0.0\AndroidManifest.xml:29:13-37

@@ -11,7 +11,6 @@ import {
   ScrollView,
 } from 'react-native';
 // import { Provider as PaperProvider } from 'react-native-paper';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import API_CONFIG, { buildApiUrl, getEndpoint } from './config/api';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
@@ -28,22 +27,6 @@ import DashboardScreen from './screens/DashboardScreen';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
 import ProfileScreen from './screens/ProfileScreen';
-
-// Set up axios interceptor to add auth token to requests
-axios.interceptors.request.use(async (config) => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Adding auth token to request:', token.substring(0, 20) + '...');
-    } else {
-      console.log('No auth token found in interceptor');
-    }
-  } catch (error) {
-    console.log('Error getting auth token in interceptor:', error);
-  }
-  return config;
-});
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, verifyResetCode, resetPassword, profile, changePassword, borrowedBooks, penalties
@@ -78,23 +61,7 @@ const App = () => {
   // Initialize push notifications when app starts
   React.useEffect(() => {
     NotificationService.initializePushNotifications();
-    
-    // Check for existing auth token
-    checkExistingAuthToken();
   }, []);
-
-  const checkExistingAuthToken = async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (token) {
-        console.log('Found existing auth token:', token.substring(0, 20) + '...');
-      } else {
-        console.log('No existing auth token found');
-      }
-    } catch (error) {
-      console.log('Error checking auth token:', error);
-    }
-  };
 
   const handleLogin = async () => {
     if (!idNumber || !password) {
@@ -111,14 +78,6 @@ const App = () => {
 
       if (response.data.success) {
         setUserData(response.data.user);
-        // Store the authentication token
-        console.log('Login response:', response.data);
-        if (response.data.token) {
-          await AsyncStorage.setItem('authToken', response.data.token);
-          console.log('Auth token stored:', response.data.token.substring(0, 20) + '...');
-        } else {
-          console.log('No token in response');
-        }
         setCurrentScreen('dashboard');
         setActiveTab('dashboard');
         setIdNumber('');
@@ -619,12 +578,7 @@ const App = () => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('authToken');
-    } catch (error) {
-      console.log('Error removing auth token:', error);
-    }
+  const handleLogout = () => {
     setCurrentScreen('welcome');
     setUserData(null);
     setIdNumber('');

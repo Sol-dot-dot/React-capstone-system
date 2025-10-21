@@ -81,13 +81,13 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.capstonemobile"
+    namespace "com.smclibraryapp"
     
     buildFeatures {
         buildConfig true
     }
     defaultConfig {
-        applicationId "com.capstonemobile"
+        applicationId "com.smclibraryapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

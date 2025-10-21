@@ -15,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -130,7 +131,7 @@ const RegisterScreen = ({ onRegister, onNavigate, onBack }) => {
       setCurrentStep(2);
       
       // Step 1: Check ID Number
-      const idCheckResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/check-id', {
+      const idCheckResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_CHECK_ID')), {
         idNumber: formData.idNumber,
       });
 
@@ -143,7 +144,7 @@ const RegisterScreen = ({ onRegister, onNavigate, onBack }) => {
       setCurrentStep(3);
 
       // Step 2: Check Email and Send Verification Code
-      const emailCheckResponse = await axios.post('http://10.0.2.2:5000/api/auth/user/check-email', {
+      const emailCheckResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_CHECK_EMAIL')), {
         idNumber: formData.idNumber,
         firstName: formData.firstName,
         lastName: formData.lastName,

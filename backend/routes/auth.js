@@ -417,7 +417,7 @@ router.post('/user/login', [
         // Log user login
         await pool.execute(
             'INSERT INTO login_logs (user_id, user_type, ip_address, user_agent) VALUES (?, ?, ?, ?)',
-            [user.id, 'user', req.ip, req.get('User-Agent')]
+            [user.id, 'student', req.ip, req.get('User-Agent')]
         );
 
         const token = jwt.sign(

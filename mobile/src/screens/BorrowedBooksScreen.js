@@ -7,6 +7,8 @@ import {
   StatusBar,
   ScrollView,
   RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -22,6 +24,11 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Recommendations state
+  const [recommendedBooks, setRecommendedBooks] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   useEffect(() => {
     loadBorrowedBooks();
@@ -48,6 +55,53 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     setRefreshing(true);
     await loadBorrowedBooks();
     setRefreshing(false);
+  };
+
+  const mapDatabaseStatusToAvailability = (book) => {
+    // Just use the status directly from database
+    const status = book.status;
+    
+    // Simple mapping - just capitalize the first letter
+    if (status === 'available') {
+      return 'Available';
+    } else if (status === 'borrowed') {
+      return 'Borrowed';
+    } else if (status === 'maintenance') {
+      return 'Maintenance';
+    } else {
+      return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+    }
+  };
+
+  const getPersonalizedRecommendations = async () => {
+    if (!userData?.idNumber) {
+      console.log('No user data available for recommendations');
+      return;
+    }
+
+    try {
+      setLoadingRecommendations(true);
+      const response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'PERSONALIZED')), {
+        studentIdNumber: userData.idNumber,
+        limit: 6 // Show 6 recommendations
+      });
+
+      if (response.data.success) {
+        // Map database status to mobile app availability
+        const booksWithAvailability = (response.data.data.books || []).map(book => ({
+          ...book,
+          availability: mapDatabaseStatusToAvailability(book)
+        }));
+        setRecommendedBooks(booksWithAvailability);
+        setShowRecommendations(true);
+      } else {
+        console.error('Failed to get recommendations:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    } finally {
+      setLoadingRecommendations(false);
+    }
   };
 
   const getBookStatus = (book) => {
@@ -256,6 +310,56 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     </Animatable.View>
   );
 
+  const renderRecommendedBook = (book, index) => (
+    <Animatable.View
+      key={book.id || index}
+      animation="fadeInUp"
+      duration={600}
+      delay={index * 100}
+      style={styles.recommendedBookCard}
+    >
+      <ModernCard style={styles.recommendedBook}>
+        <View style={styles.recommendedBookHeader}>
+          <View style={styles.recommendedBookInfo}>
+            <Text style={styles.recommendedBookTitle} numberOfLines={2}>
+              {book.title}
+            </Text>
+            <Text style={styles.recommendedBookAuthor} numberOfLines={1}>
+              by {book.author}
+            </Text>
+            {book.genre && (
+              <Text style={styles.recommendedBookGenre}>{book.genre}</Text>
+            )}
+          </View>
+        </View>
+        
+        {book.description && (
+          <Text style={styles.recommendedBookDescription} numberOfLines={2}>
+            {book.description}
+          </Text>
+        )}
+        
+        <View style={styles.recommendedBookFooter}>
+          <View style={styles.recommendedBookMeta}>
+            <Icon name="library-outline" size={14} color={ModernTheme.colors.textTertiary} />
+            <Text style={styles.recommendedBookCode}>Code: {book.number_code || book.isbn}</Text>
+          </View>
+          {book.availability && (
+            <ModernBadge
+              text={book.availability}
+              variant={
+                book.status === 'available' ? 'success' : 
+                book.status === 'borrowed' ? 'warning' : 
+                'error'
+              }
+              size="small"
+            />
+          )}
+        </View>
+      </ModernCard>
+    </Animatable.View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -338,6 +442,56 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
             <View style={styles.booksContainer}>
               {borrowedBooks.map((book, index) => renderBookCard(book, index))}
             </View>
+
+            {/* Recommended Books Section */}
+            <Animatable.View
+              animation="fadeInUp"
+              duration={600}
+              delay={400}
+              style={styles.recommendationsSection}
+            >
+              <View style={styles.recommendationsHeader}>
+                <View style={styles.recommendationsTitleContainer}>
+                  <Icon name="sparkles-outline" size={20} color={ModernTheme.colors.primary} />
+                  <Text style={styles.recommendationsTitle}>Recommended for You</Text>
+                </View>
+                <Text style={styles.recommendationsSubtitle}>
+                  Based on your reading history and patterns
+                </Text>
+              </View>
+
+              {!showRecommendations ? (
+                <TouchableOpacity
+                  style={styles.getRecommendationsButton}
+                  onPress={getPersonalizedRecommendations}
+                  disabled={loadingRecommendations}
+                >
+                  {loadingRecommendations ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Icon name="book-outline" size={16} color="#ffffff" />
+                      <Text style={styles.getRecommendationsButtonText}>
+                        Get Smart Recommendations
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.recommendedBooksContainer}>
+                  {recommendedBooks.length > 0 ? (
+                    recommendedBooks.map((book, index) => renderRecommendedBook(book, index))
+                  ) : (
+                    <View style={styles.noRecommendationsContainer}>
+                      <Icon name="book-outline" size={32} color={ModernTheme.colors.textMuted} />
+                      <Text style={styles.noRecommendationsText}>
+                        No recommendations available at the moment.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </Animatable.View>
           </>
         )}
       </ScrollView>
@@ -512,6 +666,112 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: ModernTheme.spacing.lg,
+  },
+  // Recommendations Section Styles
+  recommendationsSection: {
+    marginTop: ModernTheme.spacing.xl,
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  recommendationsHeader: {
+    marginBottom: ModernTheme.spacing.lg,
+  },
+  recommendationsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: ModernTheme.spacing.xs,
+  },
+  recommendationsTitle: {
+    ...ModernTheme.typography.h3,
+    color: ModernTheme.colors.textPrimary,
+    marginLeft: ModernTheme.spacing.sm,
+    fontWeight: '600',
+  },
+  recommendationsSubtitle: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+  },
+  getRecommendationsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ModernTheme.colors.primary,
+    paddingVertical: ModernTheme.spacing.md,
+    paddingHorizontal: ModernTheme.spacing.lg,
+    borderRadius: ModernTheme.borderRadius.lg,
+    ...ModernTheme.shadows.button,
+  },
+  getRecommendationsButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: ModernTheme.spacing.sm,
+  },
+  recommendedBooksContainer: {
+    marginTop: ModernTheme.spacing.md,
+  },
+  recommendedBookCard: {
+    marginBottom: ModernTheme.spacing.md,
+  },
+  recommendedBook: {
+    padding: ModernTheme.spacing.lg,
+  },
+  recommendedBookHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: ModernTheme.spacing.md,
+  },
+  recommendedBookInfo: {
+    flex: 1,
+    marginRight: ModernTheme.spacing.md,
+  },
+  recommendedBookTitle: {
+    ...ModernTheme.typography.bodyMedium,
+    color: ModernTheme.colors.textPrimary,
+    fontWeight: '600',
+    marginBottom: ModernTheme.spacing.xs,
+  },
+  recommendedBookAuthor: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    marginBottom: ModernTheme.spacing.xs,
+  },
+  recommendedBookGenre: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.primary,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  recommendedBookDescription: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: ModernTheme.spacing.md,
+  },
+  recommendedBookFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  recommendedBookMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recommendedBookCode: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textTertiary,
+    marginLeft: ModernTheme.spacing.xs,
+    fontSize: 11,
+  },
+  noRecommendationsContainer: {
+    alignItems: 'center',
+    paddingVertical: ModernTheme.spacing.xl,
+  },
+  noRecommendationsText: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    marginTop: ModernTheme.spacing.sm,
+    textAlign: 'center',
   },
 });
 

@@ -65,7 +65,7 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
       const [borrowedResponse, penaltiesResponse, semesterResponse] = await Promise.all([
         axios.get(buildApiUrl(getEndpoint('BORROWING', 'GET_USER_BORROWED_BOOKS', userData.idNumber))),
         axios.get(buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))),
-        axios.get(`http://10.0.2.2:5000/api/borrowing/user/${userData.idNumber}/semester-count`),
+        axios.get(buildApiUrl(`/api/borrowing/user/${userData.idNumber}/semester-count`)),
       ]);
 
       if (borrowedResponse.data.success) {

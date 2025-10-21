@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
+import { buildApiUrl } from '../config/api';
 
 // Push notifications will be implemented in a future version
 // For now, we use a simple notification service without push notifications
@@ -110,7 +111,7 @@ class NotificationService {
     try {
       const reminderType = this.mapNotificationTypeToEmailType(type);
       
-      const response = await fetch('http://10.0.2.2:5000/api/notifications/send-email', {
+      const response = await fetch(buildApiUrl('/api/notifications/send-email'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

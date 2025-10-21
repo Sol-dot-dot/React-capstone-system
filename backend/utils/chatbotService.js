@@ -268,6 +268,143 @@ Now provide a natural, conversational response that:
     return 'fiction'; // Default
   }
 
+  async getEnhancedGeneralResponse(userQuery, studentIdNumber = null) {
+    try {
+      console.log('🚀 Generating enhanced conversational AI response...');
+
+      // First, try to understand what the user is asking for
+      const queryAnalysis = this.analyzeUserQuery(userQuery);
+      
+      // If it's a question we can answer from database, do that first
+      if (queryAnalysis.canAnswerFromDB) {
+        try {
+          const dbResponse = await this.getDatabaseResponse(queryAnalysis, studentIdNumber);
+          if (dbResponse) {
+            return dbResponse;
+          }
+        } catch (dbError) {
+          console.log('⚠️ Database response failed, falling back to AI');
+        }
+      }
+
+      // If it's a book-related question but wasn't caught by the main logic, try to help
+      if (queryAnalysis.isBookRelated) {
+        return this.getBookRelatedResponse(userQuery, studentIdNumber);
+      }
+
+      // For general questions, use the enhanced AI response
+      return await this.getGeneralResponse(userQuery, studentIdNumber);
+      
+    } catch (error) {
+      console.error('❌ Error in enhanced general response:', error);
+      return this.getFallbackResponse(userQuery);
+    }
+  }
+
+  analyzeUserQuery(query) {
+    const queryLower = query.toLowerCase();
+    
+    return {
+      isBookRelated: this.isBookRelatedQuery(queryLower),
+      canAnswerFromDB: this.canAnswerFromDatabase(queryLower),
+      isPersonalQuestion: this.isPersonalQuestion(queryLower),
+      isLibraryQuestion: this.isLibraryQuestion(queryLower),
+      isGeneralQuestion: this.isGeneralQuestion(queryLower),
+      intent: this.detectIntent(queryLower)
+    };
+  }
+
+  isBookRelatedQuery(query) {
+    const bookIndicators = [
+      'book', 'books', 'read', 'reading', 'novel', 'story', 'author', 'title',
+      'recommend', 'suggest', 'find', 'search', 'what to read', 'good book'
+    ];
+    return bookIndicators.some(indicator => query.includes(indicator));
+  }
+
+  canAnswerFromDatabase(query) {
+    const dbQuestions = [
+      'how many books', 'total books', 'books in library', 'library size',
+      'available books', 'book count', 'catalog size', 'inventory'
+    ];
+    return dbQuestions.some(question => query.includes(question));
+  }
+
+  isPersonalQuestion(query) {
+    const personalIndicators = [
+      'my', 'me', 'i am', 'i have', 'my account', 'my books', 'my borrowing',
+      'my history', 'my profile', 'my status', 'my id', 'my number'
+    ];
+    return personalIndicators.some(indicator => query.includes(indicator));
+  }
+
+  isLibraryQuestion(query) {
+    const libraryIndicators = [
+      'library', 'librarian', 'borrow', 'borrowing', 'return', 'due date',
+      'overdue', 'fine', 'penalty', 'policy', 'rules', 'hours', 'location'
+    ];
+    return libraryIndicators.some(indicator => query.includes(indicator));
+  }
+
+  isGeneralQuestion(query) {
+    return query.includes('?') || query.includes('what') || query.includes('how') || 
+           query.includes('why') || query.includes('when') || query.includes('where');
+  }
+
+  detectIntent(query) {
+    if (query.includes('help') || query.includes('assist')) return 'help';
+    if (query.includes('thank')) return 'gratitude';
+    if (query.includes('bye') || query.includes('goodbye')) return 'farewell';
+    if (query.includes('hello') || query.includes('hi')) return 'greeting';
+    if (query.includes('learn') || query.includes('study')) return 'learning';
+    if (query.includes('recommend') || query.includes('suggest')) return 'recommendation';
+    return 'general';
+  }
+
+  async getDatabaseResponse(analysis, studentIdNumber) {
+    // Handle specific database queries
+    if (analysis.intent === 'help' && analysis.isLibraryQuestion) {
+      return "I can help you with book recommendations, finding specific titles, checking your borrowing status, and answering questions about our library services. What would you like to know?";
+    }
+    
+    if (analysis.isPersonalQuestion && studentIdNumber) {
+      return `I can help you with your account! Your Student ID is ${studentIdNumber}. I can check your borrowing history, recommend books based on your interests, and help you find what you're looking for. What would you like to know about your account?`;
+    }
+    
+    return null;
+  }
+
+  getBookRelatedResponse(query, studentIdNumber) {
+    if (query.includes('recommend') || query.includes('suggest')) {
+      return "I'd love to recommend some great books! Could you tell me what topics or genres you're interested in? For example, you could mention fiction, non-fiction, programming, history, or any other subject that interests you.";
+    }
+    
+    if (query.includes('find') || query.includes('search')) {
+      return "I can help you find books! You can search by title, author, category, or just describe what you're looking for. What kind of book are you trying to find?";
+    }
+    
+    return "I'm here to help you discover great books! What kind of stories or topics interest you? I can recommend books based on your interests and reading history.";
+  }
+
+  getFallbackResponse(query) {
+    const intent = this.detectIntent(query.toLowerCase());
+    
+    switch (intent) {
+      case 'greeting':
+        return "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?";
+      case 'help':
+        return "I'm here to help! I can recommend books, help you find specific titles, check your account status, and answer questions about our library. What would you like to know?";
+      case 'gratitude':
+        return "You're welcome! I love helping people discover great books. Feel free to ask me anything else!";
+      case 'farewell':
+        return "Take care! Happy reading, and I'll be here whenever you need me!";
+      case 'learning':
+        return "I'd love to help you find books to learn about that topic! What specific subject are you interested in studying?";
+      default:
+        return "I'd love to help you find some great books! What kind of stories or topics are you interested in?";
+    }
+  }
+
   async getGeneralResponse(userQuery, studentIdNumber = null) {
     try {
       console.log('🚀 Generating conversational AI response with OpenAI...');

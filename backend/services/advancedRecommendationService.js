@@ -134,7 +134,10 @@ class AdvancedRecommendationService {
           b.publication_year,
           b.publisher,
           b.status,
-          b.isbn
+          b.isbn,
+          b.available_copies,
+          b.book_copies,
+          b.number_code
         FROM books b
         WHERE b.status = 'available'
         AND b.id NOT IN (
@@ -192,7 +195,10 @@ class AdvancedRecommendationService {
           b.publication_year,
           b.publisher,
           b.status,
-          b.isbn
+          b.isbn,
+          b.available_copies,
+          b.book_copies,
+          b.number_code
         FROM books b
         WHERE b.status = 'available'
         ORDER BY b.title
