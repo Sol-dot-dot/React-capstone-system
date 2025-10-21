@@ -3,13 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { 
   Users, 
-  UserCheck, 
-  UserX, 
   Search, 
   RefreshCw, 
   ChevronDown,
   ChevronUp,
-  Eye,
   Check,
   X,
   TrendingUp,
@@ -390,24 +387,6 @@ const ModernUserManagement = ({ user }) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => updateUserVerification(user.id_number, !user.is_verified)}
-                          className={`${user.is_verified ? "text-orange-600 hover:text-orange-700" : "text-green-600 hover:text-green-700"} text-xs sm:text-sm`}
-                        >
-                          {user.is_verified ? (
-                            <>
-                              <UserX className="h-4 w-4 sm:mr-1" />
-                              <span className="hidden sm:inline">Unverify</span>
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="h-4 w-4 sm:mr-1" />
-                              <span className="hidden sm:inline">Verify</span>
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => setExpandedUser(expandedUser === user.id_number ? null : user.id_number)}
                         >
                           {expandedUser === user.id_number ? (
@@ -449,10 +428,6 @@ const ModernUserManagement = ({ user }) => {
                             <div className="space-y-2">
                               <h4 className="font-medium text-slate-900">Actions</h4>
                               <div className="flex gap-2 flex-wrap">
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View Details
-                                </Button>
                                 <Button 
                                   variant="outline" 
                                   size="sm"

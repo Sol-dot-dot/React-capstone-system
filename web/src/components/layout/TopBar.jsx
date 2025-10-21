@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   Search, 
@@ -19,6 +20,7 @@ import SearchResults from '../ui/SearchResults';
 import axios from 'axios';
 
 const ModernTopBar = ({ onToggleSidebar, onLogout, user, isMobile }) => {
+  const navigate = useNavigate();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -307,7 +309,14 @@ const ModernTopBar = ({ onToggleSidebar, onLogout, user, isMobile }) => {
                       </div>
                       <Separator className="my-4" />
                       <div className="space-y-2">
-                        <Button variant="ghost" className="w-full justify-start">
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start"
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            navigate('/profile-settings');
+                          }}
+                        >
                           <User className="h-4 w-4 mr-2" />
                           Profile Settings
                         </Button>

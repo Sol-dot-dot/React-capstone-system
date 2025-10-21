@@ -13,6 +13,7 @@ import ClearanceRequirements from './components/management/ClearanceRequirements
 import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
 import UserAnalytics from './components/analytics/UserAnalytics';
 import BookAnalytics from './components/analytics/BookAnalytics';
+import ProfileSettings from './components/management/ProfileSettings';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import { SearchProvider } from './contexts/SearchContext';
@@ -248,6 +249,14 @@ function App() {
               element={
                 isAuthenticated ? 
                 <BookAnalytics user={user} /> : 
+                <Navigate to="/login" />
+              } 
+            />
+            <Route 
+              path="/profile-settings" 
+              element={
+                isAuthenticated ? 
+                <ProfileSettings user={user} /> : 
                 <Navigate to="/login" />
               } 
             />

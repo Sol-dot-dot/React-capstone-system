@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 const pool = require('../config/database');
+const authMiddleware = require('../middleware/auth');
 
 // Get user profile
 router.get('/user/profile/:idNumber', async (req, res) => {
@@ -192,6 +193,184 @@ router.delete('/user/profile/:idNumber', [
         });
     } catch (error) {
         console.error('Delete account error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Admin profile routes
+// Get admin profile
+router.get('/admin/profile', authMiddleware, async (req, res) => {
+    try {
+        // Get admin ID from token (assuming middleware sets req.user)
+        const adminId = req.user?.id;
+        
+        if (!adminId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const [admins] = await pool.execute(
+            'SELECT id, email, first_name, last_name, role, created_at, last_login FROM users WHERE id = ? AND role = ?',
+            [adminId, 'admin']
+        );
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        const admin = admins[0];
+        res.json({
+            success: true,
+            admin: {
+                id: admin.id,
+                email: admin.email,
+                firstName: admin.first_name,
+                lastName: admin.last_name,
+                role: admin.role,
+                createdAt: admin.created_at,
+                lastLogin: admin.last_login
+            }
+        });
+    } catch (error) {
+        console.error('Get admin profile error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Update admin profile (name and email)
+router.put('/admin/profile', authMiddleware, [
+    body('firstName').optional().isLength({ min: 1 }).withMessage('First name must not be empty'),
+    body('lastName').optional().isLength({ min: 1 }).withMessage('Last name must not be empty'),
+    body('email').optional().isEmail().withMessage('Valid email is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: errors.array() 
+            });
+        }
+
+        const adminId = req.user?.id;
+        
+        if (!adminId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { firstName, lastName, email } = req.body;
+
+        // Check if admin exists
+        const [admins] = await pool.execute(
+            'SELECT * FROM users WHERE id = ? AND role = ?',
+            [adminId, 'admin']
+        );
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        // Check if email is already taken by another user
+        if (email && email !== admins[0].email) {
+            const [existingUsers] = await pool.execute(
+                'SELECT * FROM users WHERE email = ? AND id != ?',
+                [email, adminId]
+            );
+
+            if (existingUsers.length > 0) {
+                return res.status(400).json({ message: 'Email is already in use' });
+            }
+        }
+
+        // Build update query dynamically
+        const updates = [];
+        const values = [];
+
+        if (firstName) {
+            updates.push('first_name = ?');
+            values.push(firstName);
+        }
+        if (lastName) {
+            updates.push('last_name = ?');
+            values.push(lastName);
+        }
+        if (email) {
+            updates.push('email = ?');
+            values.push(email);
+        }
+
+        if (updates.length > 0) {
+            values.push(adminId);
+            await pool.execute(
+                `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+                values
+            );
+        }
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully'
+        });
+    } catch (error) {
+        console.error('Update admin profile error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Change admin password
+router.put('/admin/change-password', authMiddleware, [
+    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ 
+                message: 'Validation failed',
+                errors: errors.array() 
+            });
+        }
+
+        const adminId = req.user?.id;
+        
+        if (!adminId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        // Get admin
+        const [admins] = await pool.execute(
+            'SELECT * FROM users WHERE id = ? AND role = ?',
+            [adminId, 'admin']
+        );
+
+        if (admins.length === 0) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        const admin = admins[0];
+
+        // Verify current password
+        const isPasswordValid = await bcrypt.compare(currentPassword, admin.password_hash);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update password
+        await pool.execute(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [hashedPassword, adminId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+    } catch (error) {
+        console.error('Change admin password error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
