@@ -426,7 +426,7 @@ router.post('/recommend', async (req, res) => {
     }
     
     // Enhanced book request detection - more flexible and intelligent
-    const isBookRequest = this.detectBookRequest(message);
+    const isBookRequest = detectBookRequest(message);
     
     let response;
     let books = [];
@@ -444,7 +444,7 @@ router.post('/recommend', async (req, res) => {
           books = rankedAdv.ranked.slice(0, 5);
           
           // Double-check that all books exist in database
-          books = await this.validateBooksInDatabase(books);
+          books = await validateBooksInDatabase(books);
           response = buildSafeRecommendationsMessage(books, message);
           
           // Add additional metadata
