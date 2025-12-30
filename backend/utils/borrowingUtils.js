@@ -156,24 +156,63 @@ async function validateBorrowingRequest(studentIdNumber, bookCodes) {
     };
 }
 
+// Get current semester and academic year
+async function getCurrentSemesterInfo(connection = null) {
+    const db_conn = connection || db;
+    try {
+        // Get current semester
+        const [semesters] = await db_conn.execute(
+            'SELECT id, academic_year_id FROM semesters WHERE is_current = TRUE LIMIT 1'
+        );
+
+        if (semesters.length > 0) {
+            return {
+                semesterId: semesters[0].id,
+                academicYearId: semesters[0].academic_year_id
+            };
+        }
+
+        // Fallback: Try to find semester based on current date
+        const [dateSemesters] = await db_conn.execute(
+            'SELECT id, academic_year_id FROM semesters WHERE CURDATE() BETWEEN start_date AND end_date LIMIT 1'
+        );
+
+        if (dateSemesters.length > 0) {
+            return {
+                semesterId: dateSemesters[0].id,
+                academicYearId: dateSemesters[0].academic_year_id
+            };
+        }
+
+        // No semester found
+        return { semesterId: null, academicYearId: null };
+    } catch (error) {
+        console.error('Error getting current semester info:', error);
+        return { semesterId: null, academicYearId: null };
+    }
+}
+
 // Process borrowing transaction
 async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = null) {
     const connection = await db.getConnection();
-    
+
     try {
         await connection.beginTransaction();
 
         const actualDueDate = dueDate || await calculateDueDate();
         const borrowedBooks = [];
 
+        // Get current semester and academic year info
+        const { semesterId, academicYearId } = await getCurrentSemesterInfo(connection);
+
         // Ensure student has active semester tracking
         const currentDate = new Date();
         const semesterEndDate = new Date(currentDate);
         semesterEndDate.setMonth(semesterEndDate.getMonth() + 5); // 5 months from now
-        
+
         await createOrUpdateSemesterTracking(
-            studentIdNumber, 
-            currentDate.toISOString().split('T')[0], 
+            studentIdNumber,
+            currentDate.toISOString().split('T')[0],
             semesterEndDate.toISOString().split('T')[0]
         );
 
@@ -190,13 +229,20 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
 
             const book = bookRows[0];
 
-            // Create borrowing transaction
-            await connection.execute(
-                `INSERT INTO borrowing_transactions 
-                 (student_id_number, book_id, borrowed_date, borrowed_by_admin, due_date) 
-                 VALUES (?, ?, CURDATE(), ?, ?)`,
-                [studentIdNumber, book.id, adminId, actualDueDate]
-            );
+            // Create borrowing transaction with semester tracking
+            // Check if semester columns exist to avoid errors
+            let insertQuery = `INSERT INTO borrowing_transactions
+                 (student_id_number, book_id, borrowed_date, borrowed_by_admin, due_date`;
+            let insertValues = [studentIdNumber, book.id, adminId, actualDueDate];
+
+            if (semesterId && academicYearId) {
+                insertQuery += `, semester_id, academic_year_id) VALUES (?, ?, CURDATE(), ?, ?, ?, ?)`;
+                insertValues.push(semesterId, academicYearId);
+            } else {
+                insertQuery += `) VALUES (?, ?, CURDATE(), ?, ?)`;
+            }
+
+            await connection.execute(insertQuery, insertValues);
 
             // Decrement available_copies (trigger will update status automatically)
             await connection.execute(
@@ -214,11 +260,30 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
         // Update semester books count (increment by number of books borrowed)
         await updateSemesterBooksCount(studentIdNumber, bookCodes.length, connection);
 
+        // Update semester clearance record if exists
+        if (semesterId) {
+            try {
+                await connection.execute(`
+                    INSERT INTO semester_clearances (user_id, semester_id, books_borrowed)
+                    SELECT u.id, ?, ?
+                    FROM users u WHERE u.id_number = ?
+                    ON DUPLICATE KEY UPDATE
+                        books_borrowed = books_borrowed + ?,
+                        updated_at = NOW()
+                `, [semesterId, bookCodes.length, studentIdNumber, bookCodes.length]);
+            } catch (clearanceError) {
+                // Silently fail if semester_clearances table doesn't exist yet
+                console.log('Note: Could not update semester_clearances - table may not exist yet');
+            }
+        }
+
         await connection.commit();
         return {
             success: true,
             borrowedBooks,
-            dueDate: actualDueDate
+            dueDate: actualDueDate,
+            semesterId,
+            academicYearId
         };
 
     } catch (error) {
@@ -414,6 +479,7 @@ module.exports = {
     processBorrowing,
     getBorrowingStats,
     createReturnTransaction,
-    ensureReturnTransactionRecords
+    ensureReturnTransactionRecords,
+    getCurrentSemesterInfo
 };
 

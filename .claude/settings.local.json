@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm outdated:*)",
+      "Bash(npm update:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm install:*)",
+      "Bash(mysql:*)",
+      "Bash(where:*)",
+      "Bash(npm start)",
+      "Bash(timeout /t 3)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(npm run start)",
+      "Bash(ping:*)",
+      "Bash(.gradlew clean:*)",
+      "Bash(gradlew clean:*)",
+      "Bash(cmd /c gradlew.bat clean)",
+      "Bash(npm run android:*)",
+      "Bash(dir:*)",
+      "Bash(.gradlew.bat clean)",
+      "Bash(./gradlew clean:*)",
+      "Bash(cat:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(taskkill /F /PID 31604)",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

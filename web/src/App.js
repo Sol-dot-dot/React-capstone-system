@@ -10,10 +10,16 @@ import ReturningManagement from './components/management/ReturningManagement';
 import PenaltyManagement from './components/management/PenaltyManagement';
 import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
 import ClearanceRequirements from './components/management/ClearanceRequirements';
-import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
-import UserAnalytics from './components/analytics/UserAnalytics';
-import BookAnalytics from './components/analytics/BookAnalytics';
+// Old complex analytics - deprecated
+// import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
+// import UserAnalytics from './components/analytics/UserAnalytics';
+// import BookAnalytics from './components/analytics/BookAnalytics';
+// import SimplifiedDashboard from './components/analytics/SimplifiedDashboard';
+
+// New simplified analytics - Reports only
+import ReportsPage from './components/analytics/ReportsPage';
 import ProfileSettings from './components/management/ProfileSettings';
+import StudentRecords from './pages/StudentRecords';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import { SearchProvider } from './contexts/SearchContext';
@@ -228,37 +234,57 @@ function App() {
                 <Navigate to="/login" />
               } 
             />
-            <Route 
-              path="/analytics" 
+            {/* Old complex analytics routes - deprecated */}
+            {/* <Route
+              path="/analytics"
               element={
-                isAuthenticated ? 
-                <AnalyticsDashboard user={user} /> : 
+                isAuthenticated ?
+                <AnalyticsDashboard user={user} /> :
                 <Navigate to="/login" />
-              } 
+              }
             />
-            <Route 
-              path="/analytics/users" 
+            <Route
+              path="/analytics/users"
               element={
-                isAuthenticated ? 
-                <UserAnalytics user={user} /> : 
+                isAuthenticated ?
+                <UserAnalytics user={user} /> :
                 <Navigate to="/login" />
-              } 
+              }
             />
-            <Route 
-              path="/analytics/books" 
+            <Route
+              path="/analytics/books"
               element={
-                isAuthenticated ? 
-                <BookAnalytics user={user} /> : 
+                isAuthenticated ?
+                <BookAnalytics user={user} /> :
                 <Navigate to="/login" />
-              } 
+              }
+            /> */}
+
+            {/* Simplified analytics - Reports only */}
+            <Route
+              path="/reports"
+              element={
+                isAuthenticated ?
+                <ReportsPage user={user} /> :
+                <Navigate to="/login" />
+              }
             />
-            <Route 
-              path="/profile-settings" 
+            {/* Student Records */}
+            <Route
+              path="/student-records"
               element={
-                isAuthenticated ? 
-                <ProfileSettings user={user} /> : 
+                isAuthenticated ?
+                <StudentRecords user={user} /> :
                 <Navigate to="/login" />
-              } 
+              }
+            />
+            <Route
+              path="/profile-settings"
+              element={
+                isAuthenticated ?
+                <ProfileSettings user={user} /> :
+                <Navigate to="/login" />
+              }
             />
             <Route 
               path="/" 

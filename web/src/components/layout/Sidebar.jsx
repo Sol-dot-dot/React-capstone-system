@@ -1,22 +1,21 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Users, 
-  BookOpen, 
-  ClipboardList, 
+import {
+  Home,
+  Users,
+  BookOpen,
+  ClipboardList,
   ArrowLeft,
-  DollarSign, 
-  FileText, 
+  DollarSign,
+  FileText,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Search,
   GraduationCap,
-  BarChart3,
-  TrendingUp,
-  BookMarked
+  FileBarChart,
+  FolderOpen
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -45,10 +44,12 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
     { icon: FileText, label: 'Activity Logs', path: '/activity-logs' },
   ];
 
+  const recordsItems = [
+    { icon: FolderOpen, label: 'Student Library Records', path: '/student-records' },
+  ];
+
   const analyticsItems = [
-    { icon: BarChart3, label: 'Analytics Dashboard', path: '/analytics' },
-    { icon: TrendingUp, label: 'User Analytics', path: '/analytics/users' },
-    { icon: BookMarked, label: 'Book Analytics', path: '/analytics/books' },
+    { icon: FileBarChart, label: 'Reports', path: '/reports' },
   ];
 
   const sidebarVariants = {
@@ -244,6 +245,72 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
             );
           })}
 
+          {/* Records Section */}
+          <AnimatePresence>
+            {(!isCollapsed || isMobile) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-6"
+              >
+                <div className="px-3 py-2">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Records
+                  </h3>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {recordsItems.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <motion.div
+                key={item.label}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: (menuItems.length + index) * 0.1 }}
+              >
+                <Link to={item.path}>
+                  <motion.div
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                      isActive
+                        ? 'bg-green-50 text-green-700 border-r-2 border-green-500'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <item.icon className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-slate-500 group-hover:text-slate-700'}`} />
+                    <AnimatePresence>
+                      {(!isCollapsed || isMobile) && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="font-medium"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    {isActive && (!isCollapsed || isMobile) && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="ml-auto"
+                      >
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                </Link>
+              </motion.div>
+            );
+          })}
+
           {/* Analytics Section */}
           <AnimatePresence>
             {(!isCollapsed || isMobile) && (
@@ -270,7 +337,7 @@ const ModernSidebar = ({ isCollapsed, isMobile, isOpen, onToggle, onLogout, user
                 variants={itemVariants}
                 initial="hidden"
                 animate="visible"
-                transition={{ delay: (menuItems.length + index) * 0.1 }}
+                transition={{ delay: (menuItems.length + recordsItems.length + index) * 0.1 }}
               >
                 <Link to={item.path}>
                   <motion.div

@@ -32,6 +32,10 @@ app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/simple-analytics', require('./routes/simple-analytics'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/student-records', require('./routes/studentRecords'));
+app.use('/api/semesters', require('./routes/semesters'));
 app.use('/', require('./routes/dashboard'));
 // app.use('/api/monitoring', require('./routes/monitoring'));
 
