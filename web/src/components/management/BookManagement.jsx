@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
+import {
+  BookOpen,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
   Filter,
   RefreshCw,
   Save,
@@ -15,6 +15,7 @@ import {
   TrendingUp,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Clock,
   BarChart3,
   Calendar,
@@ -44,6 +45,8 @@ const ModernBookManagement = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setGenreFilter] = useState('');
   const [categorys, setGenres] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -180,19 +183,18 @@ const ModernBookManagement = ({ user }) => {
       if (response.data.success) {
         setShowEditForm(false);
         setSelectedBook(null);
+        setMessage({ type: 'success', text: 'Book updated successfully!' });
         fetchBooks();
       } else {
-        alert(response.data.message || 'Failed to update book');
+        setMessage({ type: 'error', text: response.data.message || 'Failed to update book' });
       }
     } catch (err) {
       console.error('Edit book error:', err);
-      alert(err.response?.data?.message || 'Failed to update book');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update book' });
     }
   };
 
   const handleDeleteBook = async (bookId) => {
-    if (!window.confirm('Are you sure you want to delete this book?')) return;
-    
     try {
       const token = localStorage.getItem('token');
       const config = {
@@ -201,15 +203,25 @@ const ModernBookManagement = ({ user }) => {
 
       const response = await axios.delete(`/api/books/${bookId}`, config);
       if (response.data.success) {
+        setMessage({ type: 'success', text: 'Book deleted successfully!' });
+        setShowDeleteConfirm(null);
         fetchBooks();
       } else {
-        alert(response.data.message || 'Failed to delete book');
+        setMessage({ type: 'error', text: response.data.message || 'Failed to delete book' });
       }
     } catch (err) {
       console.error('Delete book error:', err);
-      alert(err.response?.data?.message || 'Failed to delete book');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to delete book' });
     }
   };
+
+  // Clear message after 3 seconds
+  useEffect(() => {
+    if (message.text) {
+      const timer = setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   const filteredBooks = books.filter(book => {
     const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -452,7 +464,7 @@ const ModernBookManagement = ({ user }) => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDeleteBook(book.id)}
+                              onClick={() => setShowDeleteConfirm(book)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4 mr-1" />
@@ -539,7 +551,7 @@ const ModernBookManagement = ({ user }) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteBook(book.id)}
+                            onClick={() => setShowDeleteConfirm(book)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -950,6 +962,86 @@ const ModernBookManagement = ({ user }) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]"
+            onClick={() => setShowDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Confirm Deletion</h3>
+              </div>
+              <p className="text-slate-600 mb-2">
+                Are you sure you want to delete this book?
+              </p>
+              <div className="bg-slate-50 rounded-lg p-3 mb-6">
+                <p className="font-medium text-slate-900">{showDeleteConfirm.title}</p>
+                <p className="text-sm text-slate-600">by {showDeleteConfirm.author}</p>
+                <p className="text-xs text-slate-500">ISBN: {showDeleteConfirm.isbn}</p>
+              </div>
+              <p className="text-sm text-slate-500 mb-6">
+                This action cannot be undone. The book will be permanently removed from the system.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleDeleteBook(showDeleteConfirm.id)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete Book
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Message Toast */}
+      <AnimatePresence>
+        {message.text && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-[100] ${
+              message.type === 'success'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? (
+                <CheckCircle className="h-5 w-5" />
+              ) : (
+                <AlertCircle className="h-5 w-5" />
+              )}
+              <p>{message.text}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

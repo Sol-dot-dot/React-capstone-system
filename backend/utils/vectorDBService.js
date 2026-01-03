@@ -31,7 +31,7 @@ class VectorDBService {
         return;
       }
 
-      console.log(`📚 Found ${books.length} books in database`);
+      console.log(`[INFO] Found ${books.length} books in database`);
 
       // Store books for similarity search
       this.books = books.map(book => ({
@@ -47,20 +47,20 @@ class VectorDBService {
         const existingEmbedding = vectorStorage.getEmbedding(book.id);
         if (existingEmbedding) {
           existingEmbeddings.push(existingEmbedding);
-          console.log(`📚 Using cached embedding for: ${book.title}`);
+          console.log(`[INFO] Using cached embedding for: ${book.title}`);
         } else {
           booksNeedingEmbeddings.push(book);
         }
       }
 
-      console.log(`📚 Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
+      console.log(`[INFO] Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
 
       // Prune any embeddings that no longer exist in DB
       const dbBookIds = new Set(this.books.map(b => b.id));
       const allStored = vectorStorage.getAllEmbeddings();
       const orphaned = allStored.filter(e => !dbBookIds.has(e.bookId));
       if (orphaned.length > 0) {
-        console.log(`🧹 Removing ${orphaned.length} embeddings not present in DB...`);
+        console.log(`[INFO] Removing ${orphaned.length} embeddings not present in DB...`);
         for (const e of orphaned) {
           await vectorStorage.removeEmbedding(e.bookId);
         }
@@ -68,11 +68,11 @@ class VectorDBService {
 
       // Generate OpenAI embeddings for new books
       if (booksNeedingEmbeddings.length > 0) {
-        console.log('🚀 Generating OpenAI embeddings for new books...');
+        console.log('[INFO] Generating OpenAI embeddings for new books...');
         try {
           for (let i = 0; i < booksNeedingEmbeddings.length; i++) {
             const book = booksNeedingEmbeddings[i];
-            console.log(`📚 Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
+            console.log(`[INFO] Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
             
             const text = `${book.title || ''}\n${book.author || ''}\n${book.category || ''}\n${book.description || ''}`.trim();
             const embedding = await chatbotService.generateEmbedding(text);
@@ -88,13 +88,13 @@ class VectorDBService {
               });
               
               existingEmbeddings.push(embedding);
-              console.log(`✅ OpenAI embedding generated and saved for: ${book.title}`);
+              console.log(`[OK] OpenAI embedding generated and saved for: ${book.title}`);
             } else {
               throw new Error(`Invalid OpenAI embedding for book: ${book.title} (got ${embedding ? embedding.length : 'null'})`);
             }
           }
         } catch (error) {
-          console.error('❌ Failed to generate OpenAI embeddings:', error.message);
+          console.error('[ERROR] Failed to generate OpenAI embeddings:', error.message);
           throw new Error('OpenAI embedding generation failed - cannot proceed without real embeddings');
         }
       }
@@ -110,7 +110,7 @@ class VectorDBService {
       
       if (this.embeddings.length === this.books.length) {
         this.useRealEmbeddings = true;
-        console.log(`🎉 Successfully loaded OpenAI embeddings for ${this.embeddings.length} books!`);
+        console.log(`[OK] Successfully loaded OpenAI embeddings for ${this.embeddings.length} books!`);
       } else {
         throw new Error(`Only loaded ${this.embeddings.length} embeddings for ${this.books.length} books`);
       }
@@ -136,7 +136,7 @@ class VectorDBService {
         throw new Error('Database not properly initialized with OpenAI embeddings');
       }
 
-      console.log('🔍 Using OpenAI embeddings for similarity search!');
+      console.log('[INFO] Using OpenAI embeddings for similarity search!');
       
       // Generate embedding for query
       const queryEmbedding = await chatbotService.generateEmbedding(query);
@@ -165,7 +165,7 @@ class VectorDBService {
           similarity: result.similarity
         }));
       
-      console.log('✅ OpenAI-powered similarity search completed!');
+      console.log('[OK] OpenAI-powered similarity search completed!');
       return topResults;
     } catch (error) {
       console.error('Error in similarity search:', error);

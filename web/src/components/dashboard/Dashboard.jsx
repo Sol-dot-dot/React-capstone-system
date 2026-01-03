@@ -1,31 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import axios from 'axios';
-import { 
-  Users, 
-  UserCheck, 
-  LogIn, 
-  BookOpen, 
-  TrendingUp, 
-  Activity,
+import {
+  Users,
+  UserCheck,
+  LogIn,
+  BookOpen,
+  TrendingUp,
   CheckCircle,
-  Clock,
   AlertCircle,
   BookMarked,
-  ArrowUpRight,
-  ArrowDownRight,
   DollarSign,
-  FileText,
-  UserPlus,
   BookX,
-  Calendar,
-  Shield,
   RefreshCw
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
 
 const ModernDashboard = ({ user }) => {
@@ -33,10 +23,7 @@ const ModernDashboard = ({ user }) => {
     users: { total: 0, verified: 0, todayLogins: 0, students: 0, admins: 0, verificationRate: 0 },
     books: { total: 0, available: 0, borrowed: 0, overdue: 0, addedToday: 0 },
     borrowing: { currentlyBorrowed: 0, overdueBooks: 0, todayBorrowings: 0, todayReturns: 0 },
-    penalties: { totalFines: 0, unpaidFines: 0, totalAmount: 0, unpaidAmount: 0, finesToday: 0 },
-    activity: { totalLogs: 0, todayLogins: 0, activeUsers: 0, systemActivity: 0 },
-    system: { status: 'Online', lastCheck: null, activeUsers: 0 },
-    recentActivity: []
+    penalties: { totalFines: 0, unpaidFines: 0, totalAmount: 0, unpaidAmount: 0, finesToday: 0 }
   });
   const [loading, setLoading] = useState(true);
 
@@ -157,9 +144,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.users.total}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +12%
+                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-700">
+                        Active
                       </Badge>
                     </div>
                   </div>
@@ -184,9 +170,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.users.verified}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        {dashboardData.users.verificationRate}%
+                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
+                        {dashboardData.users.verificationRate}% verified
                       </Badge>
                     </div>
                   </div>
@@ -211,9 +196,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.users.todayLogins}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +23%
+                      <Badge variant="secondary" className="mt-1 bg-orange-100 text-orange-700">
+                        Today
                       </Badge>
                     </div>
                   </div>
@@ -221,32 +205,6 @@ const ModernDashboard = ({ user }) => {
               </Card>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
-                        <UserPlus className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Active Users</p>
-                        <p className="text-xs text-slate-500">Users with activity</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.activity.activeUsers}
-                      </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +15%
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </div>
         </motion.div>
 
@@ -276,9 +234,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.books.total}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +5%
+                      <Badge variant="secondary" className="mt-1 bg-indigo-100 text-indigo-700">
+                        {dashboardData.books.addedToday > 0 ? `+${dashboardData.books.addedToday} today` : 'In catalog'}
                       </Badge>
                     </div>
                   </div>
@@ -303,9 +260,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.books.available}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +8%
+                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
+                        {dashboardData.books.total > 0 ? Math.round((dashboardData.books.available / dashboardData.books.total) * 100) : 0}% available
                       </Badge>
                     </div>
                   </div>
@@ -330,9 +286,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.books.borrowed}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +12%
+                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-700">
+                        In circulation
                       </Badge>
                     </div>
                   </div>
@@ -357,9 +312,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.books.overdue}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +5%
+                      <Badge variant="secondary" className={`mt-1 ${dashboardData.books.overdue > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {dashboardData.books.overdue > 0 ? 'Needs attention' : 'All on time'}
                       </Badge>
                     </div>
                   </div>
@@ -395,9 +349,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.borrowing.currentlyBorrowed}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +12%
+                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-700">
+                        Active loans
                       </Badge>
                     </div>
                   </div>
@@ -422,9 +375,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.borrowing.overdueBooks}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +5%
+                      <Badge variant="secondary" className={`mt-1 ${dashboardData.borrowing.overdueBooks > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {dashboardData.borrowing.overdueBooks > 0 ? 'Action required' : 'None overdue'}
                       </Badge>
                     </div>
                   </div>
@@ -449,9 +401,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.borrowing.todayBorrowings}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +8%
+                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
+                        Today
                       </Badge>
                     </div>
                   </div>
@@ -476,9 +427,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.borrowing.todayReturns}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +15%
+                      <Badge variant="secondary" className="mt-1 bg-purple-100 text-purple-700">
+                        Today
                       </Badge>
                     </div>
                   </div>
@@ -514,9 +464,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.penalties.totalFines}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +8%
+                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-700">
+                        All records
                       </Badge>
                     </div>
                   </div>
@@ -541,9 +490,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         {dashboardData.penalties.unpaidFines}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +12%
+                      <Badge variant="secondary" className={`mt-1 ${dashboardData.penalties.unpaidFines > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {dashboardData.penalties.unpaidFines > 0 ? 'Pending' : 'All paid'}
                       </Badge>
                     </div>
                   </div>
@@ -568,9 +516,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         ₱{dashboardData.penalties.totalAmount}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +15%
+                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
+                        Collected
                       </Badge>
                     </div>
                   </div>
@@ -595,9 +542,8 @@ const ModernDashboard = ({ user }) => {
                       <div className="text-3xl font-bold text-slate-900">
                         ₱{dashboardData.penalties.unpaidAmount}
                       </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +10%
+                      <Badge variant="secondary" className={`mt-1 ${dashboardData.penalties.unpaidAmount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                        {dashboardData.penalties.unpaidAmount > 0 ? 'Outstanding' : 'Cleared'}
                       </Badge>
                     </div>
                   </div>
@@ -607,188 +553,6 @@ const ModernDashboard = ({ user }) => {
           </div>
         </motion.div>
 
-        {/* Activity Logs Stats */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="mb-8"
-        >
-          <h2 className="text-2xl font-semibold text-slate-800 mb-4">System Activity</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-blue-500 group-hover:scale-110 transition-transform duration-300">
-                        <FileText className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Total Logs</p>
-                        <p className="text-xs text-slate-500">All activity records</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.activity.totalLogs}
-                      </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +12%
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
-                        <LogIn className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Today's Logins</p>
-                        <p className="text-xs text-slate-500">Login activities today</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.activity.todayLogins}
-                      </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +8%
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-orange-500 group-hover:scale-110 transition-transform duration-300">
-                        <Users className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Active Users</p>
-                        <p className="text-xs text-slate-500">Users with activity</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.activity.activeUsers}
-                      </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +15%
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
-                        <Activity className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">System Activity</p>
-                        <p className="text-xs text-slate-500">Total system events</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.activity.systemActivity}
-                      </div>
-                      <Badge variant="secondary" className="mt-1">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        +20%
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Recent Activity */}
-        <motion.div
-          variants={itemVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <Card className="border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>Recent Activity</span>
-              </CardTitle>
-              <CardDescription>
-                Latest system activities and user interactions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {dashboardData.recentActivity.length > 0 ? (
-                  dashboardData.recentActivity.map((activity, index) => (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-blue-100 text-blue-600">
-                          {activity.userType === 'admin' ? 'A' : 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-slate-900">
-                            {activity.userId}
-                          </p>
-                          <Badge variant="outline" className="text-xs">
-                            {activity.userType}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {activity.action}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-slate-500 truncate">
-                          {activity.userAgent}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {new Date(activity.time).toLocaleString()} • {activity.ipAddress}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No recent activity found</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </div>
   );

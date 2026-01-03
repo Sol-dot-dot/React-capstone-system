@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
 import { ModernButton, ModernCard, ModernBadge } from '../components/ui/ModernComponents';
 import axios from 'axios';
@@ -45,7 +44,7 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
         setBorrowedBooks(response.data.data.borrowedBooks || []);
       }
     } catch (error) {
-      console.error('Error loading borrowed books:', error);
+      // Silent fail for borrowed books loading
     } finally {
       setLoading(false);
     }
@@ -75,7 +74,6 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
 
   const getPersonalizedRecommendations = async () => {
     if (!userData?.idNumber) {
-      console.log('No user data available for recommendations');
       return;
     }
 
@@ -94,11 +92,9 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
         }));
         setRecommendedBooks(booksWithAvailability);
         setShowRecommendations(true);
-      } else {
-        console.error('Failed to get recommendations:', response.data.message);
       }
     } catch (error) {
-      console.error('Error loading recommendations:', error);
+      // Silent fail for recommendations loading
     } finally {
       setLoadingRecommendations(false);
     }

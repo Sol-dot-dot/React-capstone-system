@@ -10,8 +10,8 @@ const auth = require('../middleware/auth');
 
 // Initialize vector database when route is loaded
 vectorDBService.initialize().catch(error => {
-  console.error('❌ Failed to initialize vector database:', error.message);
-  console.error('🚨 Chatbot will not work until AI embeddings are generated successfully');
+  console.error('[ERROR] Failed to initialize vector database:', error.message);
+  console.error('[CRITICAL] Chatbot will not work until AI embeddings are generated successfully');
 });
 
 // Add: helper to validate that candidate books exist in DB
@@ -30,7 +30,7 @@ async function filterBooksInDb(books) {
     const order = new Map(ids.map((id, i) => [String(id), i]));
     return rows.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
   } catch (e) {
-    console.error('❌ Error filtering books against DB:', e.message);
+    console.error('[ERROR] Error filtering books against DB:', e.message);
     return [];
   }
 }
@@ -202,7 +202,7 @@ router.get('/vector-integrity', async (req, res) => {
     const report = vectorDBService.getIntegrityReport();
     res.json({ success: true, data: report });
   } catch (error) {
-    console.error('❌ Error generating vector integrity report:', error);
+    console.error('[ERROR] Error generating vector integrity report:', error);
     res.status(500).json({ success: false, message: 'Failed to build integrity report', error: error.message });
   }
 });
@@ -222,7 +222,7 @@ router.get('/debug-books', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Error in /debug-books:', error);
+    console.error('[ERROR] Error in /debug-books:', error);
     res.status(500).json({ success: false, message: 'Failed to get debug books', error: error.message });
   }
 });
@@ -252,7 +252,7 @@ router.post('/simple', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Simple chatbot error:', error);
+    console.error('[ERROR] Simple chatbot error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing your request',
@@ -370,11 +370,11 @@ async function validateBooksInDatabase(books) {
       existingBooks.some(dbBook => dbBook.id === book.id)
     );
     
-    console.log(`✅ Validated ${validBooks.length}/${books.length} books exist in database`);
+    console.log(`[OK] Validated ${validBooks.length}/${books.length} books exist in database`);
     return validBooks;
     
   } catch (error) {
-    console.error('❌ Error validating books in database:', error);
+    console.error('[ERROR] Error validating books in database:', error);
     return []; // Return empty array if validation fails
   }
 }
@@ -409,7 +409,7 @@ router.post('/recommend', async (req, res) => {
       }
     }
     
-    console.log('🤖 Chatbot request received:', { 
+    console.log('[CHATBOT] Chatbot request received:', { 
       message: message?.substring(0, 50) + '...', 
       hasStudentId: !!studentIdNumber,
       studentIdLength: studentIdNumber?.length || 0
@@ -417,7 +417,7 @@ router.post('/recommend', async (req, res) => {
     
     // Check if vector database is properly initialized
     if (!vectorDBService.isInitialized || !vectorDBService.useRealEmbeddings) {
-      console.error('❌ Vector database not initialized');
+      console.error('[ERROR] Vector database not initialized');
       return res.status(503).json({
         success: false,
         message: 'AI service is not ready. Please wait for initialization to complete or check server logs.',
@@ -435,7 +435,7 @@ router.post('/recommend', async (req, res) => {
       try {
         // Use advanced hybrid recommendations if student ID is provided
         if (studentIdNumber) {
-          console.log('🚀 Using advanced hybrid recommendations');
+          console.log('[INFO] Using advanced hybrid recommendations');
           const advancedResult = await chatbotService.generateAdvancedRecommendations(studentIdNumber, message, 5);
           
           // Validate returned books against DB and improve topical accuracy
@@ -480,7 +480,7 @@ router.post('/recommend', async (req, res) => {
           response = buildSafeRecommendationsMessage(books, message);
         }
       } catch (searchError) {
-        console.error('❌ Error in book search:', searchError.message);
+        console.error('[ERROR] Error in book search:', searchError.message);
         // Graceful fallback for RAG failures
         response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
         books = [];
@@ -504,7 +504,7 @@ router.post('/recommend', async (req, res) => {
           response = await chatbotService.getEnhancedGeneralResponse(contextualMessage, studentIdNumber);
         }
       } catch (chatError) {
-        console.error('❌ Error generating chat response:', chatError.message);
+        console.error('[ERROR] Error generating chat response:', chatError.message);
         return res.status(500).json({
           success: false,
           message: 'Failed to generate response. Please try again.',
@@ -524,7 +524,7 @@ router.post('/recommend', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Chatbot error:', error);
+    console.error('[ERROR] Chatbot error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing your request',
@@ -562,7 +562,7 @@ router.post('/refresh-index', async (req, res) => {
       message: 'AI vector database refreshed successfully'
     });
   } catch (error) {
-    console.error('❌ Error refreshing vector database:', error);
+    console.error('[ERROR] Error refreshing vector database:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to refresh AI vector database',
@@ -587,7 +587,7 @@ router.get('/status', async (req, res) => {
       data: status
     });
   } catch (error) {
-    console.error('❌ Error getting vector database status:', error);
+    console.error('[ERROR] Error getting vector database status:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting status',
@@ -623,7 +623,7 @@ router.post('/personalized', [
     });
 
   } catch (error) {
-    console.error('❌ Error generating personalized recommendations:', error);
+    console.error('[ERROR] Error generating personalized recommendations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while generating personalized recommendations',
@@ -660,7 +660,7 @@ router.post('/advanced-recommendations', [
     });
 
   } catch (error) {
-    console.error('❌ Error generating advanced recommendations:', error);
+    console.error('[ERROR] Error generating advanced recommendations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while generating advanced recommendations',
@@ -689,7 +689,7 @@ router.post('/feedback', [
     const { messageId, feedback, studentIdNumber } = req.body;
 
     // Log feedback for analytics
-    console.log(`📝 User feedback received:`, {
+    console.log(`[INFO] User feedback received:`, {
       messageId,
       feedback,
       studentIdNumber,
@@ -710,7 +710,7 @@ router.post('/feedback', [
     });
 
   } catch (error) {
-    console.error('❌ Error processing feedback:', error);
+    console.error('[ERROR] Error processing feedback:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing feedback',
@@ -740,7 +740,7 @@ router.get('/user-knowledge/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error getting user knowledge:', error);
+    console.error('[ERROR] Error getting user knowledge:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting user knowledge',
@@ -774,7 +774,7 @@ router.get('/conversation-starter/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error getting conversation starter:', error);
+    console.error('[ERROR] Error getting conversation starter:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting conversation starter',
@@ -804,7 +804,7 @@ router.get('/reading-history/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error analyzing reading history:', error);
+    console.error('[ERROR] Error analyzing reading history:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while analyzing reading history',
@@ -833,7 +833,7 @@ router.get('/analytics', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error getting reading analytics:', error);
+    console.error('[ERROR] Error getting reading analytics:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting reading analytics',

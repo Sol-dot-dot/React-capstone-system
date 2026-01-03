@@ -125,6 +125,131 @@ const StudentRecords = () => {
     window.print();
   };
 
+  // Export PDF functionality
+  const handleExportPDF = () => {
+    if (!studentRecord || !selectedStudent) return;
+
+    // Create a new window for the PDF content
+    const printWindow = window.open('', '_blank');
+
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Library Clearance - ${selectedStudent.first_name} ${selectedStudent.last_name}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Times New Roman', serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+          .logo { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+          .subtitle { font-size: 14px; color: #666; }
+          .title { font-size: 20px; font-weight: bold; margin: 20px 0; text-transform: uppercase; letter-spacing: 2px; }
+          .student-info { margin: 20px 0; padding: 15px; background: #f5f5f5; }
+          .student-info p { margin: 5px 0; font-size: 14px; }
+          .label { font-weight: bold; display: inline-block; width: 150px; }
+          .section { margin: 25px 0; }
+          .section-title { font-size: 16px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 15px; }
+          .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+          .summary-item { padding: 10px; border: 1px solid #ddd; }
+          .summary-item .value { font-size: 24px; font-weight: bold; color: #2563eb; }
+          .summary-item .label { font-size: 12px; color: #666; display: block; width: auto; }
+          .clearance-status { text-align: center; padding: 20px; margin: 20px 0; border: 2px solid ${studentRecord.clearance.isCleared ? '#22c55e' : '#eab308'}; }
+          .clearance-status.cleared { background: #f0fdf4; }
+          .clearance-status.not-cleared { background: #fefce8; }
+          .status-text { font-size: 24px; font-weight: bold; color: ${studentRecord.clearance.isCleared ? '#22c55e' : '#eab308'}; }
+          .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ccc; padding-top: 20px; }
+          .signature-line { margin-top: 60px; display: flex; justify-content: space-between; }
+          .signature { text-align: center; width: 200px; }
+          .signature-line-border { border-top: 1px solid #000; margin-top: 40px; padding-top: 5px; font-size: 12px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">ST. MICHAEL'S COLLEGE</div>
+          <div class="subtitle">Library Management System</div>
+          <div class="title">Library Clearance Certificate</div>
+        </div>
+
+        <div class="student-info">
+          <p><span class="label">Student Name:</span> ${selectedStudent.first_name} ${selectedStudent.last_name}</p>
+          <p><span class="label">Student ID:</span> ${selectedStudent.id_number}</p>
+          <p><span class="label">Course:</span> ${selectedStudent.course}</p>
+          <p><span class="label">Year Level:</span> ${getYearLevelLabel(selectedStudent.year_level)}</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Library Summary</div>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="value">${studentRecord.summary.totalBooks}</div>
+              <span class="label">Total Books Borrowed</span>
+            </div>
+            <div class="summary-item">
+              <div class="value">${studentRecord.summary.returnedBooks}</div>
+              <span class="label">Books Returned</span>
+            </div>
+            <div class="summary-item">
+              <div class="value">₱${studentRecord.summary.totalFines.toFixed(2)}</div>
+              <span class="label">Total Fines Incurred</span>
+            </div>
+            <div class="summary-item">
+              <div class="value">₱${studentRecord.summary.unpaidFines.toFixed(2)}</div>
+              <span class="label">Unpaid Fines</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="clearance-status ${studentRecord.clearance.isCleared ? 'cleared' : 'not-cleared'}">
+          <div class="status-text">${studentRecord.clearance.isCleared ? '✓ CLEARED' : '⚠ NOT CLEARED'}</div>
+          <p style="margin-top: 10px; font-size: 14px;">
+            ${studentRecord.clearance.isCleared
+              ? 'This student has fulfilled all library requirements and is cleared for the current semester.'
+              : 'This student has pending library requirements that must be fulfilled.'}
+          </p>
+        </div>
+
+        ${!studentRecord.clearance.isCleared && studentRecord.clearance.pendingRequirements.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Pending Requirements</div>
+            <ul style="padding-left: 20px;">
+              ${studentRecord.clearance.pendingRequirements.map(req => `<li style="margin: 5px 0;">${req}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <div class="signature-line">
+          <div class="signature">
+            <div class="signature-line-border">Librarian</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line-border">Date</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Generated on ${currentDate}</p>
+          <p>SMC Library Management System</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+
+    // Wait for content to load then trigger print dialog
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -456,7 +581,7 @@ const StudentRecords = () => {
                       <Printer className="h-4 w-4" />
                       <span>Print Clearance</span>
                     </Button>
-                    <Button variant="outline" className="flex items-center space-x-2">
+                    <Button variant="outline" className="flex items-center space-x-2" onClick={handleExportPDF}>
                       <Download className="h-4 w-4" />
                       <span>Export PDF</span>
                     </Button>

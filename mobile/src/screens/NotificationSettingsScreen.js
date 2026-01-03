@@ -10,12 +10,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import NotificationService from '../services/NotificationService';
+import { buildApiUrl } from '../config/api';
+
+const DAYS_BEFORE_OPTIONS = [1, 2, 3, 5, 7];
 
 const NotificationSettingsScreen = ({ userData, onBack }) => {
   const [settings, setSettings] = useState({
     enabled: true,
     pushNotifications: true,
     emailNotifications: true,
+    daysBefore: 3,
     reminderTiming: {
       oneDayBefore: true,
       dueToday: true,
@@ -24,36 +28,152 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
   useEffect(() => {
     loadSettings();
+    checkPermissionStatus();
   }, []);
 
   const loadSettings = async () => {
     try {
-      const currentSettings = await NotificationService.getNotificationSettings();
+      const idNumber = userData?.idNumber || userData?.id_number;
+      const currentSettings = await NotificationService.getNotificationSettings(idNumber);
       setSettings(currentSettings);
     } catch (error) {
-      console.error('Error loading notification settings:', error);
+      // Silent fail for settings loading
     } finally {
       setLoading(false);
     }
   };
 
+  const checkPermissionStatus = async () => {
+    const hasPermission = await NotificationService.checkPermission();
+    setPermissionGranted(hasPermission);
+  };
+
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const success = await NotificationService.updateNotificationSettings(settings);
+      const idNumber = userData?.idNumber || userData?.id_number;
+      const success = await NotificationService.updateNotificationSettings(settings, idNumber);
       if (success) {
-        Alert.alert('Success', 'Notification settings updated successfully');
+        Alert.alert('Success', 'Notification settings saved and synced');
       } else {
         Alert.alert('Error', 'Failed to update notification settings');
       }
     } catch (error) {
-      console.error('Error saving notification settings:', error);
       Alert.alert('Error', 'Failed to save notification settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const testPushNotification = async () => {
+    setTesting(true);
+    try {
+      // Send a real push notification using notifee
+      const result = await NotificationService.sendTestNotification();
+
+      if (result.success) {
+        Alert.alert(
+          'Push Notification Sent!',
+          result.message + '\n\nCheck your notification tray to see the notification.'
+        );
+        // Update permission status
+        setPermissionGranted(true);
+      } else {
+        if (result.permissionDenied) {
+          Alert.alert(
+            'Permission Required',
+            result.message,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open Settings',
+                onPress: () => NotificationService.openNotificationSettings()
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Test Failed', result.message);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send test notification: ' + error.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testEmailNotification = async () => {
+    setTesting(true);
+    try {
+      // Get user email
+      const userEmail = userData?.email;
+      const firstName = userData?.firstName || userData?.first_name;
+      const idNumber = userData?.idNumber || userData?.id_number;
+
+      if (!userEmail) {
+        Alert.alert('Error', 'No email address found. Please make sure you are logged in.');
+        setTesting(false);
+        return;
+      }
+
+      // Send test email directly to the user
+      const response = await fetch(buildApiUrl('/api/notifications/test-email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          firstName: firstName,
+          idNumber: idNumber
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        Alert.alert(
+          'Test Email Sent!',
+          `A test email has been sent to:\n${userEmail}\n\nPlease check your inbox (and spam folder) to verify email notifications are working.`
+        );
+      } else {
+        Alert.alert(
+          'Email Failed',
+          result.message || 'Failed to send test email. Please check the server configuration.'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Connection Issue',
+        'Could not connect to the server. Make sure the backend is running.'
+      );
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const requestPermission = async () => {
+    const granted = await NotificationService.requestPermission();
+    setPermissionGranted(granted);
+    if (granted) {
+      Alert.alert('Permission Granted', 'You can now receive push notifications!');
+    } else {
+      Alert.alert(
+        'Permission Required',
+        'Notification permission was denied. You can enable it in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open Settings',
+            onPress: () => NotificationService.openNotificationSettings()
+          }
+        ]
+      );
     }
   };
 
@@ -93,10 +213,32 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
       </View>
 
       <View style={styles.content}>
+        {/* Permission Status */}
+        <View style={[styles.permissionSection, permissionGranted ? styles.permissionGranted : styles.permissionDenied]}>
+          <View style={styles.permissionHeader}>
+            <Text style={styles.permissionIcon}>{permissionGranted ? 'ON' : 'OFF'}</Text>
+            <View style={styles.permissionInfo}>
+              <Text style={styles.permissionTitle}>
+                {permissionGranted ? 'Notifications Enabled' : 'Notifications Disabled'}
+              </Text>
+              <Text style={styles.permissionDescription}>
+                {permissionGranted
+                  ? 'You will receive push notifications on this device'
+                  : 'Enable notifications to receive due date reminders'}
+              </Text>
+            </View>
+          </View>
+          {!permissionGranted && (
+            <TouchableOpacity style={styles.enableButton} onPress={requestPermission}>
+              <Text style={styles.enableButtonText}>Enable Notifications</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Main Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>General Settings</Text>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>Enable Notifications</Text>
@@ -145,11 +287,41 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
           </View>
         </View>
 
+        {/* Reminder Days Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reminder Days</Text>
+          <Text style={styles.sectionDescription}>
+            How many days before due date should we remind you?
+          </Text>
+
+          <View style={styles.daysContainer}>
+            {DAYS_BEFORE_OPTIONS.map((days) => (
+              <TouchableOpacity
+                key={days}
+                style={[
+                  styles.dayOption,
+                  settings.daysBefore === days && styles.dayOptionSelected,
+                  !settings.enabled && styles.dayOptionDisabled
+                ]}
+                onPress={() => settings.enabled && updateSetting('daysBefore', days)}
+                disabled={!settings.enabled}
+              >
+                <Text style={[
+                  styles.dayOptionText,
+                  settings.daysBefore === days && styles.dayOptionTextSelected
+                ]}>
+                  {days} {days === 1 ? 'day' : 'days'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Reminder Timing */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reminder Timing</Text>
+          <Text style={styles.sectionTitle}>Notification Types</Text>
           <Text style={styles.sectionDescription}>
-            Choose when you want to receive reminders
+            Choose which notifications you want to receive
           </Text>
 
           <View style={styles.settingRow}>
@@ -201,26 +373,60 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
           </View>
         </View>
 
+        {/* Test Notification Section */}
+        <View style={styles.testSection}>
+          <Text style={styles.testTitle}>Test Notifications</Text>
+          <Text style={styles.testDescription}>
+            Test if push and email notifications are working properly.
+          </Text>
+
+          <View style={styles.testButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.testButton, testing && styles.testButtonDisabled]}
+              onPress={testPushNotification}
+              disabled={testing}
+            >
+              {testing ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.testButtonText}>Test Push</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.testButton, styles.testButtonEmail, testing && styles.testButtonDisabled]}
+              onPress={testEmailNotification}
+              disabled={testing}
+            >
+              {testing ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={styles.testButtonText}>Test Email</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Information Section */}
         <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>📱 About Smart Notifications</Text>
+          <Text style={styles.infoTitle}>About Notifications</Text>
           <Text style={styles.infoText}>
-            • Push notifications appear on your device even when the app is closed
+            • Push notifications appear in your device's notification tray
           </Text>
           <Text style={styles.infoText}>
-            • Email notifications are sent to your registered email address
-          </Text>
-          <Text style={styles.infoText}>
-            • You can customize when you receive reminders
+            • Email notifications are sent to your registered email
           </Text>
           <Text style={styles.infoText}>
             • Notifications help you avoid overdue fines
           </Text>
+          <Text style={styles.infoText}>
+            • Make sure to allow notifications in device settings
+          </Text>
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={saveSettings}
           disabled={saving}
         >
@@ -274,6 +480,55 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  permissionSection: {
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 20,
+  },
+  permissionGranted: {
+    backgroundColor: '#e8f5e9',
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  permissionDenied: {
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ff9800',
+  },
+  permissionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  permissionIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  permissionInfo: {
+    flex: 1,
+  },
+  permissionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  permissionDescription: {
+    fontSize: 13,
+    color: '#666',
+  },
+  enableButton: {
+    backgroundColor: '#ff9800',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  enableButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   section: {
     backgroundColor: 'white',
@@ -339,6 +594,45 @@ const styles = StyleSheet.create({
     color: '#1976d2',
     marginBottom: 5,
   },
+  testSection: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+  },
+  testTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#e65100',
+    marginBottom: 10,
+  },
+  testDescription: {
+    fontSize: 14,
+    color: '#e65100',
+    marginBottom: 15,
+  },
+  testButtonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  testButton: {
+    flex: 1,
+    backgroundColor: '#ff9800',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  testButtonEmail: {
+    backgroundColor: '#2196f3',
+  },
+  testButtonDisabled: {
+    opacity: 0.6,
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   saveButton: {
     backgroundColor: '#007bff',
     padding: 15,
@@ -352,6 +646,36 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10,
+  },
+  dayOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#f0f0f0',
+  },
+  dayOptionSelected: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#007bff',
+  },
+  dayOptionDisabled: {
+    opacity: 0.5,
+  },
+  dayOptionText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  dayOptionTextSelected: {
+    color: '#007bff',
     fontWeight: '600',
   },
 });

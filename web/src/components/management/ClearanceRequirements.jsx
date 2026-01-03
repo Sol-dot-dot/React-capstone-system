@@ -38,6 +38,9 @@ const debounce = (func, delay) => {
   };
 };
 
+// Default book requirement - can be fetched from settings API
+const DEFAULT_BOOK_REQUIREMENT = 20;
+
 const ClearanceRequirements = ({ user }) => {
   const [students, setStudents] = useState([]);
   const [summary, setSummary] = useState({});
@@ -49,6 +52,7 @@ const ClearanceRequirements = ({ user }) => {
   const [studentDetails, setStudentDetails] = useState(null);
   const [expandedStudents, setExpandedStudents] = useState(new Set());
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [bookRequirement, setBookRequirement] = useState(DEFAULT_BOOK_REQUIREMENT);
 
   // Barcode scanner state
   const [isScanning, setIsScanning] = useState(false);
@@ -302,7 +306,7 @@ const ClearanceRequirements = ({ user }) => {
             <h1 className="text-3xl font-bold text-slate-900">Clearance Requirements</h1>
           </div>
           <p className="text-slate-600">
-            Monitor student progress towards the 20 books per semester requirement
+            Monitor student progress towards the {bookRequirement} books per semester requirement
           </p>
         </motion.div>
 
@@ -531,7 +535,7 @@ const ClearanceRequirements = ({ user }) => {
                               <div className="text-sm">
                                 <span className="font-medium text-slate-700">Books This Semester:</span>
                                 <span className="ml-1 text-blue-600 font-semibold">
-                                  {student.books_borrowed_count || 0}/20
+                                  {student.books_borrowed_count || 0}/{bookRequirement}
                                 </span>
                               </div>
                               <div className="text-sm">
@@ -600,14 +604,14 @@ const ClearanceRequirements = ({ user }) => {
                                 <h4 className="font-medium text-slate-900">Progress</h4>
                                 <div className="text-sm text-slate-600">
                                   <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
-                                    <div 
+                                    <div
                                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                      style={{ 
-                                        width: `${Math.min(100, ((student.books_borrowed_count || 0) / 20) * 100)}%` 
+                                      style={{
+                                        width: `${Math.min(100, ((student.books_borrowed_count || 0) / bookRequirement) * 100)}%`
                                       }}
                                     ></div>
                                   </div>
-                                  <p><strong>Progress:</strong> {Math.round(((student.books_borrowed_count || 0) / 20) * 100)}%</p>
+                                  <p><strong>Progress:</strong> {Math.round(((student.books_borrowed_count || 0) / bookRequirement) * 100)}%</p>
                                   <p><strong>Last Updated:</strong> {student.semester_updated ? new Date(student.semester_updated).toLocaleDateString() : 'Never'}</p>
                                 </div>
                               </div>
@@ -668,7 +672,7 @@ const ClearanceRequirements = ({ user }) => {
                     <h3 className="font-medium text-slate-900 mb-2">Clearance Status</h3>
                     <div className="text-sm text-slate-600 space-y-1">
                       <p><strong>Status:</strong> {studentDetails.clearanceMessage}</p>
-                      <p><strong>Books This Semester:</strong> {studentDetails.semesterTracking.books_borrowed_count}/20</p>
+                      <p><strong>Books This Semester:</strong> {studentDetails.semesterTracking.books_borrowed_count}/{bookRequirement}</p>
                       <p><strong>Books Remaining:</strong> {studentDetails.booksRemaining}</p>
                       <p><strong>Max Books Allowed:</strong> {studentDetails.semesterTracking.max_books_allowed}</p>
                       <p><strong>Unpaid Fines:</strong> ₱{studentDetails.finesInfo.unpaid_amount}</p>

@@ -18,7 +18,7 @@ class UserKnowledgeService {
    */
   async getUserKnowledge(studentIdNumber) {
     try {
-      console.log(`🧠 Building comprehensive user knowledge for: ${studentIdNumber}`);
+      console.log(`[INFO] Building comprehensive user knowledge for: ${studentIdNumber}`);
 
       const [
         userProfile,
@@ -70,11 +70,11 @@ class UserKnowledgeService {
         summary: this.generateUserSummary(userProfile, readingStats, preferences)
       };
 
-      console.log(`✅ User knowledge built successfully for ${studentIdNumber}`);
+      console.log(`[OK] User knowledge built successfully for ${studentIdNumber}`);
       return userKnowledge;
 
     } catch (error) {
-      console.error('❌ Error building user knowledge:', error);
+      console.error('[ERROR] Error building user knowledge:', error);
       throw error;
     }
   }
@@ -118,7 +118,7 @@ class UserKnowledgeService {
         lastLoginFormatted: this.formatDate(user.last_login)
       };
     } catch (error) {
-      console.error('❌ Error getting user profile:', error);
+      console.error('[ERROR] Error getting user profile:', error);
       return null;
     }
   }
@@ -171,7 +171,7 @@ class UserKnowledgeService {
         readingDuration: this.calculateReadingDuration(record.borrowed_date, record.returned_date)
       }));
     } catch (error) {
-      console.error('❌ Error getting borrowing history:', error);
+      console.error('[ERROR] Error getting borrowing history:', error);
       return [];
     }
   }
@@ -215,7 +215,7 @@ class UserKnowledgeService {
         urgencyLevel: this.calculateUrgencyLevel(record.due_date)
       }));
     } catch (error) {
-      console.error('❌ Error getting current borrowings:', error);
+      console.error('[ERROR] Error getting current borrowings:', error);
       return [];
     }
   }
@@ -274,7 +274,7 @@ class UserKnowledgeService {
         readingStreak: this.calculateReadingStreak(monthlyStats)
       };
     } catch (error) {
-      console.error('❌ Error getting reading statistics:', error);
+      console.error('[ERROR] Error getting reading statistics:', error);
       return {};
     }
   }
@@ -289,7 +289,7 @@ class UserKnowledgeService {
       // Since user_preferences table doesn't exist, return default preferences
       return this.getDefaultPreferences();
     } catch (error) {
-      console.error('❌ Error getting user preferences:', error);
+      console.error('[ERROR] Error getting user preferences:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -335,7 +335,7 @@ class UserKnowledgeService {
         canBorrow: (penalties[0]?.unpaid_fines || 0) === 0
       };
     } catch (error) {
-      console.error('❌ Error getting penalty information:', error);
+      console.error('[ERROR] Error getting penalty information:', error);
       return { summary: {}, recent: [], hasUnpaidFines: false, canBorrow: true };
     }
   }
@@ -350,7 +350,7 @@ class UserKnowledgeService {
       // Since activity_logs table doesn't exist, return empty array
       return [];
     } catch (error) {
-      console.error('❌ Error getting user activity logs:', error);
+      console.error('[ERROR] Error getting user activity logs:', error);
       return [];
     }
   }

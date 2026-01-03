@@ -10,7 +10,6 @@ import {
   ScrollView,
   Animated,
 } from 'react-native';
-// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
 import { ModernButton } from '../components/ui/ModernComponents';
 import Icon from 'react-native-vector-icons/Ionicons';

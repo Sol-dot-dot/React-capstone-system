@@ -14,7 +14,7 @@ class ReadingHistoryService {
    */
   async analyzeUserReadingHistory(studentIdNumber) {
     try {
-      console.log(`🔍 Analyzing reading history for student: ${studentIdNumber}`);
+      console.log(`[INFO] Analyzing reading history for student: ${studentIdNumber}`);
 
       // Get user's complete borrowing history
       const [borrowingHistory] = await pool.execute(`
@@ -60,11 +60,11 @@ class ReadingHistoryService {
         readingVelocity: this.calculateReadingVelocity(borrowingHistory)
       };
 
-      console.log(`✅ Reading history analysis completed for ${studentIdNumber}`);
+      console.log(`[OK] Reading history analysis completed for ${studentIdNumber}`);
       return analysis;
 
     } catch (error) {
-      console.error('❌ Error analyzing reading history:', error);
+      console.error('[ERROR] Error analyzing reading history:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -77,7 +77,7 @@ class ReadingHistoryService {
    */
   async generatePersonalizedRecommendations(studentIdNumber, limit = 5) {
     try {
-      console.log(`🎯 Generating personalized recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating personalized recommendations for: ${studentIdNumber}`);
 
       const userPreferences = await this.analyzeUserReadingHistory(studentIdNumber);
       
@@ -120,11 +120,11 @@ class ReadingHistoryService {
           recommendationReason: this.generateRecommendationReason(book, userPreferences)
         }));
 
-      console.log(`✅ Generated ${recommendations.length} personalized recommendations`);
+      console.log(`[OK] Generated ${recommendations.length} personalized recommendations`);
       return recommendations;
 
     } catch (error) {
-      console.error('❌ Error generating personalized recommendations:', error);
+      console.error('[ERROR] Error generating personalized recommendations:', error);
       return [];
     }
   }
@@ -505,7 +505,7 @@ class ReadingHistoryService {
    */
   async getSystemReadingStatistics() {
     try {
-      console.log('📊 Generating system-wide reading statistics...');
+      console.log('[INFO] Generating system-wide reading statistics...');
 
       // Get overall borrowing statistics
       const [overallStats] = await pool.execute(`
@@ -556,7 +556,7 @@ class ReadingHistoryService {
         ORDER BY month DESC
       `);
 
-      console.log('✅ System reading statistics generated');
+      console.log('[OK] System reading statistics generated');
       return {
         overall: overallStats[0],
         popularGenres,
@@ -565,7 +565,7 @@ class ReadingHistoryService {
       };
 
     } catch (error) {
-      console.error('❌ Error generating system reading statistics:', error);
+      console.error('[ERROR] Error generating system reading statistics:', error);
       return null;
     }
   }

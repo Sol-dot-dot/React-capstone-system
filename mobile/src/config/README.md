@@ -56,8 +56,8 @@ const response = await axios.get(buildApiUrl(getEndpoint('USER', 'GET_PROFILE', 
 
 ## Benefits
 
-- ✅ Easy to change IP address in one place
-- ✅ Centralized endpoint management
-- ✅ Type-safe endpoint references
-- ✅ Easy to switch between development and production
-- ✅ Consistent API structure across the app
+- Easy to change IP address in one place
+- Centralized endpoint management
+- Type-safe endpoint references
+- Easy to switch between development and production
+- Consistent API structure across the app

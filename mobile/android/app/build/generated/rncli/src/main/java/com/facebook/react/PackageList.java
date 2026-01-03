@@ -21,6 +21,8 @@ import com.swmansion.gesturehandler.RNGestureHandlerPackage;
 import com.swmansion.reanimated.ReanimatedPackage;
 // react-native-svg
 import com.horcrux.svg.SvgPackage;
+// @notifee/react-native
+import io.invertase.notifee.NotifeePackage;
 
 public class PackageList {
   private Application application;
@@ -70,7 +72,8 @@ public class PackageList {
       new AsyncStoragePackage(),
       new RNGestureHandlerPackage(),
       new ReanimatedPackage(),
-      new SvgPackage()
+      new SvgPackage(),
+      new NotifeePackage()
     ));
   }
 }

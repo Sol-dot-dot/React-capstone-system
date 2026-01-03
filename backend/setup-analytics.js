@@ -16,7 +16,7 @@ async function setupAnalytics() {
       database: process.env.DB_NAME || 'capstone_system'
     });
 
-    console.log('✅ Connected to database');
+    console.log('[OK] Connected to database');
 
     // Read and execute the SQL file
     const sqlFile = path.join(__dirname, 'create-analytics-tables.sql');
@@ -35,18 +35,18 @@ async function setupAnalytics() {
       if (statement.trim()) {
         try {
           await connection.execute(statement);
-          console.log(`✅ Statement ${i + 1} executed successfully`);
+          console.log(`[OK] Statement ${i + 1} executed successfully`);
         } catch (error) {
           if (error.code === 'ER_TABLE_EXISTS_ERROR' || error.code === 'ER_DUP_KEYNAME') {
-            console.log(`⚠️  Statement ${i + 1} skipped (already exists)`);
+            console.log(`[WARN] Statement ${i + 1} skipped (already exists)`);
           } else {
-            console.error(`❌ Error in statement ${i + 1}:`, error.message);
+            console.error(`[ERROR] Error in statement ${i + 1}:`, error.message);
           }
         }
       }
     }
 
-    console.log('\n🎉 Analytics database setup completed!');
+    console.log('\n[OK] Analytics database setup completed!');
     console.log('\nCreated/Updated tables:');
     console.log('- activity_logs (for tracking user actions)');
     console.log('- search_logs (for search analytics)');
@@ -56,7 +56,7 @@ async function setupAnalytics() {
     console.log('\nSample data has been inserted for testing.');
 
   } catch (error) {
-    console.error('❌ Error setting up analytics:', error.message);
+    console.error('[ERROR] Error setting up analytics:', error.message);
   } finally {
     if (connection) {
       await connection.end();

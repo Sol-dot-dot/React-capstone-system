@@ -1,17 +1,182 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
-import { buildApiUrl } from '../config/api';
-
-// Push notifications will be implemented in a future version
-// For now, we use a simple notification service without push notifications
+import { Alert, Platform, PermissionsAndroid } from 'react-native';
+import { buildApiUrl, getEndpoint } from '../config/api';
+import axios from 'axios';
+import notifee, { AndroidImportance, AuthorizationStatus, TriggerType } from '@notifee/react-native';
 
 class NotificationService {
   static STORAGE_KEY = 'borrowed_books_notifications';
   static NOTIFICATION_SETTINGS_KEY = 'notification_settings';
+  static CHANNEL_ID = 'library-notifications';
+  static permissionGranted = false;
 
-  // Initialize notifications (simplified version without push notifications)
-  static initializePushNotifications() {
-    // Notification service initialized - using email notifications for reliability
+  // Initialize push notifications - request permission and create channel
+  static async initializePushNotifications() {
+    try {
+      // Request permission
+      const permissionStatus = await this.requestPermission();
+      this.permissionGranted = permissionStatus;
+
+      // Create notification channel for Android
+      await this.createNotificationChannel();
+
+      return permissionStatus;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Request notification permission
+  static async requestPermission() {
+    try {
+      // For Android 13+ (API 33+), request POST_NOTIFICATIONS permission
+      if (Platform.OS === 'android' && Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+          {
+            title: 'Notification Permission',
+            message: 'SMC Library needs notification permission to remind you about book due dates.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'Allow',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
+
+      // For notifee permission
+      const settings = await notifee.requestPermission();
+      return settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Check if notifications are permitted
+  static async checkPermission() {
+    try {
+      const settings = await notifee.getNotificationSettings();
+      return settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Create Android notification channel
+  static async createNotificationChannel() {
+    try {
+      await notifee.createChannel({
+        id: this.CHANNEL_ID,
+        name: 'Library Notifications',
+        description: 'Notifications for book due dates and reminders',
+        importance: AndroidImportance.HIGH,
+        vibration: true,
+        sound: 'default',
+      });
+    } catch (error) {
+      // Channel creation failed silently
+    }
+  }
+
+  // Display a push notification
+  static async displayNotification(title, body, data = {}) {
+    try {
+      // Check permission first
+      const hasPermission = await this.checkPermission();
+      if (!hasPermission) {
+        console.log('NotificationService: Permission not granted');
+        return false;
+      }
+
+      // Ensure channel exists
+      await this.createNotificationChannel();
+
+      await notifee.displayNotification({
+        title,
+        body,
+        data,
+        android: {
+          channelId: this.CHANNEL_ID,
+          importance: AndroidImportance.HIGH,
+          pressAction: {
+            id: 'default',
+          },
+          // Use ic_launcher which exists in all React Native apps
+          // or omit smallIcon to let notifee use default
+          smallIcon: 'ic_launcher',
+          color: '#007bff',
+        },
+        ios: {
+          sound: 'default',
+        },
+      });
+
+      console.log('NotificationService: Notification displayed successfully');
+      return true;
+    } catch (error) {
+      console.error('NotificationService: Error displaying notification:', error);
+      return false;
+    }
+  }
+
+  // Send a test notification
+  static async sendTestNotification() {
+    try {
+      console.log('NotificationService: Starting test notification...');
+
+      // First ensure we have permission
+      const hasPermission = await this.checkPermission();
+      console.log('NotificationService: Permission status:', hasPermission);
+
+      if (!hasPermission) {
+        // Request permission
+        const granted = await this.requestPermission();
+        console.log('NotificationService: Permission request result:', granted);
+        if (!granted) {
+          return {
+            success: false,
+            message: 'Notification permission denied. Please enable notifications in your device settings.',
+            permissionDenied: true,
+          };
+        }
+      }
+
+      // Create channel if not exists
+      console.log('NotificationService: Creating notification channel...');
+      await this.createNotificationChannel();
+
+      // Display test notification
+      console.log('NotificationService: Displaying notification...');
+      const success = await this.displayNotification(
+        'SMC Library Test',
+        'Push notifications are working! You will receive reminders for your borrowed books.',
+        { type: 'test' }
+      );
+
+      console.log('NotificationService: Display result:', success);
+
+      if (success) {
+        return {
+          success: true,
+          message: 'Test notification sent successfully! Check your notification tray.',
+        };
+      } else {
+        // Try to get more details about why it failed
+        const settings = await notifee.getNotificationSettings();
+        console.log('NotificationService: Settings:', JSON.stringify(settings));
+
+        return {
+          success: false,
+          message: `Failed to display notification. Authorization: ${settings.authorizationStatus}. Try restarting the app.`,
+        };
+      }
+    } catch (error) {
+      console.error('NotificationService: Test notification error:', error);
+      return {
+        success: false,
+        message: 'Error sending test notification: ' + (error.message || 'Unknown error'),
+      };
+    }
   }
 
   // Smart notification system with push notifications and email
@@ -19,15 +184,20 @@ class NotificationService {
     try {
       const settings = await this.getNotificationSettings();
       const today = new Date().toDateString();
-      
+
       // Check if notifications are enabled
       if (!settings.enabled) {
         return;
       }
 
+      // Initialize notifications if not done
+      if (!this.permissionGranted) {
+        await this.initializePushNotifications();
+      }
+
       // Group books by notification type
       const notifications = this.categorizeBooksForNotifications(borrowedBooks);
-      
+
       // Process each notification type
       for (const [type, books] of Object.entries(notifications)) {
         if (books.length > 0) {
@@ -38,7 +208,7 @@ class NotificationService {
       // Store today's date to prevent multiple notifications
       await AsyncStorage.setItem(this.STORAGE_KEY, today);
     } catch (error) {
-      console.error('Error checking smart notifications:', error);
+      // Silent fail
     }
   }
 
@@ -75,7 +245,7 @@ class NotificationService {
   static async processNotificationType(type, books, userData, settings) {
     const notificationKey = `${type}_${new Date().toDateString()}`;
     const lastSent = await AsyncStorage.getItem(notificationKey);
-    
+
     // Don't send the same type of notification twice in one day
     if (lastSent) {
       return;
@@ -83,7 +253,7 @@ class NotificationService {
 
     // Send push notification
     if (settings.pushNotifications) {
-      this.sendPushNotification(type, books);
+      await this.sendPushNotification(type, books);
     }
 
     // Send email notification
@@ -91,26 +261,47 @@ class NotificationService {
       await this.sendEmailNotification(type, books, userData);
     }
 
-    // Show in-app alert for urgent notifications
-    if (type === 'overdue' || type === 'dueToday') {
-      this.showInAppAlert(type, books);
-    }
-
     // Mark as sent
     await AsyncStorage.setItem(notificationKey, new Date().toISOString());
   }
 
-  // Send push notification (simplified - will be implemented in future version)
-  static sendPushNotification(type, books) {
-    // Push notifications will be implemented in a future version
-    // Currently using email notifications for reliability
+  // Send real push notification
+  static async sendPushNotification(type, books) {
+    try {
+      let title, body;
+
+      switch (type) {
+        case 'overdue':
+          title = 'Overdue Books Alert';
+          body = `You have ${books.length} overdue book(s)! Return them immediately to avoid penalties.`;
+          break;
+        case 'dueToday':
+          title = 'Books Due Today';
+          body = `You have ${books.length} book(s) due today! Please return them.`;
+          break;
+        case 'dueTomorrow':
+          title = 'Books Due Tomorrow';
+          body = `You have ${books.length} book(s) due tomorrow. Don't forget to return them!`;
+          break;
+        case 'dueSoon':
+          title = 'Book Due Date Reminder';
+          body = `You have ${books.length} book(s) due soon. Plan to return them on time.`;
+          break;
+        default:
+          return;
+      }
+
+      await this.displayNotification(title, body, { type, bookCount: books.length });
+    } catch (error) {
+      // Silent fail for push notification
+    }
   }
 
   // Send email notification via backend
   static async sendEmailNotification(type, books, userData) {
     try {
       const reminderType = this.mapNotificationTypeToEmailType(type);
-      
+
       const response = await fetch(buildApiUrl('/api/notifications/send-email'), {
         method: 'POST',
         headers: {
@@ -124,13 +315,9 @@ class NotificationService {
         })
       });
 
-      if (response.ok) {
-        // Email notification sent successfully
-      } else {
-        console.error('Failed to send email notification');
-      }
+      return response.ok;
     } catch (error) {
-      console.error('Error sending email notification:', error);
+      return false;
     }
   }
 
@@ -156,11 +343,11 @@ class NotificationService {
 
     switch (type) {
       case 'overdue':
-        title = '🚨 Overdue Books Alert';
+        title = 'Overdue Books Alert';
         message = `You have ${books.length} overdue book(s)! Return them immediately to avoid penalties.`;
         break;
       case 'dueToday':
-        title = '⚠️ Books Due Today';
+        title = 'Books Due Today';
         message = `You have ${books.length} book(s) due today! Please return them.`;
         break;
     }
@@ -177,8 +364,6 @@ class NotificationService {
 
   // Legacy method for backward compatibility
   static async checkAndShowNotifications(borrowedBooks) {
-    // This method is kept for backward compatibility
-    // It will be replaced by checkAndShowSmartNotifications
     return this.checkAndShowSmartNotifications(borrowedBooks, {});
   }
 
@@ -196,7 +381,7 @@ class NotificationService {
     }
 
     Alert.alert(
-      '📚 Book Due Date Alert',
+      'Book Due Date Alert',
       message,
       [
         { text: 'View Books', style: 'default' },
@@ -219,7 +404,7 @@ class NotificationService {
     }
 
     Alert.alert(
-      '📖 Book Due Date Reminder',
+      'Book Due Date Reminder',
       message,
       [
         { text: 'View Books', style: 'default' },
@@ -232,8 +417,10 @@ class NotificationService {
   static async clearNotificationHistory() {
     try {
       await AsyncStorage.removeItem(this.STORAGE_KEY);
+      // Also cancel all displayed notifications
+      await notifee.cancelAllNotifications();
     } catch (error) {
-      console.error('Error clearing notification history:', error);
+      // Silent fail
     }
   }
 
@@ -241,25 +428,50 @@ class NotificationService {
   static async getNotificationStatus() {
     try {
       const lastNotificationDate = await AsyncStorage.getItem(this.STORAGE_KEY);
-      return lastNotificationDate;
+      const permissionStatus = await this.checkPermission();
+      return {
+        lastNotificationDate,
+        permissionGranted: permissionStatus,
+      };
     } catch (error) {
-      console.error('Error getting notification status:', error);
       return null;
     }
   }
 
-  // Notification settings management
-  static async getNotificationSettings() {
+  // Notification settings management - syncs with backend
+  static async getNotificationSettings(idNumber = null) {
     try {
+      // Try to get from backend first if user is logged in
+      if (idNumber) {
+        try {
+          const response = await axios.get(
+            buildApiUrl(getEndpoint('NOTIFICATIONS', 'GET_SETTINGS', idNumber))
+          );
+          if (response.data.success) {
+            // Also save locally as cache
+            await AsyncStorage.setItem(
+              this.NOTIFICATION_SETTINGS_KEY,
+              JSON.stringify(response.data.data)
+            );
+            return response.data.data;
+          }
+        } catch (apiError) {
+          // Fall back to local storage if API fails
+        }
+      }
+
+      // Fall back to local storage
       const settings = await AsyncStorage.getItem(this.NOTIFICATION_SETTINGS_KEY);
       if (settings) {
         return JSON.parse(settings);
       }
+
       // Default settings
       return {
         enabled: true,
         pushNotifications: true,
         emailNotifications: true,
+        daysBefore: 3,
         reminderTiming: {
           oneDayBefore: true,
           dueToday: true,
@@ -267,11 +479,11 @@ class NotificationService {
         }
       };
     } catch (error) {
-      console.error('Error getting notification settings:', error);
       return {
         enabled: true,
         pushNotifications: true,
         emailNotifications: true,
+        daysBefore: 3,
         reminderTiming: {
           oneDayBefore: true,
           dueToday: true,
@@ -281,63 +493,146 @@ class NotificationService {
     }
   }
 
-  static async updateNotificationSettings(settings) {
+  static async updateNotificationSettings(settings, idNumber = null) {
     try {
+      // Save locally first
       await AsyncStorage.setItem(this.NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+
+      // Sync with backend if user is logged in
+      if (idNumber) {
+        try {
+          await axios.put(
+            buildApiUrl(getEndpoint('NOTIFICATIONS', 'UPDATE_SETTINGS', idNumber)),
+            { settings }
+          );
+        } catch (apiError) {
+          // Local save succeeded, backend sync can retry later
+        }
+      }
+
       return true;
     } catch (error) {
-      console.error('Error updating notification settings:', error);
       return false;
     }
   }
 
-  // Schedule future notifications
-  static scheduleFutureNotifications(books, userData) {
-    books.forEach(book => {
-      const dueDate = new Date(book.dueDate);
-      const now = new Date();
-      
-      // Schedule notification for 1 day before due date
-      const oneDayBefore = new Date(dueDate);
-      oneDayBefore.setDate(oneDayBefore.getDate() - 1);
-      
-      if (oneDayBefore > now) {
-        this.scheduleNotification(
-          oneDayBefore,
-          '📚 Book Due Tomorrow',
-          `"${book.title}" is due tomorrow!`,
-          book
-        );
-      }
+  // Schedule future notifications using notifee triggers
+  static async scheduleFutureNotifications(books, userData) {
+    try {
+      for (const book of books) {
+        const dueDate = new Date(book.dueDate);
+        const now = new Date();
 
-      // Schedule notification for due date
-      if (dueDate > now) {
-        this.scheduleNotification(
-          dueDate,
-          '⚠️ Book Due Today',
-          `"${book.title}" is due today!`,
-          book
-        );
+        // Schedule notification for 1 day before due date
+        const oneDayBefore = new Date(dueDate);
+        oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+        oneDayBefore.setHours(9, 0, 0, 0); // 9 AM
+
+        if (oneDayBefore > now) {
+          await this.scheduleNotification(
+            oneDayBefore,
+            'Book Due Tomorrow',
+            `"${book.title}" is due tomorrow!`,
+            { bookId: book.id, type: 'due_tomorrow' }
+          );
+        }
+
+        // Schedule notification for due date
+        const dueDateNotif = new Date(dueDate);
+        dueDateNotif.setHours(9, 0, 0, 0); // 9 AM
+
+        if (dueDateNotif > now) {
+          await this.scheduleNotification(
+            dueDateNotif,
+            'Book Due Today',
+            `"${book.title}" is due today!`,
+            { bookId: book.id, type: 'due_today' }
+          );
+        }
       }
-    });
+    } catch (error) {
+      // Silent fail for scheduling
+    }
   }
 
-  static scheduleNotification(date, title, message, book) {
-    // Scheduled notifications will be implemented in a future version
-    // Currently using email notifications for reliability
+  static async scheduleNotification(date, title, body, data = {}) {
+    try {
+      const trigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: date.getTime(),
+      };
+
+      // Ensure channel exists
+      await this.createNotificationChannel();
+
+      await notifee.createTriggerNotification(
+        {
+          title,
+          body,
+          data,
+          android: {
+            channelId: this.CHANNEL_ID,
+            importance: AndroidImportance.HIGH,
+            pressAction: {
+              id: 'default',
+            },
+            smallIcon: 'ic_launcher',
+            color: '#007bff',
+          },
+          ios: {
+            sound: 'default',
+          },
+        },
+        trigger
+      );
+
+      return true;
+    } catch (error) {
+      console.error('NotificationService: Error scheduling notification:', error);
+      return false;
+    }
   }
 
   // Cancel all scheduled notifications
-  static cancelAllNotifications() {
-    // Cancel notifications will be implemented in a future version
+  static async cancelAllNotifications() {
+    try {
+      await notifee.cancelAllNotifications();
+      // Also cancel triggers
+      const triggers = await notifee.getTriggerNotificationIds();
+      if (triggers.length > 0) {
+        await notifee.cancelTriggerNotifications(triggers);
+      }
+    } catch (error) {
+      // Silent fail
+    }
   }
 
-  // Get push notification token
+  // Get all scheduled notifications
+  static async getScheduledNotifications() {
+    try {
+      return await notifee.getTriggerNotificationIds();
+    } catch (error) {
+      return [];
+    }
+  }
+
+  // Open device notification settings
+  static async openNotificationSettings() {
+    try {
+      await notifee.openNotificationSettings();
+    } catch (error) {
+      Alert.alert(
+        'Settings',
+        'Please go to your device Settings > Apps > SMC Library > Notifications to manage notification permissions.'
+      );
+    }
+  }
+
+  // Get push notification token (for future remote push)
   static async getPushToken() {
     try {
       return await AsyncStorage.getItem('push_token');
     } catch (error) {
-      console.error('Error getting push token:', error);
       return null;
     }
   }

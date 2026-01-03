@@ -103,7 +103,7 @@ const logger = winston.createLogger({
 });
 
 // Add custom log levels
-logger.addColors({
+winston.addColors({
   error: 'red',
   warn: 'yellow',
   info: 'green',
@@ -137,12 +137,12 @@ logger.api = (message, meta = {}) => {
 // Request logging middleware
 const requestLogger = (req, res, next) => {
   const start = Date.now();
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     const logData = {
       method: req.method,
-      url: req.url,
+      url: req.originalUrl || req.url, // Use originalUrl for full path including mount point
       status: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip || req.connection.remoteAddress,

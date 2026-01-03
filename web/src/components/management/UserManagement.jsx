@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { 
-  Users, 
-  Search, 
-  RefreshCw, 
+import {
+  Users,
+  Search,
+  RefreshCw,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Check,
   X,
   TrendingUp,
@@ -45,6 +47,11 @@ const ModernUserManagement = ({ user }) => {
   const [editForm, setEditForm] = useState({ email: '', isVerified: false });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
   useEffect(() => {
     fetchUsers();
@@ -113,7 +120,7 @@ const ModernUserManagement = ({ user }) => {
       );
     } catch (err) {
       console.error('Verification update error:', err);
-      alert(err.response?.data?.message || 'Failed to update user verification');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update user verification' });
     } finally {
       setActionLoading(false);
     }
@@ -159,10 +166,10 @@ const ModernUserManagement = ({ user }) => {
       
       setEditingUser(null);
       setEditForm({ email: '', isVerified: false });
-      alert('User updated successfully!');
+      setMessage({ type: 'success', text: 'User updated successfully!' });
     } catch (err) {
       console.error('User update error:', err);
-      alert(err.response?.data?.message || 'Failed to update user');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update user' });
     } finally {
       setActionLoading(false);
     }
@@ -190,20 +197,52 @@ const ModernUserManagement = ({ user }) => {
       setUsers(prevUsers => prevUsers.filter(u => u.id_number !== idNumber));
       
       setShowDeleteConfirm(null);
-      alert('User deleted successfully!');
+      setMessage({ type: 'success', text: 'User deleted successfully!' });
     } catch (err) {
       console.error('User deletion error:', err);
-      alert(err.response?.data?.message || 'Failed to delete user');
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to delete user' });
     } finally {
       setActionLoading(false);
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    user.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter and sort users
+  const filteredAndSortedUsers = users
+    .filter(user =>
+      user.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'id_number':
+          return a.id_number.localeCompare(b.id_number);
+        case 'email':
+          return a.email.localeCompare(b.email);
+        case 'is_verified':
+          return (b.is_verified ? 1 : 0) - (a.is_verified ? 1 : 0);
+        case 'created_at':
+        default:
+          return new Date(b.created_at) - new Date(a.created_at);
+      }
+    });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAndSortedUsers.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const paginatedUsers = filteredAndSortedUsers.slice(startIndex, startIndex + usersPerPage);
+
+  // Reset to page 1 when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy]);
+
+  // Clear message after 3 seconds
+  useEffect(() => {
+    if (message.text) {
+      const timer = setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -322,10 +361,11 @@ const ModernUserManagement = ({ user }) => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                All Users ({filteredUsers.length})
+                All Users ({filteredAndSortedUsers.length})
               </CardTitle>
               <CardDescription>
                 Manage user accounts, verification status, and permissions
+                {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -334,9 +374,23 @@ const ModernUserManagement = ({ user }) => {
                   <p className="text-red-600">{error}</p>
                 </div>
               )}
-              
+
+              {message.text && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mb-4 p-4 rounded-lg border ${
+                    message.type === 'success'
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : 'bg-red-50 border-red-200 text-red-700'
+                  }`}
+                >
+                  <p>{message.text}</p>
+                </motion.div>
+              )}
+
               <div className="space-y-4">
-                {filteredUsers.map((user, index) => (
+                {paginatedUsers.map((user, index) => (
                   <motion.div
                     key={user.id_number}
                     initial={{ opacity: 0, y: 20 }}
@@ -457,13 +511,67 @@ const ModernUserManagement = ({ user }) => {
                 ))}
               </div>
               
-              {filteredUsers.length === 0 && (
+              {filteredAndSortedUsers.length === 0 && (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-slate-900 mb-2">No users found</h3>
                   <p className="text-slate-600">
                     {searchTerm ? 'Try adjusting your search terms' : 'No users have been registered yet'}
                   </p>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+                  <p className="text-sm text-slate-600">
+                    Showing {startIndex + 1} to {Math.min(startIndex + usersPerPage, filteredAndSortedUsers.length)} of {filteredAndSortedUsers.length} users
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

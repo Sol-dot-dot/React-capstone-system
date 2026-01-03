@@ -357,7 +357,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
                         'Fine fully paid - book returned'
                     );
                     
-                    console.log('✅ Book returned after fine payment:', transaction.title);
+                    console.log('[OK] Book returned after fine payment:', transaction.title);
                 }
 
                 // Check if student can now borrow (if all fines are paid)
@@ -503,7 +503,7 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1, connec
             [incrementBy, studentIdNumber]
         );
 
-        console.log(`✅ Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
+        console.log(`[OK] Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
         return true;
     } catch (error) {
         console.error('Error updating semester books count:', error);
@@ -531,7 +531,7 @@ async function cleanupDuplicateFines() {
                 HAVING COUNT(*) > 1
             `);
             
-            console.log(`🧹 Found ${duplicateFines.length} transactions with duplicate fines`);
+            console.log(`[INFO] Found ${duplicateFines.length} transactions with duplicate fines`);
             
             for (const duplicate of duplicateFines) {
                 // Keep the first fine record and update it with the correct total
@@ -547,11 +547,11 @@ async function cleanupDuplicateFines() {
                     WHERE transaction_id = ? AND id != ?
                 `, [duplicate.transaction_id, duplicate.keep_id]);
                 
-                console.log(`✅ Cleaned up ${duplicate.count - 1} duplicate fines for transaction ${duplicate.transaction_id}`);
+                console.log(`[OK] Cleaned up ${duplicate.count - 1} duplicate fines for transaction ${duplicate.transaction_id}`);
             }
             
             await connection.commit();
-            console.log(`🎉 Cleanup completed. Processed ${duplicateFines.length} transactions`);
+            console.log(`[OK] Cleanup completed. Processed ${duplicateFines.length} transactions`);
             
         } catch (error) {
             await connection.rollback();
@@ -584,7 +584,7 @@ async function processAllOverdueFines() {
                  AND due_date < CURDATE()`
             );
             
-            console.log(`✅ Updated ${updateResult.affectedRows} books to overdue status`);
+            console.log(`[OK] Updated ${updateResult.affectedRows} books to overdue status`);
             
             // Step 2: Get all overdue transactions
             const [overdueTransactions] = await connection.execute(
@@ -594,7 +594,7 @@ async function processAllOverdueFines() {
                  AND bt.due_date < CURDATE()`
             );
             
-            console.log(`🔍 Found ${overdueTransactions.length} overdue transactions`);
+            console.log(`[INFO] Found ${overdueTransactions.length} overdue transactions`);
             
             // Step 3: Get fine per day setting
             const [settings] = await connection.execute(
@@ -666,7 +666,7 @@ async function processAllOverdueFines() {
             
             await connection.commit();
             
-            console.log(`✅ Created ${finesCreated} new fines for overdue books`);
+            console.log(`[OK] Created ${finesCreated} new fines for overdue books`);
             
             return {
                 booksUpdatedToOverdue: updateResult.affectedRows,

@@ -3,26 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginForm from './components/auth/LoginForm';
 import Dashboard from './components/dashboard/Dashboard';
 import UserManagement from './components/management/UserManagement';
-import ActivityLogs from './components/monitoring/ActivityLogs';
 import BookManagement from './components/management/BookManagement';
 import BorrowingManagement from './components/management/BorrowingManagement';
 import ReturningManagement from './components/management/ReturningManagement';
 import PenaltyManagement from './components/management/PenaltyManagement';
 import MonitoringDashboard from './components/monitoring/MonitoringDashboard';
 import ClearanceRequirements from './components/management/ClearanceRequirements';
-// Old complex analytics - deprecated
-// import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
-// import UserAnalytics from './components/analytics/UserAnalytics';
-// import BookAnalytics from './components/analytics/BookAnalytics';
-// import SimplifiedDashboard from './components/analytics/SimplifiedDashboard';
-
-// New simplified analytics - Reports only
-import ReportsPage from './components/analytics/ReportsPage';
 import ProfileSettings from './components/management/ProfileSettings';
 import StudentRecords from './pages/StudentRecords';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
-import { SearchProvider } from './contexts/SearchContext';
 import designSystem from './styles/designSystem';
 import './App.css';
 
@@ -115,8 +105,7 @@ function App() {
   };
 
   return (
-    <SearchProvider>
-      <Router>
+    <Router>
       <div style={appStyles.app}>
         {isAuthenticated ? (
           <div className="flex h-screen bg-slate-50 relative">
@@ -187,14 +176,6 @@ function App() {
               } 
             />
             <Route 
-              path="/activity-logs" 
-              element={
-                isAuthenticated ? 
-                <ActivityLogs user={user} /> : 
-                <Navigate to="/login" />
-              } 
-            />
-            <Route 
               path="/borrowings" 
               element={
                 isAuthenticated ? 
@@ -233,41 +214,6 @@ function App() {
                 <MonitoringDashboard user={user} /> : 
                 <Navigate to="/login" />
               } 
-            />
-            {/* Old complex analytics routes - deprecated */}
-            {/* <Route
-              path="/analytics"
-              element={
-                isAuthenticated ?
-                <AnalyticsDashboard user={user} /> :
-                <Navigate to="/login" />
-              }
-            />
-            <Route
-              path="/analytics/users"
-              element={
-                isAuthenticated ?
-                <UserAnalytics user={user} /> :
-                <Navigate to="/login" />
-              }
-            />
-            <Route
-              path="/analytics/books"
-              element={
-                isAuthenticated ?
-                <BookAnalytics user={user} /> :
-                <Navigate to="/login" />
-              }
-            /> */}
-
-            {/* Simplified analytics - Reports only */}
-            <Route
-              path="/reports"
-              element={
-                isAuthenticated ?
-                <ReportsPage user={user} /> :
-                <Navigate to="/login" />
-              }
             />
             {/* Student Records */}
             <Route
@@ -310,8 +256,7 @@ function App() {
         )}
 
       </div>
-      </Router>
-    </SearchProvider>
+    </Router>
   );
 }
 

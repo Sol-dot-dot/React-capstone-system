@@ -336,7 +336,7 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
     try {
         await connection.beginTransaction();
 
-        console.log(`🔄 Creating return transaction for borrowing transaction ID: ${transactionId}`);
+        console.log(`[INFO] Creating return transaction for borrowing transaction ID: ${transactionId}`);
 
         // Get the borrowing transaction details
         const [transactionRows] = await connection.execute(
@@ -383,8 +383,8 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
 
         await connection.commit();
 
-        console.log(`✅ Return transaction created successfully! ID: ${returnResult.insertId}`);
-        console.log(`📊 Book: ${transaction.book_title}, Student: ${transaction.student_id_number}`);
+        console.log(`[OK] Return transaction created successfully! ID: ${returnResult.insertId}`);
+        console.log(`[INFO] Book: ${transaction.book_title}, Student: ${transaction.student_id_number}`);
         
         return {
             created: true,
@@ -410,7 +410,7 @@ async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
     try {
         await connection.beginTransaction();
 
-        console.log(`🔍 Checking for missing return transaction records for student: ${studentIdNumber}`);
+        console.log(`[INFO] Checking for missing return transaction records for student: ${studentIdNumber}`);
 
         // Find all returned books that don't have return transaction records
         const [missingReturns] = await connection.execute(`
@@ -424,7 +424,7 @@ async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
             AND rt.id IS NULL
         `, [studentIdNumber]);
 
-        console.log(`📊 Found ${missingReturns.length} returned books without return transaction records`);
+        console.log(`[INFO] Found ${missingReturns.length} returned books without return transaction records`);
 
         let createdCount = 0;
         for (const book of missingReturns) {
@@ -449,15 +449,15 @@ async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
                 );
 
                 createdCount++;
-                console.log(`✅ Created retroactive return transaction for book: ${book.book_title}`);
+                console.log(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
             } catch (error) {
-                console.error(`❌ Error creating retroactive return transaction for book ${book.book_title}:`, error);
+                console.error(`[ERROR] Error creating retroactive return transaction for book ${book.book_title}:`, error);
             }
         }
 
         await connection.commit();
         
-        console.log(`✅ Created ${createdCount} retroactive return transaction records for student ${studentIdNumber}`);
+        console.log(`[OK] Created ${createdCount} retroactive return transaction records for student ${studentIdNumber}`);
         return { created: createdCount, total: missingReturns.length };
 
     } catch (error) {

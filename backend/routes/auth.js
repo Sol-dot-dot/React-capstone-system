@@ -388,10 +388,23 @@ router.post('/user/login', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('[LOGIN DEBUG] Validation failed for login attempt:', {
+                errors: errors.array(),
+                userAgent: req.get('User-Agent')
+            });
             return res.status(400).json({ errors: errors.array() });
         }
 
         const { idNumber, password } = req.body;
+        const userAgent = req.get('User-Agent');
+        const isMobileApp = userAgent && userAgent.includes('okhttp');
+
+        console.log('[LOGIN DEBUG] Login attempt:', {
+            idNumber,
+            userAgent,
+            isMobileApp,
+            timestamp: new Date().toISOString()
+        });
 
         // Optimized query - only select necessary fields for login
         const [users] = await pool.execute(
@@ -400,20 +413,25 @@ router.post('/user/login', [
         );
 
         if (users.length === 0) {
+            console.log('[LOGIN DEBUG] User not found:', { idNumber, isMobileApp });
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const user = users[0];
 
         if (!user.is_verified) {
+            console.log('[LOGIN DEBUG] User not verified:', { idNumber, userId: user.id, isMobileApp });
             return res.status(401).json({ message: 'Please verify your email first' });
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
         if (!isValidPassword) {
+            console.log('[LOGIN DEBUG] Invalid password:', { idNumber, userId: user.id, isMobileApp });
             return res.status(401).json({ message: 'Invalid credentials' });
         }
+
+        console.log('[LOGIN DEBUG] Login successful:', { idNumber, userId: user.id, isMobileApp });
 
         // Log user login (async, don't wait for completion)
         pool.execute(
@@ -597,6 +615,48 @@ router.post('/user/reset-password', [
         });
     } catch (error) {
         console.error('Password reset error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// DEBUG: Check user status (for troubleshooting login issues)
+// This endpoint should be removed or restricted in production
+router.get('/debug/user/:idNumber', async (req, res) => {
+    try {
+        const { idNumber } = req.params;
+
+        // Validate ID format
+        if (!/^[A-Z]\d{2}-\d{3,4}$/.test(idNumber)) {
+            return res.status(400).json({
+                exists: false,
+                message: 'Invalid ID format'
+            });
+        }
+
+        const [users] = await pool.execute(
+            'SELECT id, id_number, is_verified, email_verified, created_at FROM users WHERE id_number = ?',
+            [idNumber]
+        );
+
+        if (users.length === 0) {
+            return res.json({
+                exists: false,
+                message: 'User not found in database'
+            });
+        }
+
+        const user = users[0];
+        return res.json({
+            exists: true,
+            isVerified: user.is_verified,
+            emailVerified: user.email_verified,
+            createdAt: user.created_at,
+            message: user.is_verified
+                ? 'User exists and is verified - check password'
+                : 'User exists but is NOT verified - needs email verification'
+        });
+    } catch (error) {
+        console.error('Debug user check error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

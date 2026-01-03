@@ -12,7 +12,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
 import { 
   getResponsiveSpacing, 
@@ -59,9 +58,7 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('Loading dashboard data for user:', userData);
-      console.log('User ID Number:', userData.idNumber);
-      
+
       const [borrowedResponse, penaltiesResponse, semesterResponse] = await Promise.all([
         axios.get(buildApiUrl(getEndpoint('BORROWING', 'GET_USER_BORROWED_BOOKS', userData.idNumber))),
         axios.get(buildApiUrl(getEndpoint('PENALTY', 'GET_USER_PENALTIES', userData.idNumber))),
@@ -96,13 +93,10 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
       }
 
       // Use real semester data from database
-      console.log('Semester response:', semesterResponse);
       if (semesterResponse && semesterResponse.data && semesterResponse.data.success) {
-        console.log('Using real semester data:', semesterResponse.data.data);
         setClearanceData(semesterResponse.data.data);
       } else {
-        // No mock numbers: gracefully fall back to data derived from actual borrowed books
-        console.log('Semester endpoint unavailable; deriving progress from borrowed books list.');
+        // Gracefully fall back to data derived from actual borrowed books
         const derivedCount = Array.isArray(borrowedResponse?.data?.data?.borrowedBooks)
           ? borrowedResponse.data.data.borrowedBooks.length
           : borrowedBooks.length;

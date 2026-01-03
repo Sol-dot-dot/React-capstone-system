@@ -23,7 +23,7 @@ class AdvancedRecommendationService {
    */
   async generateHybridRecommendations(studentIdNumber, query = '', limit = 5) {
     try {
-      console.log(`🎯 Generating hybrid recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating hybrid recommendations for: ${studentIdNumber}`);
 
       // Get user's reading history
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
@@ -54,7 +54,7 @@ class AdvancedRecommendationService {
       };
 
     } catch (error) {
-      console.error('❌ Error generating hybrid recommendations:', error);
+      console.error('[ERROR] Error generating hybrid recommendations:', error);
       throw error;
     }
   }
@@ -67,7 +67,7 @@ class AdvancedRecommendationService {
    */
   async generateCollaborativeRecommendations(studentIdNumber, limit = 10) {
     try {
-      console.log(`👥 Generating collaborative recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating collaborative recommendations for: ${studentIdNumber}`);
 
       // Get user's reading history
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
@@ -98,7 +98,7 @@ class AdvancedRecommendationService {
       }));
 
     } catch (error) {
-      console.error('❌ Error in collaborative filtering:', error);
+      console.error('[ERROR] Error in collaborative filtering:', error);
       return [];
     }
   }
@@ -112,7 +112,7 @@ class AdvancedRecommendationService {
    */
   async generateContentBasedRecommendations(studentIdNumber, query = '', limit = 10) {
     try {
-      console.log(`📚 Generating content-based recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating content-based recommendations for: ${studentIdNumber}`);
 
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
       
@@ -165,7 +165,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('❌ Error in content-based filtering:', error);
+      console.error('[ERROR] Error in content-based filtering:', error);
       return [];
     }
   }
@@ -178,7 +178,7 @@ class AdvancedRecommendationService {
    */
   async generateQueryBasedRecommendations(query, limit = 10) {
     try {
-      console.log(`🔍 Generating query-based recommendations for: "${query}"`);
+      console.log(`[INFO] Generating query-based recommendations for: "${query}"`);
 
       // Tokenize and process query
       const queryTokens = this.tokenizer.tokenize(query.toLowerCase());
@@ -221,7 +221,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('❌ Error in query-based recommendations:', error);
+      console.error('[ERROR] Error in query-based recommendations:', error);
       return [];
     }
   }
@@ -282,7 +282,7 @@ class AdvancedRecommendationService {
         .slice(0, 10);
 
     } catch (error) {
-      console.error('❌ Error finding similar users:', error);
+      console.error('[ERROR] Error finding similar users:', error);
       return [];
     }
   }
@@ -350,7 +350,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('❌ Error getting books from similar users:', error);
+      console.error('[ERROR] Error getting books from similar users:', error);
       return [];
     }
   }
@@ -682,7 +682,7 @@ class AdvancedRecommendationService {
         readingDiversity: this.calculateReadingDiversity(profile)
       };
     } catch (error) {
-      console.error('❌ Error generating user profile:', error);
+      console.error('[ERROR] Error generating user profile:', error);
       return null;
     }
   }
@@ -882,7 +882,7 @@ class AdvancedRecommendationService {
 
       return history;
     } catch (error) {
-      console.error('❌ Error getting user reading history:', error);
+      console.error('[ERROR] Error getting user reading history:', error);
       return [];
     }
   }

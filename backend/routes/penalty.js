@@ -462,7 +462,6 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
         const adminId = req.user.id;
 
         // 1. Get all unpaid fines for this student with their associated transactions
-        console.log('🔍 Processing payment for student:', studentId);
         const [unpaidFines] = await connection.execute(
             `SELECT f.*, bt.id as transaction_id, bt.book_id, bt.status as transaction_status
              FROM fines f
@@ -470,7 +469,6 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
              WHERE f.student_id_number = ? AND f.status = 'unpaid'`,
             [studentId]
         );
-        console.log('🔍 Unpaid fines found:', unpaidFines);
 
         if (unpaidFines.length === 0) {
             await connection.rollback();
@@ -510,17 +508,13 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
         // 3. Return any borrowed books associated with these fines
         let booksReturned = 0;
-        console.log('🔍 Processing book returns for fines:', unpaidFines.length);
-        
+
         for (const fine of unpaidFines) {
-            console.log('🔍 Processing fine:', fine);
             if (fine.transaction_id && (fine.transaction_status === 'borrowed' || fine.transaction_status === 'overdue')) {
-                console.log('🔍 Returning book for transaction:', fine.transaction_id, 'Status:', fine.transaction_status);
-                
                 // Return the book (handle both borrowed and overdue status)
                 await connection.execute(
-                    `UPDATE borrowing_transactions 
-                     SET status = 'returned', 
+                    `UPDATE borrowing_transactions
+                     SET status = 'returned',
                          returned_date = CURDATE(),
                          returned_by_admin = ?
                      WHERE id = ? AND status IN ('borrowed', 'overdue')`,
@@ -529,21 +523,17 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
                 // Update book status to available
                 await connection.execute(
-                    `UPDATE books 
+                    `UPDATE books
                      SET status = 'available'
                      WHERE id = ?`,
                     [fine.book_id]
                 );
 
                 booksReturned++;
-                console.log('✅ Book returned successfully');
-            } else {
-                console.log('⚠️ Fine not linked to borrowed/overdue book or book already returned');
             }
         }
 
         // 4. Return ALL remaining overdue books for this student (regardless of fines)
-        console.log('🔍 Checking for any remaining overdue books...');
         const [overdueBooks] = await connection.execute(
             `SELECT bt.id, bt.book_id, b.title
              FROM borrowing_transactions bt
@@ -551,23 +541,21 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
              WHERE bt.student_id_number = ? AND bt.status = 'overdue'`,
             [studentId]
         );
-        
-        console.log('🔍 Found remaining overdue books:', overdueBooks);
-        
+
         for (const book of overdueBooks) {
-                // Return the overdue book
-                await connection.execute(
-                    `UPDATE borrowing_transactions 
-                     SET status = 'returned', 
-                         returned_date = CURDATE(),
-                         returned_by_admin = ?
-                     WHERE id = ?`,
-                    [adminId, book.id]
-                );
+            // Return the overdue book
+            await connection.execute(
+                `UPDATE borrowing_transactions
+                 SET status = 'returned',
+                     returned_date = CURDATE(),
+                     returned_by_admin = ?
+                 WHERE id = ?`,
+                [adminId, book.id]
+            );
 
             // Update book status to available
             await connection.execute(
-                `UPDATE books 
+                `UPDATE books
                  SET status = 'available'
                  WHERE id = ?`,
                 [book.book_id]
@@ -575,16 +563,14 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
             // Create return transaction record
             await createReturnTransaction(
-                book.id, 
-                adminId, 
-                'good', 
-                'Overdue book returned after fine payment', 
+                book.id,
+                adminId,
+                'good',
+                'Overdue book returned after fine payment',
                 'Overdue book processed - fine payment completed'
             );
-            console.log('✅ Return transaction record created for overdue book:', book.title);
 
             booksReturned++;
-            console.log('✅ Overdue book returned:', book.title);
         }
 
         await connection.commit();
@@ -601,9 +587,9 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
     } catch (error) {
         await connection.rollback();
-        console.error('❌ Error processing payment and book return:', error);
-        console.error('❌ Error stack:', error.stack);
-        console.error('❌ Error details:', {
+        console.error('[ERROR] Error processing payment and book return:', error);
+        console.error('[ERROR] Error stack:', error.stack);
+        console.error('[ERROR] Error details:', {
             message: error.message,
             code: error.code,
             errno: error.errno,
@@ -973,10 +959,18 @@ router.get('/all-fines', auth, async (req, res) => {
 });
 
 // GET /api/penalty/user/:studentId - Get user's own fines and status (for mobile app)
-router.get('/user/:studentId', async (req, res) => {
+router.get('/user/:studentId', auth, async (req, res) => {
     try {
         const { studentId } = req.params;
         const { recalculate = 'true' } = req.query;
+
+        // Security: Verify user can only access their own data (or admin can access any)
+        if (req.user.type !== 'admin' && req.user.idNumber !== studentId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only view your own penalty data.'
+            });
+        }
 
         // Get student's fines with real-time recalculation
         const fines = await getStudentFines(studentId, null, recalculate === 'true');
@@ -1019,9 +1013,17 @@ router.get('/user/:studentId', async (req, res) => {
 });
 
 // POST /api/penalty/recalculate/:studentId - Force recalculation of student's fines
-router.post('/recalculate/:studentId', async (req, res) => {
+router.post('/recalculate/:studentId', auth, async (req, res) => {
     try {
         const { studentId } = req.params;
+
+        // Security: Verify user can only recalculate their own fines (or admin can recalculate any)
+        if (req.user.type !== 'admin' && req.user.idNumber !== studentId) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only recalculate your own fines.'
+            });
+        }
 
         // Force recalculation of student's fines
         await recalculateStudentFines(studentId);
@@ -1127,11 +1129,10 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
                     await createReturnTransaction(
                         fine.transaction_id, 
                         adminId, 
-                        'good', 
-                        'Book returned after fine payment', 
+                        'good',
+                        'Book returned after fine payment',
                         'All fines paid at once - book returned'
                     );
-                    console.log('✅ Return transaction record created for transaction:', fine.transaction_id);
 
                     paidFinesCount++;
                     returnedBooksCount++;
@@ -1262,7 +1263,6 @@ router.post('/fix-overdue-fines', auth, async (req, res) => {
             });
         }
 
-        console.log('🔧 Admin requested to fix overdue fines...');
         const results = await processAllOverdueFines();
         
         res.json({
@@ -1357,7 +1357,6 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
                 'Overdue book returned after fine payment', 
                 'Overdue book processed - fine payment completed'
             );
-            console.log('✅ Return transaction record created for overdue book:', transaction.title);
 
             // Store in overdue history
             await connection.execute(
@@ -1418,7 +1417,7 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
 // POST /api/penalty/populate-overdue-history - Populate overdue history for current overdue books
 router.post('/populate-overdue-history', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (req.user.type !== 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Admin privileges required.'
@@ -1514,7 +1513,7 @@ router.post('/populate-overdue-history', auth, async (req, res) => {
 // POST /api/penalty/force-populate-overdue-history - Force populate overdue history (admin only)
 router.post('/force-populate-overdue-history', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (req.user.type !== 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Admin privileges required.'
@@ -1541,7 +1540,7 @@ router.post('/force-populate-overdue-history', auth, async (req, res) => {
 // POST /api/penalty/fix-missing-return-transactions - Fix missing return transaction records for paid overdue books
 router.post('/fix-missing-return-transactions', auth, async (req, res) => {
     try {
-        if (req.user.role !== 'admin') {
+        if (req.user.type !== 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. Admin privileges required.'
@@ -1603,7 +1602,7 @@ router.post('/fix-missing-return-transactions', auth, async (req, res) => {
                 ]);
 
                 recordsCreated++;
-                console.log(`✅ Created retroactive return transaction for book: ${book.book_title}`);
+                console.log(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
             }
 
             await connection.commit();
@@ -1767,14 +1766,14 @@ router.post('/reset-semester', auth, async (req, res) => {
         semesterEndDate.setMonth(semesterEndDate.getMonth() + semesterDurationMonths);
         const semesterEndDateStr = semesterEndDate.toISOString().split('T')[0];
 
-        console.log(`🔄 Resetting semester: ${semesterStartDate} to ${semesterEndDateStr} (${semesterDurationMonths} months)`);
+        console.log(`[INFO] Resetting semester: ${semesterStartDate} to ${semesterEndDateStr} (${semesterDurationMonths} months)`);
 
         // Get all active students
         const [activeStudents] = await connection.execute(
             'SELECT id_number FROM users WHERE type = "student" AND is_verified = 1'
         );
 
-        console.log(`📊 Found ${activeStudents.length} active students to reset`);
+        console.log(`[INFO] Found ${activeStudents.length} active students to reset`);
 
         let resetCount = 0;
         let createdCount = 0;
@@ -1799,7 +1798,7 @@ router.post('/reset-semester', auth, async (req, res) => {
                     [semesterStartDate, semesterEndDateStr, student.id_number]
                 );
                 resetCount++;
-                console.log(`✅ Reset semester tracking for student: ${student.id_number}`);
+                console.log(`[OK] Reset semester tracking for student: ${student.id_number}`);
             } else {
                 // Create new semester tracking
                 await connection.execute(
@@ -1809,7 +1808,7 @@ router.post('/reset-semester', auth, async (req, res) => {
                     [student.id_number, semesterStartDate, semesterEndDateStr]
                 );
                 createdCount++;
-                console.log(`✅ Created new semester tracking for student: ${student.id_number}`);
+                console.log(`[OK] Created new semester tracking for student: ${student.id_number}`);
             }
         }
 
@@ -1834,8 +1833,8 @@ router.post('/reset-semester', auth, async (req, res) => {
 
         await connection.commit();
 
-        console.log(`🎉 Semester reset completed successfully!`);
-        console.log(`📊 Reset: ${resetCount} students, Created: ${createdCount} students`);
+        console.log(`[OK] Semester reset completed successfully!`);
+        console.log(`[INFO] Reset: ${resetCount} students, Created: ${createdCount} students`);
 
         res.json({
             success: true,
@@ -1875,8 +1874,6 @@ router.get('/clearance-requirements', auth, async (req, res) => {
         const { search, semester, status } = req.query;
         let whereClause = '';
         let params = [];
-
-        console.log('🔍 Clearance Requirements Query:', { search, semester, status });
 
         if (search) {
             whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?)';
@@ -1944,15 +1941,11 @@ router.get('/clearance-requirements', auth, async (req, res) => {
                 u.last_name ASC
         `, params);
 
-        console.log('📊 Found students:', students.length);
-
         // Filter by status if provided
         let filteredStudents = students;
         if (status) {
             filteredStudents = students.filter(student => student.clearance_status === status);
         }
-
-        console.log('📊 Filtered students:', filteredStudents.length);
 
         // Get summary statistics
         const totalStudents = filteredStudents.length;

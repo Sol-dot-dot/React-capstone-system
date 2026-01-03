@@ -61,7 +61,7 @@ const Login = ({ onLogin }) => {
           width: "min(500px, 90vw)", // Responsive width
           height: "100%",
           backgroundColor: "rgba(248, 250, 252, 0.7)", // Gray background with transparency
-          backdropFilter: "blur(-20px)", // Blur effect - Change this value to control blur intensity
+          backdropFilter: "blur(20px)", // Blur effect - Change this value to control blur intensity
           pointerEvents: "none", // This allows clicks to pass through
           zIndex: 1
         }}
@@ -164,11 +164,6 @@ const Login = ({ onLogin }) => {
               </Button>
             </form>
 
-            {/* <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <p className="text-sm font-medium text-gray-700 mb-2">Default Admin Credentials:</p>
-              <p className="text-sm text-gray-600">Username: admin@library.com</p>
-              <p className="text-sm text-gray-600">Password: password</p>
-            </div> */}
           </CardContent>
         </Card>
       </div>

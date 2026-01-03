@@ -19,17 +19,17 @@ import { buildApiUrl, getEndpoint } from '../../config/api';
 // Fallback icon component in case vector icons don't load
 const FallbackIcon = ({ name, size, color }) => {
   const iconMap = {
-    'x': '✕',
-    'send': '➤',
-    'book': '📚',
-    'user': '👤',
-    'bot': '🤖',
-    'message-circle': '💬',
+    'x': 'X',
+    'send': '>',
+    'book': 'B',
+    'user': 'U',
+    'bot': 'A',
+    'message-circle': 'M',
   };
-  
+
   return (
     <Text style={{ fontSize: size, color }}>
-      {iconMap[name] || '📱'}
+      {iconMap[name] || '*'}
     </Text>
   );
 };
@@ -39,7 +39,6 @@ let Icon;
 try {
   Icon = require('react-native-vector-icons/Feather').default;
 } catch (error) {
-  console.warn('Vector icons not available, using fallback icons');
   Icon = FallbackIcon;
 }
 
@@ -103,7 +102,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         }]);
       }
     } catch (error) {
-      console.error('Error loading user knowledge:', error);
+      // Silent fail for user knowledge loading
     }
   };
 
@@ -175,17 +174,12 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       // Add student ID for personalized recommendations if available
       if (userInfo && (userInfo.id_number || userInfo.idNumber)) {
         requestData.studentIdNumber = userInfo.id_number || userInfo.idNumber;
-        console.log('📱 Adding student ID to request:', requestData.studentIdNumber);
-        console.log('📱 Conversation history length:', conversationHistory.length);
-      } else {
-        console.log('📱 No user info available for personalization:', { userInfo, hasIdNumber: userInfo?.id_number || userInfo?.idNumber });
       }
 
       let response;
       try {
         response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'SEND_MESSAGE')), requestData);
       } catch (mainError) {
-        console.log('🔄 Main chatbot failed, trying simple endpoint...');
         // Try simple endpoint as fallback
         response = await axios.post(buildApiUrl('/api/chatbot/simple'), { message: inputText.trim() });
       }
@@ -211,14 +205,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         throw new Error(response.data.message || 'Failed to get response');
       }
     } catch (error) {
-      console.error('Chatbot error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-        requestData: { message: inputText.trim(), hasUserInfo: !!userInfo }
-      });
-      
       let errorText = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for?";
       
       // Provide more specific error messages based on the error type
@@ -285,15 +271,14 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         throw new Error(response.data.message || 'Failed to get personalized recommendations');
       }
     } catch (error) {
-      console.error('Personalized recommendations error:', error);
-      const errorMessage = {
+      const errorMsg = {
         id: Date.now(),
         text: "I couldn't generate personalized recommendations right now. Please try again later or ask me about specific books you're interested in.",
         isBot: true,
         timestamp: new Date(),
         isTyping: false,
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
       setIsTyping(false);
@@ -372,7 +357,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         {message.books && message.books.length > 0 && message.showBooksAsList && (
           <View style={styles.recommendationsContainer}>
             <Text style={styles.recommendationsTitle}>
-              📚 Recommended Books
+              Recommended Books
             </Text>
             {message.books.map((book, index) => (
               <View key={index} style={styles.textRecommendation}>
@@ -381,7 +366,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
                   <Text style={styles.bookTitleText}>"{book.title}"</Text> by {book.author}
                   {book.category && ` (${book.category})`}
                   {book.description && ` - ${book.description}`}
-                  {book.reason && `\n💡 ${book.reason}`}
+                  {book.reason && `\nTip: ${book.reason}`}
                 </Text>
               </View>
             ))}
@@ -516,29 +501,6 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     </Animated.View>
     </View>
   );
-
-  const handleFeedback = async (messageId, feedback) => {
-    try {
-      console.log(`📝 User feedback: ${feedback} for message ${messageId}`);
-      
-      // Send feedback to backend
-      await axios.post(buildApiUrl('/api/chatbot/feedback'), {
-        messageId,
-        feedback,
-        studentIdNumber: userInfo?.id_number || userInfo?.idNumber
-      });
-      
-      // Update UI to show feedback was received
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, feedbackReceived: feedback }
-          : msg
-      ));
-      
-    } catch (error) {
-      console.error('Error sending feedback:', error);
-    }
-  };
 };
 
 const styles = StyleSheet.create({

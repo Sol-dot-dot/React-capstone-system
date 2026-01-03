@@ -94,25 +94,25 @@ const sendDueDateReminderEmail = async (email, userData, books, reminderType) =>
     // Configure email based on reminder type
     switch (reminderType) {
         case '1_day_before':
-            subject = '📚 Book Due Tomorrow - Capstone Library';
+            subject = 'Book Due Tomorrow - Capstone Library';
             title = 'Book Due Tomorrow Reminder';
             color = '#ffc107';
             urgency = 'Your book is due tomorrow!';
             break;
         case 'due_today':
-            subject = '⚠️ Book Due Today - Capstone Library';
+            subject = 'Book Due Today - Capstone Library';
             title = 'Book Due Today Alert';
             color = '#fd7e14';
             urgency = 'Your book is due TODAY!';
             break;
         case 'overdue':
-            subject = '🚨 Overdue Book - Capstone Library';
+            subject = 'Overdue Book - Capstone Library';
             title = 'Overdue Book Notice';
             color = '#dc3545';
             urgency = 'Your book is OVERDUE!';
             penaltyInfo = `
                 <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; padding: 15px; margin: 20px 0;">
-                    <h3 style="color: #721c24; margin: 0 0 10px 0;">⚠️ Penalty Information</h3>
+                    <h3 style="color: #721c24; margin: 0 0 10px 0;">Penalty Information</h3>
                     <p style="color: #721c24; margin: 0;">Fine: 5 pesos per day per book</p>
                     <p style="color: #721c24; margin: 0;">Please return your books immediately to avoid additional charges.</p>
                 </div>
@@ -155,13 +155,13 @@ const sendDueDateReminderEmail = async (email, userData, books, reminderType) =>
                         <p style="color: #856404; margin: 0;">Please return your borrowed books to avoid penalties.</p>
                     </div>
 
-                    <h3 style="color: #333; margin: 20px 0 10px 0;">📚 Your Borrowed Books:</h3>
+                    <h3 style="color: #333; margin: 20px 0 10px 0;">Your Borrowed Books:</h3>
                     ${bookListHtml}
 
                     ${penaltyInfo}
 
                     <div style="background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; padding: 15px; margin: 20px 0;">
-                        <h3 style="color: #0c5460; margin: 0 0 10px 0;">📱 What to do next:</h3>
+                        <h3 style="color: #0c5460; margin: 0 0 10px 0;">What to do next:</h3>
                         <ul style="color: #0c5460; margin: 0;">
                             <li>Return your books to the library as soon as possible</li>
                             <li>Check the mobile app for more details</li>

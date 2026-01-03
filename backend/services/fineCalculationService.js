@@ -14,11 +14,11 @@ class FineCalculationService {
      */
     start() {
         if (this.isRunning) {
-            console.log('⚠️  Fine calculation service is already running');
+            console.log('[WARN] Fine calculation service is already running');
             return;
         }
 
-        console.log('🚀 Starting fine calculation service...');
+        console.log('[INFO] Starting fine calculation service...');
         this.isRunning = true;
         this.lastProcessedTime = new Date();
 
@@ -30,7 +30,7 @@ class FineCalculationService {
             this.processFines();
         }, this.intervalMs);
 
-        console.log(`✅ Fine calculation service started (checking every ${this.intervalMs / 1000} seconds)`);
+        console.log(`[OK] Fine calculation service started (checking every ${this.intervalMs / 1000} seconds)`);
     }
 
     /**
@@ -38,11 +38,11 @@ class FineCalculationService {
      */
     stop() {
         if (!this.isRunning) {
-            console.log('⚠️  Fine calculation service is not running');
+            console.log('[WARN] Fine calculation service is not running');
             return;
         }
 
-        console.log('🛑 Stopping fine calculation service...');
+        console.log('[INFO] Stopping fine calculation service...');
         this.isRunning = false;
 
         if (this.intervalId) {
@@ -50,7 +50,7 @@ class FineCalculationService {
             this.intervalId = null;
         }
 
-        console.log('✅ Fine calculation service stopped');
+        console.log('[OK] Fine calculation service stopped');
     }
 
     /**
@@ -58,7 +58,7 @@ class FineCalculationService {
      */
     async populateOverdueHistory() {
         try {
-            console.log('🔄 Populating overdue history for existing overdue books...');
+            console.log('[INFO] Populating overdue history for existing overdue books...');
             
             const [overdueTransactions] = await pool.execute(`
                 SELECT 
@@ -86,11 +86,11 @@ class FineCalculationService {
             `);
 
             if (overdueTransactions.length === 0) {
-                console.log('✅ No overdue transactions need history records');
+                console.log('[OK] No overdue transactions need history records');
                 return;
             }
 
-            console.log(`📝 Creating overdue history for ${overdueTransactions.length} transactions`);
+            console.log(`[INFO] Creating overdue history for ${overdueTransactions.length} transactions`);
 
             for (const transaction of overdueTransactions) {
                 await pool.execute(`
@@ -114,10 +114,10 @@ class FineCalculationService {
                 ]);
             }
 
-            console.log(`✅ Successfully created ${overdueTransactions.length} overdue history records`);
+            console.log(`[OK] Successfully created ${overdueTransactions.length} overdue history records`);
 
         } catch (error) {
-            console.error('❌ Error populating overdue history:', error);
+            console.error('[ERROR] Error populating overdue history:', error);
         }
     }
 
@@ -155,7 +155,7 @@ class FineCalculationService {
                 return;
             }
 
-            console.log(`🔄 Processing ${overdueTransactions.length} overdue transactions...`);
+            console.log(`[INFO] Processing ${overdueTransactions.length} overdue transactions...`);
 
             let updatedCount = 0;
             let errorCount = 0;
@@ -208,7 +208,7 @@ class FineCalculationService {
                         }
                     }
                 } catch (error) {
-                    console.error(`❌ Error processing transaction ${transaction.id}:`, error.message);
+                    console.error(`[ERROR] Error processing transaction ${transaction.id}:`, error.message);
                     errorCount++;
                 }
             }
@@ -216,11 +216,11 @@ class FineCalculationService {
             this.lastProcessedTime = startTime;
 
             if (updatedCount > 0 || errorCount > 0) {
-                console.log(`📊 Fine calculation completed: ${updatedCount} updated, ${errorCount} errors`);
+                console.log(`[INFO] Fine calculation completed: ${updatedCount} updated, ${errorCount} errors`);
             }
 
         } catch (error) {
-            console.error('❌ Error in fine calculation service:', error);
+            console.error('[ERROR] Error in fine calculation service:', error);
         }
     }
 
@@ -240,7 +240,7 @@ class FineCalculationService {
      * Force immediate processing of fines
      */
     async forceProcess() {
-        console.log('🔄 Force processing fines...');
+        console.log('[INFO] Force processing fines...');
         await this.processFines();
     }
 

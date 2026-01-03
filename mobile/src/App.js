@@ -10,7 +10,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-// import { Provider as PaperProvider } from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import API_CONFIG, { buildApiUrl, getEndpoint } from './config/api';
 import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
@@ -34,15 +34,6 @@ const App = () => {
   const [email, setEmail] = useState('');
   const [resetEmail, setResetEmail] = useState(''); // Store email for password reset
   
-  // Debug email state changes
-  useEffect(() => {
-    console.log('Email state changed to:', email);
-  }, [email]);
-  
-  // Debug resetEmail state changes
-  useEffect(() => {
-    console.log('ResetEmail state changed to:', resetEmail);
-  }, [resetEmail]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -61,6 +52,21 @@ const App = () => {
   // Initialize push notifications when app starts
   React.useEffect(() => {
     NotificationService.initializePushNotifications();
+  }, []);
+
+  // Restore auth token on app startup
+  React.useEffect(() => {
+    const restoreToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (token) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (error) {
+        // Token restoration failed silently
+      }
+    };
+    restoreToken();
   }, []);
 
   const handleLogin = async () => {
@@ -106,19 +112,12 @@ const App = () => {
 
     setLoading(true);
     try {
-      console.log('Making password reset request for email:', email);
-      console.log('API URL:', buildApiUrl(getEndpoint('AUTH', 'USER_REQUEST_PASSWORD_RESET')));
-      
       const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_REQUEST_PASSWORD_RESET')), {
         email,
       });
-      
-      console.log('Password reset response:', response.data);
-      console.log('Current email state when response received:', email);
 
       if (response.data.success) {
-        console.log('Password reset successful, storing email:', email);
-        setResetEmail(email); // Store email immediately when response is received
+        setResetEmail(email);
         Alert.alert(
           'Reset Code Sent',
           'A password reset code has been sent to your email address.',
@@ -126,7 +125,6 @@ const App = () => {
             {
               text: 'OK',
               onPress: () => {
-                console.log('Navigating to verify reset code with email:', email);
                 setCurrentScreen('verifyResetCode');
               },
             },
@@ -134,9 +132,6 @@ const App = () => {
         );
       }
     } catch (error) {
-      console.error('Password reset request error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
       
       let errorMessage = 'An error occurred while requesting password reset';
       if (error.response?.data?.message) {
@@ -172,8 +167,6 @@ const App = () => {
         resetCode,
       });
 
-      console.log('Reset code verification response:', response.data);
-
       if (response.data.success) {
         Alert.alert(
           'Code Verified',
@@ -182,7 +175,6 @@ const App = () => {
             {
               text: 'Continue',
               onPress: () => {
-                console.log('Navigating to reset password with email:', resetEmail);
                 setCurrentScreen('resetPassword');
               },
             },
@@ -190,7 +182,6 @@ const App = () => {
         );
       }
     } catch (error) {
-      console.error('Reset code verification error:', error);
       
       let errorMessage = 'Failed to verify reset code. Please try again.';
       
@@ -210,14 +201,6 @@ const App = () => {
   };
 
   const handleResetPassword = async () => {
-    console.log('Reset password attempt - Current state:', {
-      email,
-      resetEmail,
-      resetCode,
-      newPassword: newPassword ? '***' : 'empty',
-      confirmNewPassword: confirmNewPassword ? '***' : 'empty'
-    });
-
     if (!resetCode || !newPassword || !confirmNewPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -245,18 +228,11 @@ const App = () => {
 
     setLoading(true);
     try {
-      const requestData = {
+      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')), {
         email: resetEmail,
         resetCode,
         newPassword,
-      };
-      
-      console.log('Sending password reset request:', {
-        url: buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')),
-        data: requestData
       });
-
-      const response = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_RESET_PASSWORD')), requestData);
 
       if (response.data.success) {
         Alert.alert(
@@ -271,8 +247,6 @@ const App = () => {
         );
       }
     } catch (error) {
-      console.error('Password reset error:', error);
-      
       let errorMessage = 'An error occurred while resetting password';
       
       if (error.response && error.response.data) {
@@ -574,11 +548,15 @@ const App = () => {
         NotificationService.scheduleFutureNotifications(borrowedBooks, userData);
       }
     } catch (error) {
-      console.error('Error checking borrowed books notifications:', error);
+      // Silent fail for notification check
     }
   };
 
   const handleLogout = () => {
+    // Clear auth token
+    AsyncStorage.removeItem('authToken');
+    delete axios.defaults.headers.common['Authorization'];
+
     setCurrentScreen('welcome');
     setUserData(null);
     setIdNumber('');
@@ -910,7 +888,6 @@ const App = () => {
   );
 
   const renderVerifyResetCodeScreen = () => {
-    console.log('Rendering verify reset code screen with resetEmail:', resetEmail);
     return (
       <View style={styles.form}>
         <Text style={styles.title}>Verify Reset Code</Text>
@@ -951,7 +928,6 @@ const App = () => {
   };
 
   const renderResetPasswordScreen = () => {
-    console.log('Rendering reset password screen with email:', email, 'resetEmail:', resetEmail);
     return (
       <View style={styles.form}>
         <Text style={styles.title}>Set New Password</Text>
@@ -1218,7 +1194,6 @@ const App = () => {
 
   // Show enhanced auth screens fullscreen
   if (['welcome', 'login', 'register', 'verify', 'forgotPassword'].includes(currentScreen)) {
-    console.log('Rendering enhanced auth screen:', currentScreen);
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
         {currentScreen === 'welcome' && (
@@ -1228,8 +1203,16 @@ const App = () => {
         )}
         {currentScreen === 'login' && (
           <LoginScreen
-            onLogin={(user) => {
+            onLogin={(user, token) => {
+              // Store user data
               setUserData(user);
+
+              // Store token and set axios default header for all future requests
+              if (token) {
+                AsyncStorage.setItem('authToken', token);
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+              }
+
               setCurrentScreen('dashboard');
               setActiveTab('dashboard');
             }}
@@ -1257,12 +1240,11 @@ const App = () => {
           />
         )}
         {currentScreen === 'forgotPassword' && (
-          <ForgotPasswordScreen 
+          <ForgotPasswordScreen
             onBack={() => setCurrentScreen('login')}
             onNavigate={setCurrentScreen}
-            onEmailSubmit={(email) => {
-              console.log('Email submitted from ForgotPasswordScreen:', email);
-              setResetEmail(email);
+            onEmailSubmit={(submittedEmail) => {
+              setResetEmail(submittedEmail);
             }}
           />
         )}
@@ -1287,9 +1269,9 @@ const App = () => {
           {currentScreen === 'profile' && renderProfileScreen()}
           {currentScreen === 'changePassword' && renderChangePasswordScreen()}
           {currentScreen === 'notificationSettings' && (
-            <NotificationSettingsScreen 
-              userData={userData} 
-              onBack={() => setCurrentScreen('dashboard')} 
+            <NotificationSettingsScreen
+              userData={userData}
+              onBack={() => setCurrentScreen('profile')}
             />
           )}
         </View>

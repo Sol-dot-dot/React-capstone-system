@@ -2,7 +2,7 @@ const db = require('./config/database');
 
 async function runMigration() {
     try {
-        console.log('📚 Creating Student Records Schema...\n');
+        console.log('[INFO] Creating Student Records Schema...\n');
 
         // 1. Create academic_years table
         console.log('Creating academic_years table...');
@@ -180,14 +180,14 @@ async function runMigration() {
             WHERE bt.semester_id IS NULL
         `);
 
-        console.log('\n✅ Migration completed successfully!\n');
+        console.log('\n[OK] Migration completed successfully!\n');
 
         // Verify
         const [academicYears] = await db.query('SELECT COUNT(*) as count FROM academic_years');
         const [semesters] = await db.query('SELECT COUNT(*) as count FROM semesters');
         const [currentYear] = await db.query('SELECT * FROM academic_years WHERE is_current = TRUE LIMIT 1');
 
-        console.log('📊 Summary:');
+        console.log('[INFO] Summary:');
         console.log(`   Academic Years: ${academicYears[0].count}`);
         console.log(`   Semesters: ${semesters[0].count}`);
         if (currentYear.length > 0) {
@@ -196,7 +196,7 @@ async function runMigration() {
 
         process.exit(0);
     } catch (error) {
-        console.error('❌ Migration failed:', error);
+        console.error('[ERROR] Migration failed:', error);
         process.exit(1);
     }
 }

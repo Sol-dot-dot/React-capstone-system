@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
-import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { ModernTheme } from '../styles/ModernTheme';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
@@ -172,7 +172,6 @@ const RegisterScreen = ({ onRegister, onNavigate, onBack }) => {
       }, 1500);
       
     } catch (error) {
-      console.error('Registration error:', error);
       setErrors({ 
         general: error.response?.data?.message || 'Registration failed. Please try again.' 
       });

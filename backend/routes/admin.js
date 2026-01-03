@@ -375,47 +375,6 @@ router.delete('/users/:idNumber', authMiddleware, async (req, res) => {
     }
 });
 
-// Get system activity logs (admin only)
-router.get('/activity-logs', authMiddleware, async (req, res) => {
-    try {
-        // Check if user is admin
-        if (req.user.type !== 'admin') {
-            return res.status(403).json({ message: 'Access denied. Admin only.' });
-        }
-
-        const [logs] = await pool.execute(`
-            SELECT 
-                'login' as activity_type,
-                login_time as timestamp,
-                ip_address,
-                user_agent,
-                u.id_number,
-                u.email
-            FROM login_logs ll
-            LEFT JOIN users u ON ll.user_id = u.id
-            UNION ALL
-            SELECT 
-                'registration' as activity_type,
-                created_at as timestamp,
-                NULL as ip_address,
-                NULL as user_agent,
-                id_number,
-                email
-            FROM users
-            ORDER BY timestamp DESC
-            LIMIT 200
-        `);
-
-        res.json({
-            message: 'Activity logs retrieved successfully',
-            logs
-        });
-    } catch (error) {
-        console.error('Get activity logs error:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
 // Get dashboard statistics (admin only)
 router.get('/dashboard-stats', authMiddleware, async (req, res) => {
     try {

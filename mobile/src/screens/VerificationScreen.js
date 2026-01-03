@@ -30,9 +30,8 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
 
     try {
       setLoading(true);
-      
-      // Step 3: Verify Email Code
-      console.log('Step 3: Verifying email code...');
+
+      // Verify Email Code
       const verifyResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_VERIFY_CODE')), {
         idNumber: userData.idNumber,
         email: userData.email,
@@ -44,8 +43,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
         return;
       }
 
-      // Step 4: Complete Registration with Password
-      console.log('Step 4: Completing registration...');
+      // Complete Registration with Password
       const completeResponse = await axios.post(buildApiUrl(getEndpoint('AUTH', 'USER_COMPLETE_REGISTRATION')), {
         userId: userData.userId,
         password: userData.password,
@@ -65,9 +63,8 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
       } else {
         Alert.alert('Registration Failed', completeResponse.data.message || 'Failed to complete registration');
       }
-      
+
     } catch (error) {
-      console.error('Verification error:', error);
       const errorMessage = error.response?.data?.message || 'Verification failed. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {
@@ -90,9 +87,8 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
       } else {
         Alert.alert('Error', 'Failed to resend verification code');
       }
-      
+
     } catch (error) {
-      console.error('Resend code error:', error);
       Alert.alert('Error', 'Failed to resend verification code');
     } finally {
       setLoading(false);
@@ -115,7 +111,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
           {/* Logo/Icon Section */}
           <View style={styles.logoSection}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logoIcon}>📧</Text>
+              <Text style={styles.logoIcon}>@</Text>
             </View>
             <Text style={styles.welcomeTitle}>Check Your Email</Text>
             <Text style={styles.welcomeSubtitle}>

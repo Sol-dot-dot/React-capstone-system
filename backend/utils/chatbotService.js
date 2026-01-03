@@ -31,7 +31,6 @@ class ChatbotService {
     - Reference their reading history when relevant, but don't overdo it
     - Be specific about why a book might appeal to them personally
     - Use contractions and casual language when it feels right
-    - Occasionally use emojis (📚, 💡, ⭐) but sparingly and naturally
 
     When Recommending Books:
     - Explain the connection between their interests and the book
@@ -72,12 +71,12 @@ class ChatbotService {
       apiKey: process.env.OPENAI_API_KEY,
     });
     
-    console.log('🚀 OpenAI client initialized for conversational AI');
+    console.log('[OK] OpenAI client initialized for conversational AI');
   }
 
   async generateEmbedding(text) {
     try {
-      console.log('🚀 Generating OpenAI embedding...');
+      console.log('[INFO] Generating OpenAI embedding...');
       
       const response = await this.openai.embeddings.create({
         model: "text-embedding-3-large",
@@ -85,29 +84,29 @@ class ChatbotService {
       });
       
       if (response.data && response.data[0] && response.data[0].embedding) {
-        console.log('✅ OpenAI embedding generated successfully!');
+        console.log('[OK] OpenAI embedding generated successfully!');
         return response.data[0].embedding;
       } else {
         throw new Error('Invalid response format from OpenAI embeddings API');
       }
     } catch (error) {
-      console.error('❌ Error generating OpenAI embedding:', error.message);
+      console.error('[ERROR] Error generating OpenAI embedding:', error.message);
       throw new Error('OpenAI embedding generation failed');
     }
   }
 
   async generateRecommendation(userQuery, bookResults, studentIdNumber = null) {
     try {
-      console.log('🚀 Generating RAG-powered recommendation with OpenAI...');
+      console.log('[INFO] Generating RAG-powered recommendation with OpenAI...');
 
       // Get user's reading history for personalized recommendations
       let userPreferences = null;
       if (studentIdNumber) {
         try {
           userPreferences = await readingHistoryService.analyzeUserReadingHistory(studentIdNumber);
-          console.log('📚 User reading preferences loaded for personalization');
+          console.log('[INFO] User reading preferences loaded for personalization');
         } catch (error) {
-          console.log('⚠️ Could not load user preferences, using general recommendations');
+          console.log('[WARN] Could not load user preferences, using general recommendations');
         }
       }
 
@@ -166,22 +165,22 @@ Now provide a natural, conversational response that:
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
-          console.log('✅ RAG-powered personalized recommendation generated!');
+          console.log('[OK] RAG-powered personalized recommendation generated!');
           return response.choices[0].message.content;
         } else {
           throw new Error('Invalid response format from OpenAI');
         }
       } catch (apiError) {
-        console.log('🔄 OpenAI failed, falling back to smart response...');
+        console.log('[INFO] OpenAI failed, falling back to smart response...');
         console.log('Error details:', apiError.message);
         
         // Fallback to smart NLP response if OpenAI fails
         const response = this.generateSmartResponse(userQuery, bookResults, userPreferences);
-        console.log('✅ Fallback smart response generated!');
+        console.log('[OK] Fallback smart response generated!');
         return response;
       }
     } catch (error) {
-      console.error('❌ Error generating recommendation:', error.message);
+      console.error('[ERROR] Error generating recommendation:', error.message);
       throw new Error('AI recommendation generation failed');
     }
   }
@@ -270,7 +269,7 @@ Now provide a natural, conversational response that:
 
   async getEnhancedGeneralResponse(userQuery, studentIdNumber = null) {
     try {
-      console.log('🚀 Generating enhanced conversational AI response...');
+      console.log('[INFO] Generating enhanced conversational AI response...');
 
       // First, try to understand what the user is asking for
       const queryAnalysis = this.analyzeUserQuery(userQuery);
@@ -283,7 +282,7 @@ Now provide a natural, conversational response that:
             return dbResponse;
           }
         } catch (dbError) {
-          console.log('⚠️ Database response failed, falling back to AI');
+          console.log('[WARN] Database response failed, falling back to AI');
         }
       }
 
@@ -296,7 +295,7 @@ Now provide a natural, conversational response that:
       return await this.getGeneralResponse(userQuery, studentIdNumber);
       
     } catch (error) {
-      console.error('❌ Error in enhanced general response:', error);
+      console.error('[ERROR] Error in enhanced general response:', error);
       return this.getFallbackResponse(userQuery);
     }
   }
@@ -407,7 +406,7 @@ Now provide a natural, conversational response that:
 
   async getGeneralResponse(userQuery, studentIdNumber = null) {
     try {
-      console.log('🚀 Generating conversational AI response with OpenAI...');
+      console.log('[INFO] Generating conversational AI response with OpenAI...');
 
       let userContext = '';
       let conversationStyle = '';
@@ -423,7 +422,7 @@ Now provide a natural, conversational response that:
             userContext += `\n\nIMPORTANT: The user's Student ID Number is: ${studentIdNumber}`;
           }
         } catch (error) {
-          console.log('⚠️ Could not load user context, proceeding without it');
+          console.log('[WARN] Could not load user context, proceeding without it');
         }
       }
 
@@ -439,20 +438,20 @@ Now provide a natural, conversational response that:
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
-          console.log('✅ OpenAI conversational AI response generated!');
+          console.log('[OK] OpenAI conversational AI response generated!');
           return response.choices[0].message.content;
         } else {
           throw new Error('Invalid response format from OpenAI');
         }
       } catch (apiError) {
-        console.log('🔄 OpenAI failed, falling back to smart response...');
-        
+        console.log('[INFO] OpenAI failed, falling back to smart response...');
+
         const response = this.generateGeneralResponse(userQuery);
-        console.log('✅ Fallback smart response generated!');
+        console.log('[OK] Fallback smart response generated!');
         return response;
       }
     } catch (error) {
-      console.error('❌ Error generating response:', error.message);
+      console.error('[ERROR] Error generating response:', error.message);
       throw new Error('AI response generation failed');
     }
   }
@@ -607,7 +606,7 @@ Now provide a natural, conversational response that:
    */
   async generatePersonalizedRecommendations(studentIdNumber, limit = 5) {
     try {
-      console.log(`🎯 Generating personalized recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating personalized recommendations for: ${studentIdNumber}`);
 
       // Get personalized recommendations from reading history service
       const recommendations = await readingHistoryService.generatePersonalizedRecommendations(studentIdNumber, limit);
@@ -665,7 +664,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
         });
         
         if (response.choices && response.choices[0] && response.choices[0].message) {
-          console.log('✅ Personalized recommendations with AI explanation generated!');
+          console.log('[OK] Personalized recommendations with AI explanation generated!');
           return {
             response: response.choices[0].message.content,
             books: recommendations,
@@ -680,7 +679,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
           throw new Error('Invalid response format from OpenAI');
         }
       } catch (apiError) {
-        console.log('🔄 OpenAI failed, using fallback personalized response...');
+        console.log('[INFO] OpenAI failed, using fallback personalized response...');
         
         // Fallback personalized response
         const response = this.generateFallbackPersonalizedResponse(recommendations, userPreferences);
@@ -696,7 +695,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
         };
       }
     } catch (error) {
-      console.error('❌ Error generating personalized recommendations:', error.message);
+      console.error('[ERROR] Error generating personalized recommendations:', error.message);
       throw new Error('Personalized recommendation generation failed');
     }
   }
@@ -710,7 +709,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
    */
   async generateAdvancedRecommendations(studentIdNumber, query = '', limit = 5) {
     try {
-      console.log(`🚀 Generating advanced hybrid recommendations for: ${studentIdNumber}`);
+      console.log(`[INFO] Generating advanced hybrid recommendations for: ${studentIdNumber}`);
       
       // Get comprehensive user knowledge
       const userKnowledge = await userKnowledgeService.getUserKnowledge(studentIdNumber);
@@ -733,7 +732,7 @@ Make it sound like a knowledgeable librarian who knows their reading habits well
         recommendationEngine: 'hybrid-ai-contextual'
       };
     } catch (error) {
-      console.error('❌ Error generating advanced recommendations:', error);
+      console.error('[ERROR] Error generating advanced recommendations:', error);
       throw error;
     }
   }
@@ -787,7 +786,7 @@ Respond naturally and conversationally. Be genuine and enthusiastic about sharin
 
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('❌ Error generating contextual AI explanation:', error);
+      console.error('[ERROR] Error generating contextual AI explanation:', error);
       return result.explanation || "Here are some personalized book recommendations based on your reading history and preferences!";
     }
   }
@@ -844,7 +843,7 @@ Keep the response under 200 words and make it sound like a helpful librarian.`;
 
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('❌ Error generating AI explanation:', error);
+      console.error('[ERROR] Error generating AI explanation:', error);
       return result.explanation || "Here are some personalized book recommendations based on your reading history and preferences!";
     }
   }
@@ -893,7 +892,7 @@ Keep the response under 200 words and make it sound like a helpful librarian.`;
       
       return response.choices[0].message.content;
     } catch (error) {
-      console.error('❌ OpenAI API test failed:', error.message);
+      console.error('[ERROR] OpenAI API test failed:', error.message);
       throw error;
     }
   }

@@ -14,7 +14,7 @@ require('dotenv').config({ path: './config.env' });
 const mysql = require('mysql2/promise');
 
 async function runMigration() {
-    console.log('🚀 Starting Semester Tracking Migration...\n');
+    console.log('[INFO] Starting Semester Tracking Migration...\n');
 
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
@@ -27,7 +27,7 @@ async function runMigration() {
 
     try {
         // Step 1: Create academic_years table
-        console.log('📅 Step 1: Creating/updating academic_years table...');
+        console.log('[INFO] Step 1: Creating/updating academic_years table...');
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS academic_years (
                 id INT PRIMARY KEY AUTO_INCREMENT,
@@ -58,10 +58,10 @@ async function runMigration() {
                 ON DUPLICATE KEY UPDATE is_current = VALUES(is_current)
             `, year);
         }
-        console.log('   ✅ Academic years created/updated\n');
+        console.log('   [OK] Academic years created/updated\n');
 
         // Step 2: Create semesters table
-        console.log('📚 Step 2: Creating/updating semesters table...');
+        console.log('[INFO] Step 2: Creating/updating semesters table...');
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS semesters (
                 id INT PRIMARY KEY AUTO_INCREMENT,
@@ -117,10 +117,10 @@ async function runMigration() {
                 }
             }
         }
-        console.log('   ✅ Semesters created/updated\n');
+        console.log('   [OK] Semesters created/updated\n');
 
         // Step 3: Add columns to borrowing_transactions
-        console.log('🔧 Step 3: Adding semester columns to borrowing_transactions...');
+        console.log('[INFO] Step 3: Adding semester columns to borrowing_transactions...');
 
         // Check if columns exist
         const [columns] = await connection.execute(`
@@ -134,21 +134,21 @@ async function runMigration() {
 
         if (!existingColumns.includes('semester_id')) {
             await connection.execute('ALTER TABLE borrowing_transactions ADD COLUMN semester_id INT NULL');
-            console.log('   ✅ Added semester_id column');
+            console.log('   [OK] Added semester_id column');
         } else {
-            console.log('   ⏭️ semester_id column already exists');
+            console.log('   [SKIP] semester_id column already exists');
         }
 
         if (!existingColumns.includes('academic_year_id')) {
             await connection.execute('ALTER TABLE borrowing_transactions ADD COLUMN academic_year_id INT NULL');
-            console.log('   ✅ Added academic_year_id column');
+            console.log('   [OK] Added academic_year_id column');
         } else {
-            console.log('   ⏭️ academic_year_id column already exists');
+            console.log('   [SKIP] academic_year_id column already exists');
         }
         console.log('');
 
         // Step 4: Link existing borrowings to semesters
-        console.log('🔗 Step 4: Linking existing borrowings to semesters...');
+        console.log('[INFO] Step 4: Linking existing borrowings to semesters...');
 
         // Get count of borrowings without semester data
         const [beforeCount] = await connection.execute(`
@@ -164,7 +164,7 @@ async function runMigration() {
             SET bt.semester_id = s.id, bt.academic_year_id = s.academic_year_id
             WHERE bt.semester_id IS NULL AND bt.borrowed_date IS NOT NULL AND bt.borrowed_date != '0000-00-00'
         `);
-        console.log(`   ✅ Updated ${updateResult.affectedRows} borrowings with exact semester match`);
+        console.log(`   [OK] Updated ${updateResult.affectedRows} borrowings with exact semester match`);
 
         // For any remaining borrowings, find closest semester
         const [remainingCount] = await connection.execute(`
@@ -173,7 +173,7 @@ async function runMigration() {
         `);
 
         if (remainingCount[0].count > 0) {
-            console.log(`   📌 ${remainingCount[0].count} borrowings need closest semester assignment...`);
+            console.log(`   [INFO] ${remainingCount[0].count} borrowings need closest semester assignment...`);
 
             // Get borrowings without semester
             const [borrowingsToUpdate] = await connection.execute(`
@@ -204,12 +204,12 @@ async function runMigration() {
                     WHERE id = ?
                 `, [closestSemester.id, closestSemester.academic_year_id, bt.id]);
             }
-            console.log(`   ✅ Updated remaining borrowings with closest semester match`);
+            console.log(`   [OK] Updated remaining borrowings with closest semester match`);
         }
         console.log('');
 
         // Step 5: Create student_year_history table
-        console.log('👤 Step 5: Creating student_year_history table...');
+        console.log('[INFO] Step 5: Creating student_year_history table...');
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS student_year_history (
                 id INT PRIMARY KEY AUTO_INCREMENT,
@@ -223,10 +223,10 @@ async function runMigration() {
                 UNIQUE KEY unique_user_year (user_id, academic_year_id)
             )
         `);
-        console.log('   ✅ student_year_history table created/exists\n');
+        console.log('   [OK] student_year_history table created/exists\n');
 
         // Step 6: Generate student year history from borrowing data
-        console.log('📊 Step 6: Generating student year history...');
+        console.log('[INFO] Step 6: Generating student year history...');
 
         // Get unique student-academic year combinations from borrowings
         const [studentYears] = await connection.execute(`
@@ -267,10 +267,10 @@ async function runMigration() {
                 }
             }
         }
-        console.log(`   ✅ Created ${historyInserted} student year history records\n`);
+        console.log(`   [OK] Created ${historyInserted} student year history records\n`);
 
         // Step 7: Create semester_clearances table
-        console.log('📋 Step 7: Creating semester_clearances table...');
+        console.log('[INFO] Step 7: Creating semester_clearances table...');
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS semester_clearances (
                 id INT PRIMARY KEY AUTO_INCREMENT,
@@ -291,10 +291,10 @@ async function runMigration() {
                 UNIQUE KEY unique_user_semester (user_id, semester_id)
             )
         `);
-        console.log('   ✅ semester_clearances table created/exists\n');
+        console.log('   [OK] semester_clearances table created/exists\n');
 
         // Step 8: Populate semester_clearances
-        console.log('📝 Step 8: Populating semester clearances...');
+        console.log('[INFO] Step 8: Populating semester clearances...');
         const [clearanceResult] = await connection.execute(`
             INSERT IGNORE INTO semester_clearances (user_id, semester_id, books_borrowed, total_fines, fines_paid)
             SELECT
@@ -310,10 +310,10 @@ async function runMigration() {
             AND u.role = 'student'
             GROUP BY u.id, bt.semester_id
         `);
-        console.log(`   ✅ Created/updated clearance records\n`);
+        console.log(`   [OK] Created/updated clearance records\n`);
 
         // Final verification
-        console.log('✅ Migration completed! Verification:');
+        console.log('[OK] Migration completed! Verification:');
 
         const [ayCount] = await connection.execute('SELECT COUNT(*) as count FROM academic_years');
         console.log(`   Academic Years: ${ayCount[0].count}`);
@@ -334,10 +334,10 @@ async function runMigration() {
         const [scCount] = await connection.execute('SELECT COUNT(*) as count FROM semester_clearances');
         console.log(`   Semester Clearances: ${scCount[0].count}`);
 
-        console.log('\n🎉 Migration completed successfully!');
+        console.log('\n[OK] Migration completed successfully!');
 
     } catch (error) {
-        console.error('\n❌ Migration failed:', error.message);
+        console.error('\n[ERROR] Migration failed:', error.message);
         throw error;
     } finally {
         await connection.end();

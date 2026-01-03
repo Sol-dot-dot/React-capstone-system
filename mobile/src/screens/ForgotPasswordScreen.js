@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
-import { ModernTheme, ModernStyles } from '../styles/ModernTheme';
+import { ModernTheme } from '../styles/ModernTheme';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
 const { width } = Dimensions.get('window');
@@ -39,8 +39,6 @@ const ForgotPasswordScreen = ({ onBack, onNavigate, onEmailSubmit }) => {
       }),
     ]).start();
   }, []);
-
-  console.log('ForgotPasswordScreen rendered');
 
   const handleSendResetCode = async () => {
     if (!email.trim()) {
@@ -82,7 +80,6 @@ const ForgotPasswordScreen = ({ onBack, onNavigate, onEmailSubmit }) => {
         Alert.alert('Error', response.data.message || 'Failed to send reset code');
       }
     } catch (error) {
-      console.error('Forgot password error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to send reset code. Please try again.';
       Alert.alert('Error', errorMessage);
     } finally {

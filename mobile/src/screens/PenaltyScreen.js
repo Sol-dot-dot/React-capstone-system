@@ -10,20 +10,12 @@ import {
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { 
-  ModernButton, 
-  ModernCard, 
-  ModernBadge, 
-  ResponsiveContainer,
-  ResponsiveGrid 
+import {
+  ModernButton,
+  ModernCard,
+  ModernBadge
 } from '../components/ui/ModernComponents';
-import { 
-  getResponsiveSpacing, 
-  getResponsiveFontSize, 
-  deviceInfo 
-} from '../utils/ResponsiveUtils';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
@@ -69,7 +61,7 @@ const PenaltyScreen = ({ userData, onBack }) => {
         setPenalties(transformedPenalties);
       }
     } catch (error) {
-      console.error('Error loading penalties:', error);
+      // Silent fail for penalties loading
     } finally {
       setLoading(false);
     }

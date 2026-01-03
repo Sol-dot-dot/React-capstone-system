@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Plus, 
-  Search, 
+import {
+  BookOpen,
+  Plus,
+  Search,
   RefreshCw,
   TrendingUp,
   CheckCircle,
@@ -18,7 +18,8 @@ import {
   Eye,
   Filter,
   List,
-  BarChart3
+  BarChart3,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -63,6 +64,7 @@ const ModernBorrowingManagement = ({ user }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [viewingTransaction, setViewingTransaction] = useState(null);
 
 
 
@@ -942,6 +944,7 @@ const ModernBorrowingManagement = ({ user }) => {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => setViewingTransaction(transaction)}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View
@@ -994,6 +997,134 @@ const ModernBorrowingManagement = ({ user }) => {
           )}
         </motion.div>
       </div>
+
+      {/* Transaction View Modal */}
+      <AnimatePresence>
+        {viewingTransaction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setViewingTransaction(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-900">Transaction Details</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewingTransaction(null)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">Transaction ID</p>
+                    <p className="text-slate-900">{viewingTransaction.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">Status</p>
+                    <Badge
+                      className={
+                        viewingTransaction.status === 'returned'
+                          ? 'bg-green-100 text-green-700'
+                          : viewingTransaction.status === 'overdue'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }
+                    >
+                      {viewingTransaction.status.charAt(0).toUpperCase() + viewingTransaction.status.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="text-sm font-medium text-slate-500 mb-2">Student Information</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{viewingTransaction.student_id_number}</p>
+                      <p className="text-sm text-slate-500">{viewingTransaction.student_email || 'No email available'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="text-sm font-medium text-slate-500 mb-2">Book Information</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <BookOpen className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-900">{viewingTransaction.title}</p>
+                      <p className="text-sm text-slate-500">by {viewingTransaction.author}</p>
+                      <p className="text-xs text-slate-400">Code: {viewingTransaction.book_code}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="text-sm font-medium text-slate-500 mb-2">Dates</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500">Borrowed Date</p>
+                      <p className="text-slate-900">
+                        {new Date(viewingTransaction.borrow_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Due Date</p>
+                      <p className={viewingTransaction.status === 'overdue' ? 'text-red-600 font-medium' : 'text-slate-900'}>
+                        {new Date(viewingTransaction.due_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    {viewingTransaction.return_date && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-slate-500">Returned Date</p>
+                        <p className="text-green-600">
+                          {new Date(viewingTransaction.return_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 p-6 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewingTransaction(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

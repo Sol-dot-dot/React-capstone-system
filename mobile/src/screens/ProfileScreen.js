@@ -74,7 +74,7 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
         });
       }
     } catch (error) {
-      console.error('Error loading profile data:', error);
+      // Silent fail for profile data loading
     } finally {
       setLoading(false);
     }
@@ -185,6 +185,21 @@ const ProfileScreen = ({ userData, onBack, onNavigate, onLogout }) => {
         </View>
 
 
+
+        {/* Settings Section */}
+        <View style={styles.settingsSection}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <ModernCard style={styles.settingsCard}>
+            <ModernButton
+              title="Notification Settings"
+              onPress={() => onNavigate('notificationSettings')}
+              variant="ghost"
+              size="medium"
+              icon={<Icon name="notifications-outline" size={20} color={ModernTheme.colors.primary} />}
+              style={styles.settingsButton}
+            />
+          </ModernCard>
+        </View>
 
         {/* Account Information */}
         <View style={styles.accountSection}>
@@ -376,6 +391,16 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     borderColor: ModernTheme.colors.error,
+  },
+  settingsSection: {
+    marginBottom: ModernTheme.spacing.xl,
+  },
+  settingsCard: {
+    padding: ModernTheme.spacing.sm,
+  },
+  settingsButton: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: ModernTheme.spacing.md,
   },
 });
 

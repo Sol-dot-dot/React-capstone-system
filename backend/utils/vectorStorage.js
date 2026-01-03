@@ -26,12 +26,12 @@ class VectorStorage {
           this.metadata = new Map(parsed.metadata);
         }
         
-        console.log(`📚 Loaded ${this.embeddings.size} embeddings from storage`);
+        console.log(`[INFO] Loaded ${this.embeddings.size} embeddings from storage`);
       } catch (error) {
-        console.log('📚 No existing vector storage found, starting fresh');
+        console.log('[INFO] No existing vector storage found, starting fresh');
       }
     } catch (error) {
-      console.error('❌ Error initializing vector storage:', error);
+      console.error('[ERROR] Error initializing vector storage:', error);
       throw error;
     }
   }
@@ -46,9 +46,9 @@ class VectorStorage {
       });
       
       await this.persist();
-      console.log(`✅ Saved embedding for book ${bookId}`);
+      console.log(`[OK] Saved embedding for book ${bookId}`);
     } catch (error) {
-      console.error('❌ Error saving embedding:', error);
+      console.error('[ERROR] Error saving embedding:', error);
       throw error;
     }
   }
@@ -74,9 +74,9 @@ class VectorStorage {
       this.embeddings.delete(bookId);
       this.metadata.delete(bookId);
       await this.persist();
-      console.log(`🗑️ Removed embedding for book ${bookId}`);
+      console.log(`[INFO] Removed embedding for book ${bookId}`);
     } catch (error) {
-      console.error('❌ Error removing embedding:', error);
+      console.error('[ERROR] Error removing embedding:', error);
       throw error;
     }
   }
@@ -86,9 +86,9 @@ class VectorStorage {
       this.embeddings.clear();
       this.metadata.clear();
       await this.persist();
-      console.log('🗑️ Cleared all embeddings');
+      console.log('[INFO] Cleared all embeddings');
     } catch (error) {
-      console.error('❌ Error clearing embeddings:', error);
+      console.error('[ERROR] Error clearing embeddings:', error);
       throw error;
     }
   }
@@ -104,7 +104,7 @@ class VectorStorage {
       
       await fs.writeFile(this.storagePath, JSON.stringify(data, null, 2));
     } catch (error) {
-      console.error('❌ Error persisting vector storage:', error);
+      console.error('[ERROR] Error persisting vector storage:', error);
       throw error;
     }
   }

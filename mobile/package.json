@@ -20,7 +20,8 @@
     "react-native-gesture-handler": "^2.9.0",
     "react-native-reanimated": "^3.5.4",
     "react-native-svg": "^13.14.0",
-    "react-native-vector-icons": "^10.3.0"
+    "react-native-vector-icons": "^10.3.0",
+    "@notifee/react-native": "^7.8.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -5,16 +5,16 @@ require('dotenv').config({ path: './config.env' });
 // Import the fine calculation service
 const fineCalculationService = require('./services/fineCalculationService');
 
-// Import monitoring middleware (temporarily disabled)
-// const { logger } = require('./config/logger');
+// Import the notification scheduler service
+const notificationScheduler = require('./services/notificationScheduler');
+
+// Import logger for production-ready logging
+const { logger, requestLogger, errorLogger } = require('./config/logger');
 
 const app = express();
 
-// Monitoring middleware (temporarily disabled)
-// app.use(requestTiming);
-// app.use(performanceMonitoring);
-// app.use(auditLogging);
-// app.use(securityMonitoring);
+// Request logging middleware (enabled for production logging)
+app.use(requestLogger);
 
 // Standard middleware
 app.use(cors());
@@ -29,13 +29,9 @@ app.use('/api/books', require('./routes/books'));
 app.use('/api/borrowing', require('./routes/borrowing'));
 app.use('/api/penalty', require('./routes/penalty'));
 app.use('/api/chatbot', require('./routes/chatbot'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/search', require('./routes/search'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/simple-analytics', require('./routes/simple-analytics'));
-app.use('/api/reports', require('./routes/reports'));
 app.use('/api/student-records', require('./routes/studentRecords'));
 app.use('/api/semesters', require('./routes/semesters'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/', require('./routes/dashboard'));
 // app.use('/api/monitoring', require('./routes/monitoring'));
 
@@ -74,13 +70,31 @@ app.post('/api/fine-service/force-process', (req, res) => {
         });
 });
 
-// Error handling middleware
-// Error tracking middleware (temporarily disabled)
-// app.use(errorTracking);
+// Force notification check endpoint (admin/testing)
+app.post('/api/notification-service/force-process', (req, res) => {
+    notificationScheduler.runManually()
+        .then(result => {
+            res.json({
+                success: true,
+                message: 'Notification check completed',
+                data: result
+            });
+        })
+        .catch(error => {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to process notifications',
+                error: error.message
+            });
+        });
+});
+
+// Error logging middleware (enabled for production error tracking)
+app.use(errorLogger);
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    logger.error('Unhandled error:', { error: err.message, stack: err.stack });
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
@@ -92,29 +106,28 @@ app.use('*', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/api/health`);
-    console.log(`Network access: http://0.0.0.0:${PORT}/api/health`);
-    
-    // Initialize logging (temporarily disabled)
-    // logger.info('🚀 Server started successfully', {
-    //     port: PORT,
-    //     environment: process.env.NODE_ENV || 'development',
-    //     timestamp: new Date().toISOString()
-    // });
-    
+    logger.info('Server started successfully', {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        healthCheck: `http://localhost:${PORT}/api/health`,
+        networkAccess: `http://0.0.0.0:${PORT}/api/health`
+    });
+
     // Start the fine calculation service
     fineCalculationService.start();
-    
+
+    // Start the notification scheduler
+    notificationScheduler.initializeScheduler();
+
     // Graceful shutdown handling
     process.on('SIGINT', () => {
-        console.log('\n🛑 Received SIGINT. Gracefully shutting down...');
+        logger.info('Received SIGINT. Gracefully shutting down...');
         fineCalculationService.stop();
         process.exit(0);
     });
-    
+
     process.on('SIGTERM', () => {
-        console.log('\n🛑 Received SIGTERM. Gracefully shutting down...');
+        logger.info('Received SIGTERM. Gracefully shutting down...');
         fineCalculationService.stop();
         process.exit(0);
     });

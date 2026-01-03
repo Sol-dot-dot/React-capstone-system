@@ -140,27 +140,20 @@ router.post('/validate', auth, async (req, res) => {
 // POST /api/borrowing/borrow - Process book borrowing
 router.post('/borrow', auth, async (req, res) => {
     try {
-        console.log('🔍 Borrowing API called with:', req.body);
-        console.log('🔍 Admin ID:', req.user.id);
-        
         const { studentIdNumber, bookCodes, dueDate } = req.body;
         const adminId = req.user.id;
 
         if (!studentIdNumber || !bookCodes || !Array.isArray(bookCodes)) {
-            console.log('❌ Invalid request data');
             return res.status(400).json({
                 success: false,
                 message: 'Student ID number and book codes array are required'
             });
         }
 
-        console.log('✅ Request data validated, proceeding with validation...');
-
         // Validate the borrowing request
         const validation = await validateBorrowingRequest(studentIdNumber, bookCodes);
-        
+
         if (!validation.valid) {
-            console.log('❌ Validation failed:', validation.errors);
             return res.status(400).json({
                 success: false,
                 message: 'Borrowing request validation failed',
@@ -168,12 +161,8 @@ router.post('/borrow', auth, async (req, res) => {
             });
         }
 
-        console.log('✅ Validation successful, processing borrowing...');
-
         // Process the borrowing
         const result = await processBorrowing(studentIdNumber, bookCodes, adminId, dueDate);
-
-        console.log('✅ Borrowing processed successfully:', result);
 
         res.json({
             success: true,
@@ -187,7 +176,7 @@ router.post('/borrow', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error processing borrowing:', error);
+        console.error('[ERROR] Error processing borrowing:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to process borrowing transaction'
@@ -414,13 +403,12 @@ router.post('/return', auth, async (req, res) => {
 
                 // Create return transaction record
                 await createReturnTransaction(
-                    transactionId, 
-                    adminId, 
-                    'good', 
-                    transaction.status === 'overdue' ? 'Overdue book returned' : 'Book returned on time', 
+                    transactionId,
+                    adminId,
+                    'good',
+                    transaction.status === 'overdue' ? 'Overdue book returned' : 'Book returned on time',
                     transaction.status === 'overdue' ? 'Overdue book processed' : 'Normal return processed'
                 );
-                console.log('✅ Return transaction record created for transaction:', transactionId);
 
                 returnedBooks.push({
                     transactionId,
@@ -461,9 +449,6 @@ router.post('/return', auth, async (req, res) => {
 // GET /api/borrowing/admin/search/:idNumber - Get student's borrowed books (admin only)
 router.get('/admin/search/:idNumber', auth, async (req, res) => {
     try {
-        console.log('🔍 Admin search request for student:', req.params.idNumber);
-        console.log('🔍 User type:', req.user.type);
-        
         if (req.user.type !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -474,10 +459,8 @@ router.get('/admin/search/:idNumber', auth, async (req, res) => {
         const { idNumber } = req.params;
 
         // Check if student exists
-        console.log('🔍 Checking if student exists:', idNumber);
         const student = await checkStudentExists(idNumber);
-        console.log('🔍 Student lookup result:', student);
-        
+
         if (!student) {
             return res.status(404).json({
                 success: false,
@@ -486,7 +469,6 @@ router.get('/admin/search/:idNumber', auth, async (req, res) => {
         }
 
         // Get all borrowed books (including overdue)
-        console.log('🔍 Querying borrowed books for student:', idNumber);
         const [borrowedBooks] = await pool.execute(
             `SELECT 
                 bt.id,
@@ -511,7 +493,6 @@ router.get('/admin/search/:idNumber', auth, async (req, res) => {
                 bt.due_date ASC`,
             [idNumber]
         );
-        console.log('🔍 Borrowed books query result:', borrowedBooks);
 
         // Calculate due date status for each book
         const booksWithStatus = borrowedBooks.map(book => {
@@ -844,9 +825,17 @@ router.get('/admin/returns', auth, async (req, res) => {
 });
 
 // GET /api/borrowing/user/:idNumber - Get user's own borrowed books (for mobile app)
-router.get('/user/:idNumber', async (req, res) => {
+router.get('/user/:idNumber', auth, async (req, res) => {
     try {
         const { idNumber } = req.params;
+
+        // Security: Verify user can only access their own data (or admin can access any)
+        if (req.user.type !== 'admin' && req.user.idNumber !== idNumber) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only view your own borrowed books.'
+            });
+        }
 
         // Check if student exists
         const student = await checkStudentExists(idNumber);
@@ -929,9 +918,17 @@ router.get('/user/:idNumber', async (req, res) => {
 });
 
 // GET /api/borrowing/user/:idNumber/semester-count - Get user's semester book count
-router.get('/user/:idNumber/semester-count', async (req, res) => {
+router.get('/user/:idNumber/semester-count', auth, async (req, res) => {
     try {
         const { idNumber } = req.params;
+
+        // Security: Verify user can only access their own data (or admin can access any)
+        if (req.user.type !== 'admin' && req.user.idNumber !== idNumber) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only view your own semester data.'
+            });
+        }
 
         // Get semester tracking data
         const [semesterData] = await pool.execute(`

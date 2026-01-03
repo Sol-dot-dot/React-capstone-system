@@ -14,18 +14,11 @@ import {
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import LinearGradient from 'react-native-linear-gradient';
 import { ModernTheme } from '../styles/ModernTheme';
-import { 
-  ModernButton, 
-  ModernInput, 
-  ResponsiveContainer 
+import {
+  ModernButton,
+  ModernInput
 } from '../components/ui/ModernComponents';
-import { 
-  getResponsiveSpacing, 
-  getResponsiveFontSize, 
-  deviceInfo 
-} from '../utils/ResponsiveUtils';
 import axios from 'axios';
 import { buildApiUrl, getEndpoint } from '../config/api';
 
@@ -81,7 +74,8 @@ const LoginScreen = ({ onLogin, onNavigate, onBack }) => {
         setLoginStep('success');
         // Small delay for better UX
         setTimeout(() => {
-          onLogin(response.data.user);
+          // Pass both user data and token to onLogin
+          onLogin(response.data.user, response.data.token);
         }, 300);
       }
     } catch (error) {
