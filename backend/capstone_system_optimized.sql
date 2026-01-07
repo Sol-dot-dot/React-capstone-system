@@ -768,7 +768,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `id_number`, `student_barcode`, `email`, `password_hash`, `first_name`, `last_name`, `role`, `is_verified`, `email_verified`, `last_login`, `created_at`, `updated_at`, `reset_code`, `reset_expires`, `verification_code`, `verification_expires`) VALUES
-(1, 'ADMIN001', NULL, 'admin@library.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System', 'Administrator', 'admin', 1, 1, NULL, '2025-09-10 14:15:50', '2025-09-10 14:26:40', NULL, NULL, NULL, NULL),
+(1, 'admin', NULL, 'admin@library.com', '$2a$10$XhmxjxvTP5byQI1JErBZKOMG434zmmqCyHRb9GZAMkzf7niyB7AkC', 'System', 'Administrator', 'admin', 1, 1, NULL, '2025-09-10 14:15:50', '2025-09-10 14:26:40', NULL, NULL, NULL, NULL),
 (4, 'C22-0044', 'STU-C22-0044', 'rhodcelisterduallo.sol@my.smciligan.edu.ph', '$2a$10$GUpMnNVGIqEa8f.Apu3uq.BK7RNglfbti77JqjtsiHN9cD..akomi', 'Rhod', 'Sol', 'student', 1, 1, NULL, '2025-09-10 15:11:29', '2025-09-24 10:20:07', NULL, NULL, NULL, NULL),
 (5, 'C22-0045', 'STU-C22-0045', 'kierrehagamann.vosotros@my.smciligan.edu.ph', '$2a$10$mR5apbDn414c19etgQm1oOVFJ3uiFDXAxSHME8Tyf3SFDqI16dxxi', 'Tabong', 'Vosotros', 'student', 1, 1, NULL, '2025-09-13 12:12:00', '2025-09-24 10:20:07', NULL, NULL, NULL, NULL);
 

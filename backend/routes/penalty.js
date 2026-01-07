@@ -22,6 +22,7 @@ const { ensureReturnTransactionRecords } = require('../utils/borrowingUtils');
 const { createReturnTransaction } = require('../utils/borrowingUtils');
 const pool = require('../config/database');
 
+const { logger } = require('../config/logger');
 // GET /api/penalty/settings - Get system settings (admin only)
 router.get('/settings', auth, async (req, res) => {
     try {
@@ -38,7 +39,7 @@ router.get('/settings', auth, async (req, res) => {
             data: settings
         });
     } catch (error) {
-        console.error('Error fetching system settings:', error);
+        logger.error('Error fetching system settings:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch system settings'
@@ -80,7 +81,7 @@ router.put('/settings', auth, async (req, res) => {
             message: 'System settings updated successfully'
         });
     } catch (error) {
-        console.error('Error updating system settings:', error);
+        logger.error('Error updating system settings:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update system settings'
@@ -104,7 +105,7 @@ router.get('/stats', auth, async (req, res) => {
             data: stats
         });
     } catch (error) {
-        console.error('Error fetching penalty stats:', error);
+        logger.error('Error fetching penalty stats:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch penalty statistics'
@@ -129,7 +130,7 @@ router.post('/process-overdue', auth, async (req, res) => {
             data: results
         });
     } catch (error) {
-        console.error('Error processing overdue fines:', error);
+        logger.error('Error processing overdue fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to process overdue fines'
@@ -154,7 +155,7 @@ router.post('/recalculate-semester-counts', auth, async (req, res) => {
             data: results
         });
     } catch (error) {
-        console.error('Error recalculating semester counts:', error);
+        logger.error('Error recalculating semester counts:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to recalculate semester counts'
@@ -173,7 +174,7 @@ router.get('/students-with-fines', auth, async (req, res) => {
         }
 
         const [students] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id_number,
                 u.email,
                 u.is_verified,
@@ -183,7 +184,7 @@ router.get('/students-with-fines', auth, async (req, res) => {
                 COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount
             FROM users u
             LEFT JOIN (
-                SELECT 
+                SELECT
                     student_id_number,
                     id,
                     fine_amount,
@@ -202,7 +203,7 @@ router.get('/students-with-fines', auth, async (req, res) => {
             data: students
         });
     } catch (error) {
-        console.error('Error fetching students with fines:', error);
+        logger.error('Error fetching students with fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch students with fines'
@@ -225,45 +226,45 @@ router.get('/students-detailed', auth, async (req, res) => {
         let params = [];
         let joinClause = '';
 
-        console.log('Penalty search request:', { search, status });
+        logger.info('Penalty search request:', { search, status });
 
         // Clean up any duplicate fines before fetching data
         try {
             await cleanupDuplicateFines();
         } catch (cleanupError) {
-            console.warn('Warning: Could not cleanup duplicate fines:', cleanupError.message);
+            logger.warn('Warning: Could not cleanup duplicate fines:', cleanupError.message);
         }
 
         // Debug: Check if student exists in users table
         if (search) {
             try {
                 const [userCheck] = await pool.execute('SELECT id_number FROM users WHERE id_number = ?', [search.trim()]);
-                console.log('User exists check:', userCheck.length > 0 ? 'YES' : 'NO', userCheck);
-                
+                logger.info('User exists check:', userCheck.length > 0 ? 'YES' : 'NO', userCheck);
+
                 // Check if student has fines
                 const [finesCheck] = await pool.execute('SELECT COUNT(*) as count FROM fines WHERE student_id_number = ?', [search.trim()]);
-                console.log('Fines count for student:', finesCheck[0]?.count || 0);
+                logger.info('Fines count for student:', finesCheck[0]?.count || 0);
             } catch (err) {
-                console.log('User check error:', err.message);
+                logger.info('User check error:', err.message);
             }
         }
 
         if (search) {
             // Check if search term looks like a student ID (contains C and numbers)
             const isStudentId = /^C\d{2}-\d{4}$/.test(search.trim());
-            console.log('Search term analysis:', { search: search.trim(), isStudentId });
-            
+            logger.info('Search term analysis:', { search: search.trim(), isStudentId });
+
             if (isStudentId) {
                 // For student ID, search exactly and don't filter by status in WHERE clause
                 whereClause = 'WHERE u.id_number = ?';
                 params.push(search.trim());
-                console.log('Using exact student ID search');
+                logger.info('Using exact student ID search');
             } else {
                 // For other searches, use LIKE with wildcards
                 whereClause = 'WHERE (u.id_number LIKE ? OR u.email LIKE ?)';
                 params.push(`%${search}%`, `%${search}%`);
-                console.log('Using LIKE search');
-                
+                logger.info('Using LIKE search');
+
                 // Add status filter for non-student-ID searches
                 if (status) {
                     whereClause += ' AND f.status = ?';
@@ -284,20 +285,20 @@ router.get('/students-detailed', auth, async (req, res) => {
             // If searching for a specific student, show them even if they have no fines
             const isStudentId = /^C\d{2}-\d{4}$/.test(search.trim());
             if (!isStudentId) {
-                havingClause = 'HAVING total_fines > 0';
+                havingClause = 'HAVING (total_fines > 0 OR overdue_books > 0)';
             } else {
-                // For student ID searches, only show if they have fines
-                havingClause = 'HAVING total_fines > 0';
+                // For student ID searches, show if they have fines OR overdue books
+                havingClause = 'HAVING (total_fines > 0 OR overdue_books > 0)';
             }
         } else {
-            // If not searching, only show students with fines
-            havingClause = 'HAVING total_fines > 0';
+            // If not searching, only show students with fines OR overdue books
+            havingClause = 'HAVING (total_fines > 0 OR overdue_books > 0)';
         }
 
         let students = [];
         try {
             [students] = await pool.execute(`
-                SELECT 
+                SELECT
                     u.id_number,
                     u.email,
                     u.first_name,
@@ -313,10 +314,11 @@ router.get('/students-detailed', auth, async (req, res) => {
                     COALESCE(SUM(CASE WHEN f.status = 'unpaid' THEN f.fine_amount - COALESCE(f.paid_amount, 0) ELSE 0 END), 0) as unpaid_amount,
                     COALESCE(SUM(CASE WHEN f.status = 'paid' THEN f.paid_amount ELSE 0 END), 0) as paid_amount,
                     MAX(f.fine_date) as latest_fine_date,
-                    MIN(f.fine_date) as earliest_fine_date
+                    MIN(f.fine_date) as earliest_fine_date,
+                    COUNT(DISTINCT CASE WHEN bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()) THEN bt.id END) as overdue_books
                 FROM users u
                 LEFT JOIN (
-                    SELECT 
+                    SELECT
                         student_id_number,
                         id,
                         fine_amount,
@@ -326,109 +328,125 @@ router.get('/students-detailed', auth, async (req, res) => {
                         ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
                     FROM fines
                 ) f ON u.id_number = f.student_id_number AND f.rn = 1
+                LEFT JOIN borrowing_transactions bt ON u.id_number = bt.student_id_number
                 ${joinClause}
                 ${whereClause}
                 GROUP BY u.id_number, u.email, u.first_name, u.last_name, u.is_verified, u.email_verified, u.last_login, u.created_at
                 ${havingClause}
-                ORDER BY unpaid_amount DESC, total_amount DESC
+                ORDER BY unpaid_amount DESC, total_amount DESC, overdue_books DESC
             `, params);
         } catch (queryError) {
-            console.error('SQL Query Error:', queryError);
-            console.error('Query params:', params);
-            console.error('Where clause:', whereClause);
-            console.error('Having clause:', havingClause);
+            logger.error('SQL Query Error:', queryError);
+            logger.error('Query params:', params);
+            logger.error('Where clause:', whereClause);
+            logger.error('Having clause:', havingClause);
             throw queryError;
         }
 
-        console.log('Students found:', students.length);
-        console.log('Query params:', params);
-        console.log('Where clause:', whereClause);
-        console.log('Having clause:', havingClause);
-        
+        logger.info('Students found:', students.length);
+        logger.info('Query params:', params);
+        logger.info('Where clause:', whereClause);
+        logger.info('Having clause:', havingClause);
+
         // Debug: Log the first few students if any found
         if (students.length > 0) {
-            console.log('First student found:', students[0]);
+            logger.info('First student found:', students[0]);
         }
 
         // Get complete book history for each student (current overdue + previously paid)
         for (let student of students) {
-            const [bookHistory] = await pool.execute(`
-                SELECT 
-                    bt.id as transaction_id,
-                    bt.borrowed_date,
-                    bt.due_date,
-                    bt.returned_date,
-                    bt.status as transaction_status,
-                    b.title,
-                    b.author,
-                    b.number_code,
-                    b.category,
-                    f.id as fine_id,
-                    f.fine_amount,
-                    f.paid_amount,
-                    f.days_overdue,
-                    f.fine_date,
-                    f.status as fine_status,
-                    CASE 
-                        WHEN bt.status = 'overdue' THEN 'Overdue'
-                        WHEN bt.status = 'borrowed' AND bt.due_date < CURDATE() THEN 'Overdue'
-                        WHEN bt.status = 'returned' AND f.status = 'paid' THEN 'Paid'
-                        WHEN bt.status = 'returned' THEN 'Returned'
-                        ELSE 'Borrowed'
-                    END as current_status,
-                    DATEDIFF(CURDATE(), bt.due_date) as days_past_due,
-                    CASE 
-                        WHEN bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()) THEN 1
-                        WHEN bt.status = 'returned' AND f.status = 'paid' THEN 2
-                        ELSE 3
-                    END as sort_priority
-                FROM borrowing_transactions bt
-                JOIN books b ON bt.book_id = b.id
-                LEFT JOIN (
-                    SELECT 
-                        transaction_id,
-                        id,
-                        fine_amount,
-                        paid_amount,
-                        days_overdue,
-                        fine_date,
-                        status,
-                        ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
-                    FROM fines
-                ) f ON bt.id = f.transaction_id AND f.rn = 1
-                WHERE bt.student_id_number = ? 
-                AND (
-                    bt.status = 'overdue' 
-                    OR (bt.status = 'borrowed' AND bt.due_date < CURDATE())
-                    OR (bt.status = 'returned' AND f.status = 'paid')
-                )
-                ORDER BY sort_priority ASC, bt.due_date DESC
-            `, [student.id_number]);
+            try {
+                logger.info(`[DEBUG] Fetching book history for student ${student.id_number}`);
 
-            // Get payment history for each book that has payments
-            for (let book of bookHistory) {
-                if (book.fine_status === 'paid') {
-                    const [paymentHistory] = await pool.execute(`
-                        SELECT 
-                            fp.id as payment_id,
-                            fp.payment_amount,
-                            fp.payment_method,
-                            fp.notes,
-                            fp.created_at as payment_date,
-                            u.email as processed_by_admin
-                        FROM fine_payments fp
-                        JOIN fines f ON fp.fine_id = f.id
-                        LEFT JOIN users u ON fp.processed_by = u.id
-                        WHERE f.transaction_id = ?
-                        ORDER BY fp.created_at DESC
-                    `, [book.transaction_id]);
+                const [bookHistory] = await pool.execute(`
+                    SELECT
+                        bt.id as transaction_id,
+                        bt.borrowed_date,
+                        bt.due_date,
+                        bt.returned_date,
+                        bt.status as transaction_status,
+                        b.title,
+                        b.author,
+                        b.number_code,
+                        b.category,
+                        f.id as fine_id,
+                        f.fine_amount,
+                        f.paid_amount,
+                        f.days_overdue,
+                        f.fine_date,
+                        f.status as fine_status,
+                        CASE
+                            WHEN bt.status = 'overdue' THEN 'Overdue'
+                            WHEN bt.status = 'borrowed' AND bt.due_date < CURDATE() THEN 'Overdue'
+                            WHEN bt.status = 'returned' AND f.status = 'paid' THEN 'Paid'
+                            WHEN bt.status = 'returned' THEN 'Returned'
+                            ELSE 'Borrowed'
+                        END as current_status,
+                        DATEDIFF(CURDATE(), bt.due_date) as days_past_due,
+                        CASE
+                            WHEN bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()) THEN 1
+                            WHEN bt.status = 'returned' AND f.status = 'paid' THEN 2
+                            ELSE 3
+                        END as sort_priority
+                    FROM borrowing_transactions bt
+                    JOIN books b ON bt.book_id = b.id
+                    LEFT JOIN (
+                        SELECT
+                            transaction_id,
+                            id,
+                            fine_amount,
+                            paid_amount,
+                            days_overdue,
+                            fine_date,
+                            status,
+                            ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
+                        FROM fines
+                    ) f ON bt.id = f.transaction_id AND f.rn = 1
+                    WHERE bt.student_id_number = ?
+                    AND (
+                        bt.status = 'overdue'
+                        OR (bt.status = 'borrowed' AND bt.due_date < CURDATE())
+                        OR (bt.status = 'returned' AND f.status = 'paid')
+                    )
+                    ORDER BY sort_priority ASC, bt.due_date DESC
+                    LIMIT 100
+                `, [student.id_number]);
 
-                    book.payment_history = paymentHistory;
+                logger.info(`[DEBUG] Found ${bookHistory.length} book history records for student ${student.id_number}`);
+
+                // Get payment history for each book that has payments
+                for (let book of bookHistory) {
+                    if (book.fine_status === 'paid') {
+                        const [paymentHistory] = await pool.execute(`
+                            SELECT
+                                fp.id as payment_id,
+                                fp.payment_amount,
+                                fp.payment_method,
+                                fp.notes,
+                                fp.created_at as payment_date,
+                                u.email as processed_by_admin
+                            FROM fine_payments fp
+                            JOIN fines f ON fp.fine_id = f.id
+                            LEFT JOIN users u ON fp.processed_by = u.id
+                            WHERE f.transaction_id = ?
+                            ORDER BY fp.created_at DESC
+                        `, [book.transaction_id]);
+
+                        book.payment_history = paymentHistory;
+                    }
                 }
-            }
 
-            student.book_history = bookHistory;
+                student.book_history = bookHistory;
+                logger.info(`[DEBUG] Completed book history for student ${student.id_number}`);
+
+            } catch (bookHistoryError) {
+                logger.error(`[ERROR] Failed to fetch book history for student ${student.id_number}:`, bookHistoryError.message);
+                student.book_history = [];
+                student.book_history_error = 'Failed to load book history';
+            }
         }
+
+        logger.info(`[DEBUG] Sending response with ${students.length} students`);
 
         res.json({
             success: true,
@@ -436,7 +454,7 @@ router.get('/students-detailed', auth, async (req, res) => {
             lastUpdated: new Date().toISOString()
         });
     } catch (error) {
-        console.error('Error fetching detailed student penalty information:', error);
+        logger.error('Error fetching detailed student penalty information:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch detailed student penalty information'
@@ -447,7 +465,7 @@ router.get('/students-detailed', auth, async (req, res) => {
 // POST /api/penalty/mark-paid/:studentId - Mark all fines as paid and return books (admin only)
 router.post('/mark-paid/:studentId', auth, async (req, res) => {
     const connection = await pool.getConnection();
-    
+
     try {
         await connection.beginTransaction();
 
@@ -485,8 +503,8 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
         // 2. Mark all unpaid fines as paid and create payment records
         const [fineResult] = await connection.execute(
-            `UPDATE fines 
-             SET status = 'paid', 
+            `UPDATE fines
+             SET status = 'paid',
                  paid_amount = fine_amount,
                  updated_at = CURRENT_TIMESTAMP
              WHERE student_id_number = ? AND status = 'unpaid'`,
@@ -498,8 +516,8 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
             const remainingAmount = fine.fine_amount - (fine.paid_amount || 0);
             if (remainingAmount > 0) {
                 await connection.execute(
-                    `INSERT INTO fine_payments 
-                     (fine_id, payment_amount, payment_method, processed_by, notes) 
+                    `INSERT INTO fine_payments
+                     (fine_id, payment_amount, payment_method, processed_by, notes)
                      VALUES (?, ?, 'cash', ?, 'Full payment - All fines paid at once')`,
                     [fine.id, remainingAmount, adminId]
                 );
@@ -521,11 +539,11 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
                     [adminId, fine.transaction_id]
                 );
 
-                // Update book status to available
+                // Increment available_copies (trigger will update status automatically)
                 await connection.execute(
                     `UPDATE books
-                     SET status = 'available'
-                     WHERE id = ?`,
+                     SET available_copies = available_copies + 1
+                     WHERE id = ? AND available_copies < book_copies`,
                     [fine.book_id]
                 );
 
@@ -553,11 +571,11 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
                 [adminId, book.id]
             );
 
-            // Update book status to available
+            // Increment available_copies (trigger will update status automatically)
             await connection.execute(
                 `UPDATE books
-                 SET status = 'available'
-                 WHERE id = ?`,
+                 SET available_copies = available_copies + 1
+                 WHERE id = ? AND available_copies < book_copies`,
                 [book.book_id]
             );
 
@@ -587,9 +605,9 @@ router.post('/mark-paid/:studentId', auth, async (req, res) => {
 
     } catch (error) {
         await connection.rollback();
-        console.error('[ERROR] Error processing payment and book return:', error);
-        console.error('[ERROR] Error stack:', error.stack);
-        console.error('[ERROR] Error details:', {
+        logger.error('[ERROR] Error processing payment and book return:', error);
+        logger.error('[ERROR] Error stack:', error.stack);
+        logger.error('[ERROR] Error details:', {
             message: error.message,
             code: error.code,
             errno: error.errno,
@@ -622,7 +640,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
 
         // Get student basic information
         const [studentInfo] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id_number,
                 u.email,
                 u.first_name,
@@ -644,21 +662,21 @@ router.get('/fines/:studentId', auth, async (req, res) => {
 
         // Get student's fines with detailed book information
         const fines = await getStudentFines(studentId, status, recalculate === 'true');
-        
+
         // Get current borrowing status
         const [borrowingStatus] = await pool.execute(`
-            SELECT 
+            SELECT
                 COUNT(*) as total_borrowed,
                 COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currently_borrowed,
                 COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count,
                 COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned_count
-            FROM borrowing_transactions 
+            FROM borrowing_transactions
             WHERE student_id_number = ?
         `, [studentId]);
 
         // Get overdue books details
         const [overdueBooks] = await pool.execute(`
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.borrowed_date,
                 bt.due_date,
@@ -677,7 +695,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
             FROM borrowing_transactions bt
             JOIN books b ON bt.book_id = b.id
             LEFT JOIN (
-                SELECT 
+                SELECT
                     transaction_id,
                     id,
                     fine_amount,
@@ -688,7 +706,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
                     ROW_NUMBER() OVER (PARTITION BY transaction_id ORDER BY id DESC) as rn
                 FROM fines
             ) f ON bt.id = f.transaction_id AND f.rn = 1
-            WHERE bt.student_id_number = ? 
+            WHERE bt.student_id_number = ?
             AND (bt.status = 'overdue' OR (bt.status = 'borrowed' AND bt.due_date < CURDATE()))
             ORDER BY bt.due_date ASC
         `, [studentId]);
@@ -696,7 +714,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
         // Get payment history for each overdue book
         for (let book of overdueBooks) {
             const [paymentHistory] = await pool.execute(`
-                SELECT 
+                SELECT
                     fp.id as payment_id,
                     fp.payment_amount,
                     fp.payment_method,
@@ -707,7 +725,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
                 JOIN fines f ON fp.fine_id = f.id
                 JOIN borrowing_transactions bt ON f.transaction_id = bt.id
                 LEFT JOIN users u ON fp.processed_by = u.id
-                WHERE bt.student_id_number = ? 
+                WHERE bt.student_id_number = ?
                 AND bt.book_id = (
                     SELECT book_id FROM borrowing_transactions WHERE id = ?
                 )
@@ -745,7 +763,7 @@ router.get('/fines/:studentId', auth, async (req, res) => {
             lastUpdated: new Date().toISOString()
         });
     } catch (error) {
-        console.error('Error fetching student fines:', error);
+        logger.error('Error fetching student fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch student fines'
@@ -780,7 +798,7 @@ router.post('/pay', auth, async (req, res) => {
             data: result
         });
     } catch (error) {
-        console.error('Error processing fine payment:', error);
+        logger.error('Error processing fine payment:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to process fine payment'
@@ -805,7 +823,7 @@ router.get('/semester/:studentId', auth, async (req, res) => {
             data: tracking
         });
     } catch (error) {
-        console.error('Error fetching semester tracking:', error);
+        logger.error('Error fetching semester tracking:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch semester tracking'
@@ -838,7 +856,7 @@ router.post('/semester', auth, async (req, res) => {
             message: 'Semester tracking updated successfully'
         });
     } catch (error) {
-        console.error('Error updating semester tracking:', error);
+        logger.error('Error updating semester tracking:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update semester tracking'
@@ -863,7 +881,7 @@ router.get('/student-status/:studentId', auth, async (req, res) => {
             data: status
         });
     } catch (error) {
-        console.error('Error checking student status:', error);
+        logger.error('Error checking student status:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to check student status'
@@ -900,7 +918,7 @@ router.get('/all-fines', auth, async (req, res) => {
 
         // Get fines
         const [fines] = await pool.execute(
-            `SELECT 
+            `SELECT
                 f.id,
                 f.student_id_number,
                 f.transaction_id,
@@ -950,7 +968,7 @@ router.get('/all-fines', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching all fines:', error);
+        logger.error('Error fetching all fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch fines'
@@ -974,13 +992,13 @@ router.get('/user/:studentId', auth, async (req, res) => {
 
         // Get student's fines with real-time recalculation
         const fines = await getStudentFines(studentId, null, recalculate === 'true');
-        
+
         // Get student's borrowing status
         const borrowingStatus = await checkAndUpdateStudentBorrowingStatus(studentId);
-        
+
         // Get semester tracking
         const semesterTracking = await getSemesterTracking(studentId);
-        
+
         // Get current borrowed books count
         const [currentBorrowed] = await pool.execute(
             'SELECT COUNT(*) as count FROM borrowing_transactions WHERE student_id_number = ? AND status = "borrowed"',
@@ -1004,7 +1022,7 @@ router.get('/user/:studentId', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching user penalty data:', error);
+        logger.error('Error fetching user penalty data:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch penalty data'
@@ -1027,10 +1045,10 @@ router.post('/recalculate/:studentId', auth, async (req, res) => {
 
         // Force recalculation of student's fines
         await recalculateStudentFines(studentId);
-        
+
         // Get updated fines
         const fines = await getStudentFines(studentId, null, false); // Don't recalculate again
-        
+
         // Calculate total unpaid fine amount
         const unpaidFines = fines.filter(fine => fine.status === 'unpaid');
         const totalUnpaidAmount = unpaidFines.reduce((sum, fine) => sum + (fine.fine_amount - fine.paid_amount), 0);
@@ -1046,7 +1064,7 @@ router.post('/recalculate/:studentId', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error recalculating student fines:', error);
+        logger.error('Error recalculating student fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to recalculate fines'
@@ -1069,7 +1087,7 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
 
         // Get all unpaid fines for the student
         const fines = await getStudentFines(studentId, 'unpaid', true);
-        
+
         if (fines.length === 0) {
             return res.json({
                 success: true,
@@ -1079,7 +1097,7 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
         }
 
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
@@ -1089,46 +1107,52 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
             // Process each unpaid fine
             for (const fine of fines) {
                 const remainingAmount = fine.fine_amount - fine.paid_amount;
-                
+
                 if (remainingAmount > 0) {
                     // Update fine to paid
                     await connection.execute(`
-                        UPDATE fines 
-                        SET paid_amount = fine_amount, 
-                            status = 'paid', 
+                        UPDATE fines
+                        SET paid_amount = fine_amount,
+                            status = 'paid',
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     `, [fine.id]);
 
                     // Add payment record
                     await connection.execute(`
-                        INSERT INTO fine_payments 
-                        (fine_id, payment_amount, payment_method, processed_by, notes) 
+                        INSERT INTO fine_payments
+                        (fine_id, payment_amount, payment_method, processed_by, notes)
                         VALUES (?, ?, 'cash', ?, 'Full payment - All fines paid at once')
                     `, [fine.id, remainingAmount, adminId]);
 
                     // Return the book to available status
                     await connection.execute(`
-                        UPDATE borrowing_transactions 
-                        SET status = 'returned', 
+                        UPDATE borrowing_transactions
+                        SET status = 'returned',
                             returned_date = CURDATE(),
                             returned_by_admin = ?
                         WHERE id = ?
                     `, [adminId, fine.transaction_id]);
 
-                    // Update book status to available
-                    await connection.execute(`
-                        UPDATE books 
-                        SET status = 'available'
-                        WHERE id = (
-                            SELECT book_id FROM borrowing_transactions WHERE id = ?
-                        )
-                    `, [fine.transaction_id]);
+                    // Get book_id from transaction
+                    const [bookResult] = await connection.execute(
+                        'SELECT book_id FROM borrowing_transactions WHERE id = ?',
+                        [fine.transaction_id]
+                    );
+
+                    if (bookResult.length > 0) {
+                        // Increment available_copies (trigger will update status automatically)
+                        await connection.execute(`
+                            UPDATE books
+                            SET available_copies = available_copies + 1
+                            WHERE id = ? AND available_copies < book_copies
+                        `, [bookResult[0].book_id]);
+                    }
 
                     // Create return transaction record
                     await createReturnTransaction(
-                        fine.transaction_id, 
-                        adminId, 
+                        fine.transaction_id,
+                        adminId,
                         'good',
                         'Book returned after fine payment',
                         'All fines paid at once - book returned'
@@ -1162,7 +1186,7 @@ router.post('/pay-all/:studentId', auth, async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Error paying all fines for student:', error);
+        logger.error('Error paying all fines for student:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to process payment for all fines'
@@ -1207,7 +1231,7 @@ router.get('/overdue-books', auth, async (req, res) => {
 
         // Group by student for better organization
         const studentMap = new Map();
-        
+
         overdueBooks.forEach(book => {
             const studentId = book.student_id_number;
             if (!studentMap.has(studentId)) {
@@ -1220,11 +1244,11 @@ router.get('/overdue-books', auth, async (req, res) => {
                     overdueBooks: []
                 });
             }
-            
+
             const student = studentMap.get(studentId);
             student.overdueBooks.push(book);
             student.totalOverdueBooks++;
-            
+
             if (book.fine_id && book.fine_status === 'unpaid') {
                 student.totalUnpaidFines++;
                 student.totalUnpaidAmount += (book.fine_amount - book.paid_amount);
@@ -1245,7 +1269,7 @@ router.get('/overdue-books', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching overdue books:', error);
+        logger.error('Error fetching overdue books:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch overdue books'
@@ -1264,14 +1288,14 @@ router.post('/fix-overdue-fines', auth, async (req, res) => {
         }
 
         const results = await processAllOverdueFines();
-        
+
         res.json({
             success: true,
             message: 'Overdue fines fixed successfully',
             data: results
         });
     } catch (error) {
-        console.error('Error fixing overdue fines:', error);
+        logger.error('Error fixing overdue fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fix overdue fines'
@@ -1322,7 +1346,7 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
 
             // Check if all fines are paid for this transaction
             const [unpaidFines] = await connection.execute(
-                `SELECT COUNT(*) as count FROM fines 
+                `SELECT COUNT(*) as count FROM fines
                  WHERE transaction_id = ? AND status = 'unpaid'`,
                 [transactionId]
             );
@@ -1333,34 +1357,34 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
 
             // Return the book
             await connection.execute(
-                `UPDATE borrowing_transactions 
-                 SET status = 'returned', 
+                `UPDATE borrowing_transactions
+                 SET status = 'returned',
                      returned_date = CURDATE(),
                      returned_by_admin = ?
                  WHERE id = ?`,
                 [adminId, transactionId]
             );
 
-            // Update book status
+            // Increment available_copies (trigger will update status automatically)
             await connection.execute(
-                `UPDATE books 
-                 SET status = 'available'
-                 WHERE id = ?`,
+                `UPDATE books
+                 SET available_copies = available_copies + 1
+                 WHERE id = ? AND available_copies < book_copies`,
                 [transaction.book_id]
             );
 
             // Create return transaction record
             await createReturnTransaction(
-                transactionId, 
-                adminId, 
-                'good', 
-                'Overdue book returned after fine payment', 
+                transactionId,
+                adminId,
+                'good',
+                'Overdue book returned after fine payment',
                 'Overdue book processed - fine payment completed'
             );
 
             // Store in overdue history
             await connection.execute(
-                `INSERT INTO overdue_history 
+                `INSERT INTO overdue_history
                  (student_id_number, transaction_id, book_title, book_author, book_code,
                   borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
                   returned_by_admin, created_at)
@@ -1404,7 +1428,7 @@ router.post('/return-paid-overdue', auth, async (req, res) => {
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error returning paid overdue books:', error);
+        logger.error('Error returning paid overdue books:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to return paid overdue books'
@@ -1425,13 +1449,13 @@ router.post('/populate-overdue-history', auth, async (req, res) => {
         }
 
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
             // Get all current overdue transactions that don't have overdue history records
             const [overdueTransactions] = await connection.execute(`
-                SELECT 
+                SELECT
                     bt.id as transaction_id,
                     bt.student_id_number,
                     bt.borrowed_date,
@@ -1446,22 +1470,22 @@ router.post('/populate-overdue-history', auth, async (req, res) => {
                 FROM borrowing_transactions bt
                 JOIN books b ON bt.book_id = b.id
                 LEFT JOIN fines f ON bt.id = f.transaction_id
-                WHERE bt.status = 'overdue' 
+                WHERE bt.status = 'overdue'
                 AND bt.due_date < CURDATE()
                 AND NOT EXISTS (
-                    SELECT 1 FROM overdue_history oh 
+                    SELECT 1 FROM overdue_history oh
                     WHERE oh.transaction_id = bt.id
                 )
                 ORDER BY bt.due_date ASC
             `);
 
-            console.log(`Found ${overdueTransactions.length} overdue transactions without history records`);
+            logger.info(`Found ${overdueTransactions.length} overdue transactions without history records`);
 
             let recordsCreated = 0;
 
             for (const transaction of overdueTransactions) {
                 await connection.execute(`
-                    INSERT INTO overdue_history 
+                    INSERT INTO overdue_history
                     (student_id_number, transaction_id, book_title, book_author, book_code,
                      borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
                      returned_by_admin, created_at)
@@ -1502,7 +1526,7 @@ router.post('/populate-overdue-history', auth, async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Error populating overdue history:', error);
+        logger.error('Error populating overdue history:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to populate overdue history'
@@ -1529,7 +1553,7 @@ router.post('/force-populate-overdue-history', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error forcing overdue history population:', error);
+        logger.error('Error forcing overdue history population:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to populate overdue history'
@@ -1548,13 +1572,13 @@ router.post('/fix-missing-return-transactions', auth, async (req, res) => {
         }
 
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
             // Find overdue books that are marked as returned but don't have return transaction records
             const [missingReturns] = await connection.execute(`
-                SELECT 
+                SELECT
                     bt.id as transaction_id,
                     bt.student_id_number,
                     bt.book_id,
@@ -1568,25 +1592,25 @@ router.post('/fix-missing-return-transactions', auth, async (req, res) => {
                 FROM borrowing_transactions bt
                 JOIN books b ON bt.book_id = b.id
                 LEFT JOIN fines f ON bt.id = f.transaction_id
-                WHERE bt.status = 'returned' 
+                WHERE bt.status = 'returned'
                 AND bt.returned_date IS NOT NULL
                 AND NOT EXISTS (
-                    SELECT 1 FROM return_transactions rt 
+                    SELECT 1 FROM return_transactions rt
                     WHERE rt.transaction_id = bt.id
                 )
                 ORDER BY bt.returned_date ASC
             `);
 
-            console.log(`Found ${missingReturns.length} returned books without return transaction records`);
+            logger.info(`Found ${missingReturns.length} returned books without return transaction records`);
 
             let recordsCreated = 0;
 
             for (const book of missingReturns) {
                 // Create return transaction record
                 await connection.execute(`
-                    INSERT INTO return_transactions 
-                    (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
-                     return_condition, condition_notes, processing_notes, status, fine_applied, fine_reason) 
+                    INSERT INTO return_transactions
+                    (transaction_id, student_id_number, book_id, returned_at, returned_by_admin,
+                     return_condition, condition_notes, processing_notes, status, fine_applied, fine_reason)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)
                 `, [
                     book.transaction_id,
@@ -1602,7 +1626,7 @@ router.post('/fix-missing-return-transactions', auth, async (req, res) => {
                 ]);
 
                 recordsCreated++;
-                console.log(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
+                logger.info(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
             }
 
             await connection.commit();
@@ -1624,7 +1648,7 @@ router.post('/fix-missing-return-transactions', auth, async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Error fixing missing return transactions:', error);
+        logger.error('Error fixing missing return transactions:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fix missing return transactions'
@@ -1675,7 +1699,7 @@ router.get('/overdue-history/:studentId', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching overdue history:', error);
+        logger.error('Error fetching overdue history:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch overdue history'
@@ -1699,7 +1723,7 @@ router.post('/cleanup-duplicates', auth, async (req, res) => {
             message: 'Duplicate fines cleaned up successfully'
         });
     } catch (error) {
-        console.error('Error cleaning up duplicate fines:', error);
+        logger.error('Error cleaning up duplicate fines:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to clean up duplicate fines'
@@ -1727,7 +1751,7 @@ router.post('/fix-return-records/:studentId', auth, async (req, res) => {
             data: result
         });
     } catch (error) {
-        console.error('Error fixing return transaction records:', error);
+        logger.error('Error fixing return transaction records:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fix return transaction records'
@@ -1738,7 +1762,7 @@ router.post('/fix-return-records/:studentId', auth, async (req, res) => {
 // POST /api/penalty/reset-semester - Reset semester and clear all borrowing counts (admin only)
 router.post('/reset-semester', auth, async (req, res) => {
     const connection = await pool.getConnection();
-    
+
     try {
         if (req.user.type !== 'admin') {
             return res.status(403).json({
@@ -1754,26 +1778,26 @@ router.post('/reset-semester', auth, async (req, res) => {
             'SELECT setting_value FROM system_settings WHERE setting_key = ?',
             ['semester_duration_months']
         );
-        
-        const semesterDurationMonths = durationSetting.length > 0 ? 
+
+        const semesterDurationMonths = durationSetting.length > 0 ?
             parseInt(durationSetting[0].setting_value) : 5; // Default to 5 months
 
         // Calculate new semester dates
         const currentDate = new Date();
         const semesterStartDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-        
+
         const semesterEndDate = new Date(currentDate);
         semesterEndDate.setMonth(semesterEndDate.getMonth() + semesterDurationMonths);
         const semesterEndDateStr = semesterEndDate.toISOString().split('T')[0];
 
-        console.log(`[INFO] Resetting semester: ${semesterStartDate} to ${semesterEndDateStr} (${semesterDurationMonths} months)`);
+        logger.info(`[INFO] Resetting semester: ${semesterStartDate} to ${semesterEndDateStr} (${semesterDurationMonths} months)`);
 
         // Get all active students
         const [activeStudents] = await connection.execute(
             'SELECT id_number FROM users WHERE type = "student" AND is_verified = 1'
         );
 
-        console.log(`[INFO] Found ${activeStudents.length} active students to reset`);
+        logger.info(`[INFO] Found ${activeStudents.length} active students to reset`);
 
         let resetCount = 0;
         let createdCount = 0;
@@ -1789,7 +1813,7 @@ router.post('/reset-semester', auth, async (req, res) => {
             if (existingTracking.length > 0) {
                 // Update existing tracking - reset counts and update dates
                 await connection.execute(
-                    `UPDATE semester_tracking 
+                    `UPDATE semester_tracking
                      SET books_borrowed_count = 0,
                          semester_start_date = ?,
                          semester_end_date = ?,
@@ -1798,43 +1822,43 @@ router.post('/reset-semester', auth, async (req, res) => {
                     [semesterStartDate, semesterEndDateStr, student.id_number]
                 );
                 resetCount++;
-                console.log(`[OK] Reset semester tracking for student: ${student.id_number}`);
+                logger.info(`[OK] Reset semester tracking for student: ${student.id_number}`);
             } else {
                 // Create new semester tracking
                 await connection.execute(
-                    `INSERT INTO semester_tracking 
-                     (student_id_number, semester_start_date, semester_end_date, books_borrowed_count, max_books_allowed, status) 
+                    `INSERT INTO semester_tracking
+                     (student_id_number, semester_start_date, semester_end_date, books_borrowed_count, max_books_allowed, status)
                      VALUES (?, ?, ?, 0, 5, 'active')`,
                     [student.id_number, semesterStartDate, semesterEndDateStr]
                 );
                 createdCount++;
-                console.log(`[OK] Created new semester tracking for student: ${student.id_number}`);
+                logger.info(`[OK] Created new semester tracking for student: ${student.id_number}`);
             }
         }
 
         // Update system settings with new semester start date
         await connection.execute(
-            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at) 
+            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at)
              VALUES ('current_semester_start', ?, 'Current semester start date', CURRENT_TIMESTAMP)
-             ON DUPLICATE KEY UPDATE 
-             setting_value = VALUES(setting_value), 
+             ON DUPLICATE KEY UPDATE
+             setting_value = VALUES(setting_value),
              updated_at = CURRENT_TIMESTAMP`,
             [semesterStartDate]
         );
 
         await connection.execute(
-            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at) 
+            `INSERT INTO system_settings (setting_key, setting_value, description, updated_at)
              VALUES ('current_semester_end', ?, 'Current semester end date', CURRENT_TIMESTAMP)
-             ON DUPLICATE KEY UPDATE 
-             setting_value = VALUES(setting_value), 
+             ON DUPLICATE KEY UPDATE
+             setting_value = VALUES(setting_value),
              updated_at = CURRENT_TIMESTAMP`,
             [semesterEndDateStr]
         );
 
         await connection.commit();
 
-        console.log(`[OK] Semester reset completed successfully!`);
-        console.log(`[INFO] Reset: ${resetCount} students, Created: ${createdCount} students`);
+        logger.info(`[OK] Semester reset completed successfully!`);
+        logger.info(`[INFO] Reset: ${resetCount} students, Created: ${createdCount} students`);
 
         res.json({
             success: true,
@@ -1851,7 +1875,7 @@ router.post('/reset-semester', auth, async (req, res) => {
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error resetting semester:', error);
+        logger.error('Error resetting semester:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to reset semester'
@@ -1871,6 +1895,14 @@ router.get('/clearance-requirements', auth, async (req, res) => {
             });
         }
 
+        // Get the books_required_per_semester setting
+        const [settingsResult] = await pool.execute(`
+            SELECT setting_value FROM system_settings WHERE setting_key = 'books_required_per_semester'
+        `);
+        const booksRequired = settingsResult.length > 0 ? parseInt(settingsResult[0].setting_value) || 20 : 20;
+        const nearCompletionThreshold = Math.floor(booksRequired * 0.75); // 75% of requirement
+        const inProgressThreshold = Math.floor(booksRequired * 0.5); // 50% of requirement
+
         const { search, semester, status } = req.query;
         let whereClause = '';
         let params = [];
@@ -1888,7 +1920,7 @@ router.get('/clearance-requirements', auth, async (req, res) => {
 
         // Get students with their semester tracking and clearance status
         const [students] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id_number,
                 u.email,
                 u.first_name,
@@ -1903,38 +1935,38 @@ router.get('/clearance-requirements', auth, async (req, res) => {
                 st.status as semester_status,
                 st.created_at as semester_created,
                 st.updated_at as semester_updated,
-                CASE 
-                    WHEN st.books_borrowed_count >= 20 THEN 'completed'
-                    WHEN st.books_borrowed_count >= 15 THEN 'near_completion'
-                    WHEN st.books_borrowed_count >= 10 THEN 'in_progress'
+                CASE
+                    WHEN st.books_borrowed_count >= ${booksRequired} THEN 'completed'
+                    WHEN st.books_borrowed_count >= ${nearCompletionThreshold} THEN 'near_completion'
+                    WHEN st.books_borrowed_count >= ${inProgressThreshold} THEN 'in_progress'
                     ELSE 'needs_improvement'
                 END as clearance_status,
-                CASE 
-                    WHEN st.books_borrowed_count >= 20 THEN 'Eligible for Clearance'
-                    WHEN st.books_borrowed_count >= 15 THEN CONCAT('Near Completion (', (20 - st.books_borrowed_count), ' books remaining)')
-                    WHEN st.books_borrowed_count >= 10 THEN CONCAT('In Progress (', (20 - st.books_borrowed_count), ' books remaining)')
-                    ELSE CONCAT('Needs Improvement (', (20 - st.books_borrowed_count), ' books remaining)')
+                CASE
+                    WHEN st.books_borrowed_count >= ${booksRequired} THEN 'Eligible for Clearance'
+                    WHEN st.books_borrowed_count >= ${nearCompletionThreshold} THEN CONCAT('Near Completion (', (${booksRequired} - st.books_borrowed_count), ' books remaining)')
+                    WHEN st.books_borrowed_count >= ${inProgressThreshold} THEN CONCAT('In Progress (', (${booksRequired} - st.books_borrowed_count), ' books remaining)')
+                    ELSE CONCAT('Needs Improvement (', (${booksRequired} - st.books_borrowed_count), ' books remaining)')
                 END as clearance_message,
-                (20 - st.books_borrowed_count) as books_remaining,
+                (${booksRequired} - st.books_borrowed_count) as books_remaining,
                 COALESCE(f.unpaid_fines, 0) as unpaid_fines_count,
                 COALESCE(f.unpaid_amount, 0) as unpaid_fines_amount
             FROM users u
             LEFT JOIN semester_tracking st ON u.id_number = st.student_id_number
             LEFT JOIN (
-                SELECT 
+                SELECT
                     student_id_number,
                     COUNT(*) as unpaid_fines,
                     SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount
-                FROM fines 
+                FROM fines
                 WHERE status = 'unpaid'
                 GROUP BY student_id_number
             ) f ON u.id_number = f.student_id_number
             ${whereClause}
-            ORDER BY 
-                CASE 
-                    WHEN st.books_borrowed_count >= 20 THEN 1
-                    WHEN st.books_borrowed_count >= 15 THEN 2
-                    WHEN st.books_borrowed_count >= 10 THEN 3
+            ORDER BY
+                CASE
+                    WHEN st.books_borrowed_count >= ${booksRequired} THEN 1
+                    WHEN st.books_borrowed_count >= ${nearCompletionThreshold} THEN 2
+                    WHEN st.books_borrowed_count >= ${inProgressThreshold} THEN 3
                     ELSE 4
                 END,
                 st.books_borrowed_count DESC,
@@ -1965,13 +1997,14 @@ router.get('/clearance-requirements', auth, async (req, res) => {
                     in_progress: inProgressStudents,
                     needs_improvement: needsImprovementStudents,
                     completion_rate: totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0
-                }
+                },
+                booksRequired: booksRequired
             },
             lastUpdated: new Date().toISOString()
         });
 
     } catch (error) {
-        console.error('Error fetching clearance requirements:', error);
+        logger.error('Error fetching clearance requirements:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch clearance requirements'
@@ -1989,11 +2022,19 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
             });
         }
 
+        // Get the books_required_per_semester setting
+        const [settingsResult] = await pool.execute(`
+            SELECT setting_value FROM system_settings WHERE setting_key = 'books_required_per_semester'
+        `);
+        const booksRequired = settingsResult.length > 0 ? parseInt(settingsResult[0].setting_value) || 20 : 20;
+        const nearCompletionThreshold = Math.floor(booksRequired * 0.75);
+        const inProgressThreshold = Math.floor(booksRequired * 0.5);
+
         const { studentId } = req.params;
 
         // Get student details
         const [studentInfo] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id_number,
                 u.email,
                 u.first_name,
@@ -2015,7 +2056,7 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
 
         // Get semester tracking
         const [semesterTracking] = await pool.execute(`
-            SELECT 
+            SELECT
                 semester_start_date,
                 semester_end_date,
                 books_borrowed_count,
@@ -2030,7 +2071,7 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
 
         // Get current semester books
         const [currentSemesterBooks] = await pool.execute(`
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.borrowed_date,
                 bt.due_date,
@@ -2040,7 +2081,7 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
                 b.author,
                 b.number_code,
                 b.category,
-                CASE 
+                CASE
                     WHEN bt.status = 'returned' THEN 'Returned'
                     WHEN bt.status = 'overdue' THEN 'Overdue'
                     WHEN bt.due_date < CURDATE() AND bt.status = 'borrowed' THEN 'Overdue'
@@ -2055,7 +2096,7 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
 
         // Get fines information
         const [finesInfo] = await pool.execute(`
-            SELECT 
+            SELECT
                 COUNT(*) as total_fines,
                 SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount,
                 COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_fines
@@ -2074,9 +2115,9 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
             semester_updated: null
         };
 
-        const clearanceStatus = currentSemester.books_borrowed_count >= 20 ? 'completed' : 
-                               currentSemester.books_borrowed_count >= 15 ? 'near_completion' :
-                               currentSemester.books_borrowed_count >= 10 ? 'in_progress' : 'needs_improvement';
+        const clearanceStatus = currentSemester.books_borrowed_count >= booksRequired ? 'completed' :
+                               currentSemester.books_borrowed_count >= nearCompletionThreshold ? 'near_completion' :
+                               currentSemester.books_borrowed_count >= inProgressThreshold ? 'in_progress' : 'needs_improvement';
 
         res.json({
             success: true,
@@ -2086,15 +2127,16 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
                 currentSemesterBooks: currentSemesterBooks,
                 finesInfo: finesInfo[0] || { total_fines: 0, unpaid_amount: 0, unpaid_fines: 0 },
                 clearanceStatus: clearanceStatus,
-                booksRemaining: Math.max(0, 20 - currentSemester.books_borrowed_count),
-                clearanceMessage: currentSemester.books_borrowed_count >= 20 ? 
-                    'Eligible for Clearance' : 
-                    `${20 - currentSemester.books_borrowed_count} books remaining to complete clearance requirements`
+                booksRemaining: Math.max(0, booksRequired - currentSemester.books_borrowed_count),
+                booksRequired: booksRequired,
+                clearanceMessage: currentSemester.books_borrowed_count >= booksRequired ?
+                    'Eligible for Clearance' :
+                    `${booksRequired - currentSemester.books_borrowed_count} books remaining to complete clearance requirements`
             }
         });
 
     } catch (error) {
-        console.error('Error fetching student clearance details:', error);
+        logger.error('Error fetching student clearance details:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch student clearance details'
@@ -2106,13 +2148,13 @@ router.get('/clearance-requirements/:studentId', auth, async (req, res) => {
 router.get('/user/:idNumber/clearance', auth, async (req, res) => {
     try {
         const { idNumber } = req.params;
-        
-        console.log('Clearance endpoint called for:', idNumber);
-        console.log('User from token:', req.user);
-        
+
+        logger.info('Clearance endpoint called for:', idNumber);
+        logger.info('User from token:', req.user);
+
         // Verify user can access this data
         if (req.user.type !== 'admin' && req.user.idNumber !== idNumber) {
-            console.log('Access denied for user:', req.user.idNumber, 'requesting:', idNumber);
+            logger.info('Access denied for user:', req.user.idNumber, 'requesting:', idNumber);
             return res.status(403).json({
                 success: false,
                 message: 'Access denied. You can only view your own clearance status.'
@@ -2121,7 +2163,7 @@ router.get('/user/:idNumber/clearance', auth, async (req, res) => {
 
         // Get user's semester tracking
         const [semesterTracking] = await pool.execute(`
-            SELECT 
+            SELECT
                 books_borrowed_count,
                 max_books_allowed,
                 status as semester_status,
@@ -2136,43 +2178,43 @@ router.get('/user/:idNumber/clearance', auth, async (req, res) => {
         // Get current semester books count from semester_tracking table
         const [currentBooks] = await pool.execute(`
             SELECT books_borrowed_count as books_this_semester
-            FROM semester_tracking 
-            WHERE student_id_number = ? 
+            FROM semester_tracking
+            WHERE student_id_number = ?
             ORDER BY created_at DESC
             LIMIT 1
         `, [idNumber]);
 
         // Get fines info
         const [finesInfo] = await pool.execute(`
-            SELECT 
+            SELECT
                 COUNT(*) as total_fines,
                 SUM(fine_amount - COALESCE(paid_amount, 0)) as unpaid_amount,
                 COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_fines
-            FROM fines 
+            FROM fines
             WHERE student_id_number = ?
         `, [idNumber]);
 
         const booksThisSemester = currentBooks[0]?.books_this_semester || 0;
-        
+
         // Get max books allowed from semester tracking
         const [maxBooksData] = await pool.execute(`
             SELECT max_books_allowed
-            FROM semester_tracking 
-            WHERE student_id_number = ? 
+            FROM semester_tracking
+            WHERE student_id_number = ?
             ORDER BY created_at DESC
             LIMIT 1
         `, [idNumber]);
-        
+
         const requiredBooks = maxBooksData[0]?.max_books_allowed || 20;
         const booksRemaining = Math.max(0, requiredBooks - booksThisSemester);
-        
-        console.log('Clearance data for', idNumber, ':', {
+
+        logger.info('Clearance data for', idNumber, ':', {
             booksThisSemester,
             requiredBooks,
             booksRemaining
         });
-        
-        const clearanceStatus = booksThisSemester >= requiredBooks ? 'completed' : 
+
+        const clearanceStatus = booksThisSemester >= requiredBooks ? 'completed' :
                                booksThisSemester >= 15 ? 'near_completion' :
                                booksThisSemester >= 10 ? 'in_progress' : 'needs_improvement';
 
@@ -2184,18 +2226,145 @@ router.get('/user/:idNumber/clearance', auth, async (req, res) => {
                 booksRemaining: booksRemaining,
                 clearanceStatus: clearanceStatus,
                 unpaidFines: finesInfo[0]?.unpaid_amount || 0,
-                clearanceMessage: booksThisSemester >= requiredBooks ? 
-                    'Eligible for Clearance' : 
+                clearanceMessage: booksThisSemester >= requiredBooks ?
+                    'Eligible for Clearance' :
                     `${booksRemaining} books remaining to complete clearance requirements`
             }
         });
 
     } catch (error) {
-        console.error('Error fetching user clearance status:', error);
+        logger.error('Error fetching user clearance status:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch clearance status'
         });
+    }
+});
+
+// DELETE /api/penalty/cleanup-excess-records - Remove excess borrowing records beyond max per semester
+router.delete('/cleanup-excess-records', auth, async (req, res) => {
+    const connection = await pool.getConnection();
+
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        await connection.beginTransaction();
+
+        // Get max books per semester from settings
+        const [settingsResult] = await connection.execute(
+            `SELECT setting_value FROM system_settings WHERE setting_key = 'books_required_per_semester'`
+        );
+        const maxBooksPerSemester = settingsResult.length > 0 ?
+            parseInt(settingsResult[0].setting_value) : 20;
+
+        logger.info(`[INFO] Cleanup: Max books per semester = ${maxBooksPerSemester}`);
+
+        // Get all students with borrowing history
+        const [students] = await connection.execute(
+            `SELECT DISTINCT student_id_number FROM borrowing_transactions`
+        );
+
+        let totalDeleted = 0;
+        let finesDeleted = 0;
+
+        for (const student of students) {
+            const idNumber = student.student_id_number;
+
+            // Get all borrowings for this student, ordered by date
+            const [borrowings] = await connection.execute(
+                `SELECT id, borrowed_date, YEAR(borrowed_date) as year, MONTH(borrowed_date) as month
+                 FROM borrowing_transactions
+                 WHERE student_id_number = ?
+                 ORDER BY borrowed_date DESC`,
+                [idNumber]
+            );
+
+            // Group by semester (academic year pattern: June-May)
+            const semesterGroups = {};
+            for (const b of borrowings) {
+                let academicYearStart;
+                if (b.month >= 6) {
+                    academicYearStart = b.year;
+                } else {
+                    academicYearStart = b.year - 1;
+                }
+
+                let semesterNumber;
+                if (b.month >= 6 && b.month <= 10) {
+                    semesterNumber = 1;
+                } else if (b.month >= 11 || b.month <= 3) {
+                    semesterNumber = 2;
+                } else {
+                    semesterNumber = 3;
+                }
+
+                const key = `${academicYearStart}-${semesterNumber}`;
+                if (!semesterGroups[key]) {
+                    semesterGroups[key] = [];
+                }
+                semesterGroups[key].push(b.id);
+            }
+
+            // Delete excess records for each semester (keep most recent maxBooksPerSemester)
+            for (const [key, transactionIds] of Object.entries(semesterGroups)) {
+                if (transactionIds.length > maxBooksPerSemester) {
+                    // Keep the first maxBooksPerSemester (they're already ordered DESC, so these are most recent)
+                    const idsToDelete = transactionIds.slice(maxBooksPerSemester);
+
+                    if (idsToDelete.length > 0) {
+                        // First delete associated fines
+                        const [fineResult] = await connection.execute(
+                            `DELETE FROM fines WHERE transaction_id IN (${idsToDelete.join(',')})`
+                        );
+                        finesDeleted += fineResult.affectedRows;
+
+                        // Delete overdue history
+                        await connection.execute(
+                            `DELETE FROM overdue_history WHERE transaction_id IN (${idsToDelete.join(',')})`
+                        );
+
+                        // Then delete the transactions
+                        const [result] = await connection.execute(
+                            `DELETE FROM borrowing_transactions WHERE id IN (${idsToDelete.join(',')})`
+                        );
+                        totalDeleted += result.affectedRows;
+
+                        logger.info(`[OK] Student ${idNumber}, Semester ${key}: Deleted ${result.affectedRows} excess records`);
+                    }
+                }
+            }
+        }
+
+        await connection.commit();
+
+        logger.info(`[OK] Cleanup completed: ${totalDeleted} borrowing records deleted, ${finesDeleted} fines deleted`);
+
+        res.json({
+            success: true,
+            message: `Cleanup completed successfully`,
+            data: {
+                maxBooksPerSemester,
+                studentsProcessed: students.length,
+                borrowingRecordsDeleted: totalDeleted,
+                finesDeleted: finesDeleted
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        logger.error('Error cleaning up excess records:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cleanup excess records',
+            error: error.message
+        });
+    } finally {
+        connection.release();
     }
 });
 

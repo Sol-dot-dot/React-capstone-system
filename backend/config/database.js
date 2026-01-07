@@ -9,7 +9,24 @@ const pool = mysql.createPool({
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 30000, // 30 seconds
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
 });
+
+// Test connection on startup
+pool.getConnection()
+    .then(connection => {
+        console.log('[OK] MySQL database connected successfully');
+        connection.release();
+    })
+    .catch(err => {
+        console.error('[ERROR] MySQL connection failed:', err.message);
+        console.error('[INFO] Make sure MySQL is running and the database exists');
+        console.error('[INFO] You can create the database by running:');
+        console.error('  mysql -u root -p -e "CREATE DATABASE capstone_system_optimized;"');
+        console.error('  mysql -u root -p capstone_system_optimized < capstone_system_optimized.sql');
+    });
 
 module.exports = pool;

@@ -183,6 +183,9 @@ const ClearanceRequirements = ({ user }) => {
         if (response.data.success) {
           setStudents(response.data.data.students || []);
           setSummary(response.data.data.summary || {});
+          if (response.data.data.booksRequired) {
+            setBookRequirement(response.data.data.booksRequired);
+          }
         }
       } catch (error) {
         console.error('Error loading clearance data:', error);
@@ -210,6 +213,9 @@ const ClearanceRequirements = ({ user }) => {
         setStudents(response.data.data.students || []);
         setSummary(response.data.data.summary || {});
         setLastUpdated(new Date());
+        if (response.data.data.booksRequired) {
+          setBookRequirement(response.data.data.booksRequired);
+        }
       }
     } catch (error) {
       console.error('Error loading clearance data:', error);
@@ -480,29 +486,6 @@ const ClearanceRequirements = ({ user }) => {
               <CardDescription>
                 Track student progress towards semester book requirements
               </CardDescription>
-              
-              {/* Barcode Scanner Status */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-                    <span className="text-sm font-medium text-blue-700">
-                      {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-blue-600">
-                    <span>Current Field: Student Search</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-blue-600">
-                  <p>💡 <strong>Barcode Scanner Tips:</strong></p>
-                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                    <li>Scan student ID barcode directly into the highlighted field</li>
-                    <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to search automatically</li>
-                    <li>Student clearance status will load automatically after scanning</li>
-                  </ul>
-                </div>
-              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -672,7 +655,7 @@ const ClearanceRequirements = ({ user }) => {
                     <h3 className="font-medium text-slate-900 mb-2">Clearance Status</h3>
                     <div className="text-sm text-slate-600 space-y-1">
                       <p><strong>Status:</strong> {studentDetails.clearanceMessage}</p>
-                      <p><strong>Books This Semester:</strong> {studentDetails.semesterTracking.books_borrowed_count}/{bookRequirement}</p>
+                      <p><strong>Books This Semester:</strong> {studentDetails.semesterTracking.books_borrowed_count}/{studentDetails.booksRequired || bookRequirement}</p>
                       <p><strong>Books Remaining:</strong> {studentDetails.booksRemaining}</p>
                       <p><strong>Max Books Allowed:</strong> {studentDetails.semesterTracking.max_books_allowed}</p>
                       <p><strong>Unpaid Fines:</strong> ₱{studentDetails.finesInfo.unpaid_amount}</p>

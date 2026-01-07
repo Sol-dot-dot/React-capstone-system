@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const natural = require('natural');
 
+const { logger } = require('../config/logger');
 /**
  * User Knowledge Service
  * Provides comprehensive user information and context for the chatbot
@@ -18,7 +19,7 @@ class UserKnowledgeService {
    */
   async getUserKnowledge(studentIdNumber) {
     try {
-      console.log(`[INFO] Building comprehensive user knowledge for: ${studentIdNumber}`);
+      logger.info(`[INFO] Building comprehensive user knowledge for: ${studentIdNumber}`);
 
       const [
         userProfile,
@@ -41,40 +42,40 @@ class UserKnowledgeService {
       const userKnowledge = {
         // Basic Profile
         profile: userProfile,
-        
+
         // Borrowing Information
         borrowing: {
           history: borrowingHistory,
           current: currentBorrowings,
           statistics: readingStats
         },
-        
+
         // Reading Patterns
         reading: {
           preferences: preferences,
           patterns: this.analyzeReadingPatterns(borrowingHistory),
           trends: this.analyzeReadingTrends(borrowingHistory)
         },
-        
+
         // System Status
         status: {
           penalties: penalties,
           activity: activityLogs,
           accountStatus: this.getAccountStatus(userProfile, penalties)
         },
-        
+
         // AI Context
         context: this.generateAIContext(userProfile, borrowingHistory, preferences, penalties),
-        
+
         // Summary for quick reference
         summary: this.generateUserSummary(userProfile, readingStats, preferences)
       };
 
-      console.log(`[OK] User knowledge built successfully for ${studentIdNumber}`);
+      logger.info(`[OK] User knowledge built successfully for ${studentIdNumber}`);
       return userKnowledge;
 
     } catch (error) {
-      console.error('[ERROR] Error building user knowledge:', error);
+      logger.error('[ERROR] Error building user knowledge:', error);
       throw error;
     }
   }
@@ -87,7 +88,7 @@ class UserKnowledgeService {
   async getUserProfile(studentIdNumber) {
     try {
       const [users] = await pool.execute(`
-        SELECT 
+        SELECT
           id,
           id_number,
           first_name,
@@ -97,7 +98,7 @@ class UserKnowledgeService {
           email_verified,
           created_at,
           last_login
-        FROM users 
+        FROM users
         WHERE id_number = ?
       `, [studentIdNumber]);
 
@@ -106,10 +107,10 @@ class UserKnowledgeService {
       }
 
       const user = users[0];
-      
+
       // Calculate account age
       const accountAge = this.calculateAccountAge(user.created_at);
-      
+
       return {
         ...user,
         accountAge,
@@ -118,7 +119,7 @@ class UserKnowledgeService {
         lastLoginFormatted: this.formatDate(user.last_login)
       };
     } catch (error) {
-      console.error('[ERROR] Error getting user profile:', error);
+      logger.error('[ERROR] Error getting user profile:', error);
       return null;
     }
   }
@@ -131,7 +132,7 @@ class UserKnowledgeService {
   async getBorrowingHistory(studentIdNumber) {
     try {
       const [history] = await pool.execute(`
-        SELECT 
+        SELECT
           bt.id as transaction_id,
           bt.borrowed_date,
           bt.due_date,
@@ -147,13 +148,13 @@ class UserKnowledgeService {
           b.isbn,
           b.status as book_status,
           DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.borrowed_date) as days_kept,
-          CASE 
-            WHEN bt.returned_date IS NOT NULL THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.returned_date IS NOT NULL THEN 1
+            ELSE 0
           END as completed_reading,
-          CASE 
-            WHEN bt.returned_date IS NULL AND bt.due_date < NOW() THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.returned_date IS NULL AND bt.due_date < NOW() THEN 1
+            ELSE 0
           END as is_overdue
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
@@ -171,7 +172,7 @@ class UserKnowledgeService {
         readingDuration: this.calculateReadingDuration(record.borrowed_date, record.returned_date)
       }));
     } catch (error) {
-      console.error('[ERROR] Error getting borrowing history:', error);
+      logger.error('[ERROR] Error getting borrowing history:', error);
       return [];
     }
   }
@@ -184,7 +185,7 @@ class UserKnowledgeService {
   async getCurrentBorrowings(studentIdNumber) {
     try {
       const [current] = await pool.execute(`
-        SELECT 
+        SELECT
           bt.id as transaction_id,
           bt.borrowed_date,
           bt.due_date,
@@ -196,13 +197,13 @@ class UserKnowledgeService {
           b.publication_year,
           b.publisher,
           DATEDIFF(bt.due_date, NOW()) as days_until_due,
-          CASE 
-            WHEN bt.due_date < NOW() THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.due_date < NOW() THEN 1
+            ELSE 0
           END as is_overdue
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
-        WHERE bt.student_id_number = ? 
+        WHERE bt.student_id_number = ?
         AND bt.status IN ('borrowed', 'overdue')
         ORDER BY bt.due_date ASC
       `, [studentIdNumber]);
@@ -215,7 +216,7 @@ class UserKnowledgeService {
         urgencyLevel: this.calculateUrgencyLevel(record.due_date)
       }));
     } catch (error) {
-      console.error('[ERROR] Error getting current borrowings:', error);
+      logger.error('[ERROR] Error getting current borrowings:', error);
       return [];
     }
   }
@@ -228,7 +229,7 @@ class UserKnowledgeService {
   async getReadingStatistics(studentIdNumber) {
     try {
       const [stats] = await pool.execute(`
-        SELECT 
+        SELECT
           COUNT(*) as total_borrowed,
           COUNT(CASE WHEN returned_date IS NOT NULL THEN 1 END) as total_returned,
           COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currently_borrowed,
@@ -238,23 +239,23 @@ class UserKnowledgeService {
           MIN(borrowed_date) as first_borrow_date,
           MAX(borrowed_date) as last_borrow_date,
           COUNT(DISTINCT book_id) as unique_books_read
-        FROM borrowing_transactions 
+        FROM borrowing_transactions
         WHERE student_id_number = ?
       `, [studentIdNumber]);
 
       const [monthlyStats] = await pool.execute(`
-        SELECT 
+        SELECT
           DATE_FORMAT(borrowed_date, '%Y-%m') as month,
           COUNT(*) as books_borrowed
-        FROM borrowing_transactions 
-        WHERE student_id_number = ? 
+        FROM borrowing_transactions
+        WHERE student_id_number = ?
         AND borrowed_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
         GROUP BY DATE_FORMAT(borrowed_date, '%Y-%m')
         ORDER BY month DESC
       `, [studentIdNumber]);
 
       const [authorStats] = await pool.execute(`
-        SELECT 
+        SELECT
           b.author,
           COUNT(*) as books_borrowed,
           AVG(DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.borrowed_date)) as avg_reading_days
@@ -274,7 +275,7 @@ class UserKnowledgeService {
         readingStreak: this.calculateReadingStreak(monthlyStats)
       };
     } catch (error) {
-      console.error('[ERROR] Error getting reading statistics:', error);
+      logger.error('[ERROR] Error getting reading statistics:', error);
       return {};
     }
   }
@@ -289,7 +290,7 @@ class UserKnowledgeService {
       // Since user_preferences table doesn't exist, return default preferences
       return this.getDefaultPreferences();
     } catch (error) {
-      console.error('[ERROR] Error getting user preferences:', error);
+      logger.error('[ERROR] Error getting user preferences:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -302,23 +303,23 @@ class UserKnowledgeService {
   async getPenaltyInformation(studentIdNumber) {
     try {
       const [penalties] = await pool.execute(`
-        SELECT 
+        SELECT
           COUNT(*) as total_fines,
           SUM(fine_amount) as total_amount,
           SUM(CASE WHEN status = 'paid' THEN fine_amount ELSE 0 END) as paid_amount,
           SUM(CASE WHEN status = 'unpaid' THEN fine_amount ELSE 0 END) as unpaid_amount,
           COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_fines
-        FROM fines 
+        FROM fines
         WHERE student_id_number = ?
       `, [studentIdNumber]);
 
       const [recentFines] = await pool.execute(`
-        SELECT 
+        SELECT
           id,
           fine_amount as amount,
           status,
           created_at
-        FROM fines 
+        FROM fines
         WHERE student_id_number = ?
         ORDER BY created_at DESC
         LIMIT 5
@@ -335,7 +336,7 @@ class UserKnowledgeService {
         canBorrow: (penalties[0]?.unpaid_fines || 0) === 0
       };
     } catch (error) {
-      console.error('[ERROR] Error getting penalty information:', error);
+      logger.error('[ERROR] Error getting penalty information:', error);
       return { summary: {}, recent: [], hasUnpaidFines: false, canBorrow: true };
     }
   }
@@ -350,7 +351,7 @@ class UserKnowledgeService {
       // Since activity_logs table doesn't exist, return empty array
       return [];
     } catch (error) {
-      console.error('[ERROR] Error getting user activity logs:', error);
+      logger.error('[ERROR] Error getting user activity logs:', error);
       return [];
     }
   }
@@ -388,7 +389,7 @@ class UserKnowledgeService {
 
     const monthlyData = this.groupByMonth(borrowingHistory);
     const trend = this.calculateTrend(monthlyData);
-    
+
     return {
       trend: trend.direction,
       strength: trend.strength,
@@ -470,7 +471,7 @@ RECENT ACTIVITY:
     const created = new Date(createdAt);
     const diffTime = Math.abs(now - created);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 30) return `${diffDays} days`;
     if (diffDays < 365) return `${Math.floor(diffDays / 30)} months`;
     return `${Math.floor(diffDays / 365)} years`;
@@ -499,7 +500,7 @@ RECENT ACTIVITY:
     const due = new Date(dueDate);
     const diffTime = due - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) return 'overdue';
     if (diffDays === 0) return 'due-today';
     if (diffDays <= 2) return 'urgent';
@@ -510,7 +511,7 @@ RECENT ACTIVITY:
   calculateReadingLevel(stats) {
     const totalBooks = stats?.total_borrowed || 0;
     const avgDays = stats?.avg_reading_days || 0;
-    
+
     if (totalBooks === 0) return 'New Reader';
     if (totalBooks < 5) return 'Beginner';
     if (totalBooks < 15) return 'Intermediate';
@@ -520,10 +521,10 @@ RECENT ACTIVITY:
 
   calculateReadingStreak(monthlyStats) {
     if (monthlyStats.length === 0) return 0;
-    
+
     let streak = 0;
     const currentMonth = new Date().toISOString().slice(0, 7);
-    
+
     for (let i = 0; i < monthlyStats.length; i++) {
       if (monthlyStats[i].month === currentMonth || monthlyStats[i].books_borrowed > 0) {
         streak++;
@@ -531,18 +532,18 @@ RECENT ACTIVITY:
         break;
       }
     }
-    
+
     return streak;
   }
 
   calculateReadingFrequency(history) {
     if (history.length === 0) return 'No activity';
-    
+
     const firstBorrow = new Date(history[history.length - 1].borrowed_date);
     const lastBorrow = new Date(history[0].borrowed_date);
     const totalDays = Math.ceil((lastBorrow - firstBorrow) / (1000 * 60 * 60 * 24));
     const booksPerMonth = (history.length / totalDays) * 30;
-    
+
     if (booksPerMonth >= 4) return 'Very Active';
     if (booksPerMonth >= 2) return 'Active';
     if (booksPerMonth >= 1) return 'Moderate';
@@ -561,7 +562,7 @@ RECENT ACTIVITY:
         authorCount[record.author] = (authorCount[record.author] || 0) + 1;
       }
     });
-    
+
     return Object.entries(authorCount)
       .sort(([,a], [,b]) => b - a)
       .map(([author]) => author);
@@ -569,13 +570,13 @@ RECENT ACTIVITY:
 
   calculateReadingSpeed(history) {
     if (history.length === 0) return 'Unknown';
-    
+
     const completedBooks = history.filter(h => h.completed_reading);
     if (completedBooks.length === 0) return 'Unknown';
-    
+
     const totalDays = completedBooks.reduce((sum, book) => sum + book.days_kept, 0);
     const avgDays = totalDays / completedBooks.length;
-    
+
     if (avgDays <= 3) return 'Very Fast';
     if (avgDays <= 7) return 'Fast';
     if (avgDays <= 14) return 'Moderate';
@@ -591,14 +592,14 @@ RECENT ACTIVITY:
 
   calculateDiversityScore(history) {
     if (history.length === 0) return 0;
-    
+
     const uniqueGenres = new Set(history.map(h => h.category)).size;
     const uniqueAuthors = new Set(history.map(h => h.author)).size;
     const totalBooks = history.length;
-    
+
     const genreDiversity = uniqueGenres / Math.min(totalBooks, 10);
     const authorDiversity = uniqueAuthors / Math.min(totalBooks, 10);
-    
+
     return Math.round(((genreDiversity + authorDiversity) / 2) * 100);
   }
 
@@ -647,7 +648,7 @@ RECENT ACTIVITY:
             monthly[month]++;
           }
         } catch (error) {
-          console.log('Invalid date:', record.borrowed_date);
+          logger.info('Invalid date:', record.borrowed_date);
         }
       }
     });
@@ -657,10 +658,10 @@ RECENT ACTIVITY:
   calculateTrend(monthlyData) {
     const months = Object.keys(monthlyData).sort();
     if (months.length < 2) return { direction: 'stable', strength: 0 };
-    
+
     const recent = months.slice(-3).reduce((sum, month) => sum + monthlyData[month], 0);
     const earlier = months.slice(-6, -3).reduce((sum, month) => sum + monthlyData[month], 0);
-    
+
     if (recent > earlier * 1.2) return { direction: 'increasing', strength: 'strong' };
     if (recent < earlier * 0.8) return { direction: 'decreasing', strength: 'strong' };
     return { direction: 'stable', strength: 'moderate' };
@@ -684,10 +685,10 @@ RECENT ACTIVITY:
   calculateMomentum(monthlyData) {
     const months = Object.keys(monthlyData).sort();
     if (months.length < 2) return 'stable';
-    
+
     const recent = months.slice(-2).reduce((sum, month) => sum + monthlyData[month], 0);
     const previous = months.slice(-4, -2).reduce((sum, month) => sum + monthlyData[month], 0);
-    
+
     if (recent > previous * 1.5) return 'accelerating';
     if (recent < previous * 0.5) return 'decelerating';
     return 'stable';

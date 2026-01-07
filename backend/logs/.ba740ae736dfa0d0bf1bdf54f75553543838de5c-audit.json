@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\.ba740ae736dfa0d0bf1bdf54f75553543838de5c-audit.json",
+    "files": [
+        {
+            "date": 1767579959639,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-05.log",
+            "hash": "c59b3eda0b62da982eb737b4682d8461817babef271e189dfe11b5b1e334e70b"
+        },
+        {
+            "date": 1767661593303,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-06.log",
+            "hash": "fbd0038a5a92a93b0996c767c8866a810ff765adf21e748b5a3fc5e1cb1f8cfc"
+        },
+        {
+            "date": 1767748949501,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-07.log",
+            "hash": "6bcee4bd9e90947c183560048d9bbb249a0d9fd9137c28d729f0ed3e089b7bc8"
+        }
+    ],
+    "hashType": "sha256"
+}

@@ -8,10 +8,11 @@ const db = require('../config/database');
 const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 
+const { logger } = require('../config/logger');
 // Initialize vector database when route is loaded
 vectorDBService.initialize().catch(error => {
-  console.error('[ERROR] Failed to initialize vector database:', error.message);
-  console.error('[CRITICAL] Chatbot will not work until AI embeddings are generated successfully');
+  logger.error('[ERROR] Failed to initialize vector database:', error.message);
+  logger.error('[CRITICAL] Chatbot will not work until AI embeddings are generated successfully');
 });
 
 // Add: helper to validate that candidate books exist in DB
@@ -30,7 +31,7 @@ async function filterBooksInDb(books) {
     const order = new Map(ids.map((id, i) => [String(id), i]));
     return rows.sort((a, b) => (order.get(String(a.id)) ?? 0) - (order.get(String(b.id)) ?? 0));
   } catch (e) {
-    console.error('[ERROR] Error filtering books against DB:', e.message);
+    logger.error('[ERROR] Error filtering books against DB:', e.message);
     return [];
   }
 }
@@ -202,7 +203,7 @@ router.get('/vector-integrity', async (req, res) => {
     const report = vectorDBService.getIntegrityReport();
     res.json({ success: true, data: report });
   } catch (error) {
-    console.error('[ERROR] Error generating vector integrity report:', error);
+    logger.error('[ERROR] Error generating vector integrity report:', error);
     res.status(500).json({ success: false, message: 'Failed to build integrity report', error: error.message });
   }
 });
@@ -222,7 +223,7 @@ router.get('/debug-books', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[ERROR] Error in /debug-books:', error);
+    logger.error('[ERROR] Error in /debug-books:', error);
     res.status(500).json({ success: false, message: 'Failed to get debug books', error: error.message });
   }
 });
@@ -231,17 +232,17 @@ router.get('/debug-books', async (req, res) => {
 router.post('/simple', async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     if (!message || typeof message !== 'string' || message.length < 1) {
       return res.status(400).json({
         success: false,
         message: 'Message is required and must be at least 1 character'
       });
     }
-    
+
     // Simple response without AI
     const response = "I'm a simple chatbot. For full AI-powered book recommendations, please use the main chatbot endpoint.";
-    
+
     res.json({
       success: true,
       data: {
@@ -252,7 +253,7 @@ router.post('/simple', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[ERROR] Simple chatbot error:', error);
+    logger.error('[ERROR] Simple chatbot error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing your request',
@@ -264,7 +265,7 @@ router.post('/simple', async (req, res) => {
 // Enhanced book request detection function
 function detectBookRequest(message) {
   const query = message.toLowerCase();
-  
+
   // Direct book-related keywords
   const bookKeywords = [
     'book', 'books', 'novel', 'novels', 'story', 'stories', 'read', 'reading',
@@ -273,7 +274,7 @@ function detectBookRequest(message) {
     'autobiography', 'memoir', 'textbook', 'textbooks', 'manual', 'manuals',
     'guide', 'guides', 'tutorial', 'tutorials', 'reference', 'references'
   ];
-  
+
   // Recommendation keywords
   const recommendationKeywords = [
     'recommend', 'recommendation', 'recommendations', 'suggest', 'suggestion',
@@ -282,7 +283,7 @@ function detectBookRequest(message) {
     'need a book', 'want a book', 'good book', 'best book', 'favorite book',
     'popular book', 'trending book', 'new book', 'latest book'
   ];
-  
+
   // Subject/topic keywords that might relate to books
   const subjectKeywords = [
     'learn', 'learning', 'study', 'studying', 'education', 'academic',
@@ -292,7 +293,7 @@ function detectBookRequest(message) {
     'music', 'film', 'cinema', 'photography', 'cooking', 'travel', 'health',
     'fitness', 'sports', 'gaming', 'comics', 'manga', 'anime'
   ];
-  
+
   // Question patterns that might be about books
   const questionPatterns = [
     /what.*book/i,
@@ -306,75 +307,75 @@ function detectBookRequest(message) {
     /give.*me/i,
     /any.*good/i
   ];
-  
+
   // Check for direct book keywords
   const hasBookKeywords = bookKeywords.some(keyword => query.includes(keyword));
-  
+
   // Check for recommendation keywords
   const hasRecommendationKeywords = recommendationKeywords.some(keyword => query.includes(keyword));
-  
+
   // Check for subject keywords (but only if combined with other indicators)
   const hasSubjectKeywords = subjectKeywords.some(keyword => query.includes(keyword));
-  
+
   // Check for question patterns
   const hasQuestionPatterns = questionPatterns.some(pattern => pattern.test(query));
-  
+
   // Check for specific phrases that indicate book interest
   const bookPhrases = [
     'what to read', 'what should i read', 'book about', 'books on',
     'learn about', 'study about', 'read about', 'interested in',
     'curious about', 'want to know', 'need to learn', 'help with'
   ];
-  
+
   const hasBookPhrases = bookPhrases.some(phrase => query.includes(phrase));
-  
+
   // Decision logic: more flexible detection
   if (hasBookKeywords || hasRecommendationKeywords || hasBookPhrases) {
     return true;
   }
-  
+
   // If it has subject keywords AND is a question/request, likely about books
   if (hasSubjectKeywords && (hasQuestionPatterns || query.includes('?'))) {
     return true;
   }
-  
+
   // If it's a general question about learning/studying, likely wants book recommendations
   if (query.includes('learn') || query.includes('study') || query.includes('education')) {
     return true;
   }
-  
+
   // If it's asking for help with a specific topic, likely wants books
   if (query.includes('help') && (hasSubjectKeywords || query.includes('with'))) {
     return true;
   }
-  
+
   return false;
 }
 
 // Validate that books actually exist in the database
 async function validateBooksInDatabase(books) {
   if (!books || books.length === 0) return [];
-  
+
   try {
     const bookIds = books.map(book => book.id).filter(id => id);
     if (bookIds.length === 0) return [];
-    
+
     const placeholders = bookIds.map(() => '?').join(',');
     const [existingBooks] = await db.execute(
       `SELECT id, title, author, status, available_copies FROM books WHERE id IN (${placeholders})`,
       bookIds
     );
-    
+
     // Filter to only include books that actually exist in DB
-    const validBooks = books.filter(book => 
+    const validBooks = books.filter(book =>
       existingBooks.some(dbBook => dbBook.id === book.id)
     );
-    
-    console.log(`[OK] Validated ${validBooks.length}/${books.length} books exist in database`);
+
+    logger.info(`[OK] Validated ${validBooks.length}/${books.length} books exist in database`);
     return validBooks;
-    
+
   } catch (error) {
-    console.error('[ERROR] Error validating books in database:', error);
+    logger.error('[ERROR] Error validating books in database:', error);
     return []; // Return empty array if validation fails
   }
 }
@@ -383,7 +384,7 @@ async function validateBooksInDatabase(books) {
 router.post('/recommend', async (req, res) => {
   try {
     const { message, studentIdNumber, conversationHistory = [], explain = false } = req.body;
-    
+
     // Manual validation
     if (!message || typeof message !== 'string') {
       return res.status(400).json({
@@ -391,14 +392,14 @@ router.post('/recommend', async (req, res) => {
         message: 'Message is required and must be a string'
       });
     }
-    
+
     if (message.length < 1 || message.length > 500) {
       return res.status(400).json({
         success: false,
         message: 'Message must be between 1 and 500 characters'
       });
     }
-    
+
     // Validate studentIdNumber if provided
     if (studentIdNumber !== undefined && studentIdNumber !== null && studentIdNumber !== '') {
       if (typeof studentIdNumber !== 'string' || studentIdNumber.length < 1 || studentIdNumber.length > 20) {
@@ -408,26 +409,26 @@ router.post('/recommend', async (req, res) => {
         });
       }
     }
-    
-    console.log('[CHATBOT] Chatbot request received:', { 
-      message: message?.substring(0, 50) + '...', 
+
+    logger.info('[CHATBOT] Chatbot request received:', {
+      message: message?.substring(0, 50) + '...',
       hasStudentId: !!studentIdNumber,
       studentIdLength: studentIdNumber?.length || 0
     });
-    
+
     // Check if vector database is properly initialized
     if (!vectorDBService.isInitialized || !vectorDBService.useRealEmbeddings) {
-      console.error('[ERROR] Vector database not initialized');
+      logger.error('[ERROR] Vector database not initialized');
       return res.status(503).json({
         success: false,
         message: 'AI service is not ready. Please wait for initialization to complete or check server logs.',
         error: 'Vector database not initialized with AI embeddings'
       });
     }
-    
+
     // Enhanced book request detection - more flexible and intelligent
     const isBookRequest = detectBookRequest(message);
-    
+
     let response;
     let books = [];
 
@@ -435,18 +436,18 @@ router.post('/recommend', async (req, res) => {
       try {
         // Use advanced hybrid recommendations if student ID is provided
         if (studentIdNumber) {
-          console.log('[INFO] Using advanced hybrid recommendations');
+          logger.info('[INFO] Using advanced hybrid recommendations');
           const advancedResult = await chatbotService.generateAdvancedRecommendations(studentIdNumber, message, 5);
-          
+
           // Validate returned books against DB and improve topical accuracy
           books = await filterBooksInDb(advancedResult.recommendations || []);
           const rankedAdv = rankBooksAgainstQuery(books, message);
           books = rankedAdv.ranked.slice(0, 5);
-          
+
           // Double-check that all books exist in database
           books = await validateBooksInDatabase(books);
           response = buildSafeRecommendationsMessage(books, message);
-          
+
           // Add additional metadata
           const metadata = {
             recommendationEngine: advancedResult.recommendationEngine,
@@ -454,7 +455,7 @@ router.post('/recommend', async (req, res) => {
             userProfile: advancedResult.userProfile,
             sources: books.map(book => book.sources || []).flat()
           };
-          
+
           res.json({
             success: true,
             data: {
@@ -474,13 +475,13 @@ router.post('/recommend', async (req, res) => {
           books = await filterBooksInDb(books);
           const ranked = rankBooksAgainstQuery(books, message);
           books = ranked.ranked.slice(0, 5);
-          
+
           // Validate books exist in database
           books = await validateBooksInDatabase(books);
           response = buildSafeRecommendationsMessage(books, message);
         }
       } catch (searchError) {
-        console.error('[ERROR] Error in book search:', searchError.message);
+        logger.error('[ERROR] Error in book search:', searchError.message);
         // Graceful fallback for RAG failures
         response = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for? For example, you could mention a specific category, author, or describe the type of story you want to read.";
         books = [];
@@ -504,7 +505,7 @@ router.post('/recommend', async (req, res) => {
           response = await chatbotService.getEnhancedGeneralResponse(contextualMessage, studentIdNumber);
         }
       } catch (chatError) {
-        console.error('[ERROR] Error generating chat response:', chatError.message);
+        logger.error('[ERROR] Error generating chat response:', chatError.message);
         return res.status(500).json({
           success: false,
           message: 'Failed to generate response. Please try again.',
@@ -524,7 +525,7 @@ router.post('/recommend', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[ERROR] Chatbot error:', error);
+    logger.error('[ERROR] Chatbot error:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing your request',
@@ -545,7 +546,7 @@ router.get('/history', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error getting chat history:', error);
+    logger.error('Error getting chat history:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting chat history'
@@ -562,35 +563,10 @@ router.post('/refresh-index', async (req, res) => {
       message: 'AI vector database refreshed successfully'
     });
   } catch (error) {
-    console.error('[ERROR] Error refreshing vector database:', error);
+    logger.error('[ERROR] Error refreshing vector database:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to refresh AI vector database',
-      error: error.message
-    });
-  }
-});
-
-// Get vector database status
-router.get('/status', async (req, res) => {
-  try {
-    const status = {
-      isInitialized: vectorDBService.isInitialized,
-      useRealEmbeddings: vectorDBService.useRealEmbeddings,
-      bookCount: vectorDBService.books.length,
-      embeddingCount: vectorDBService.embeddings.length,
-      hasEmbeddings: vectorDBService.embeddings.length > 0
-    };
-
-    res.json({
-      success: true,
-      data: status
-    });
-  } catch (error) {
-    console.error('[ERROR] Error getting vector database status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'An error occurred while getting status',
       error: error.message
     });
   }
@@ -623,7 +599,7 @@ router.post('/personalized', [
     });
 
   } catch (error) {
-    console.error('[ERROR] Error generating personalized recommendations:', error);
+    logger.error('[ERROR] Error generating personalized recommendations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while generating personalized recommendations',
@@ -660,7 +636,7 @@ router.post('/advanced-recommendations', [
     });
 
   } catch (error) {
-    console.error('[ERROR] Error generating advanced recommendations:', error);
+    logger.error('[ERROR] Error generating advanced recommendations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while generating advanced recommendations',
@@ -689,7 +665,7 @@ router.post('/feedback', [
     const { messageId, feedback, studentIdNumber } = req.body;
 
     // Log feedback for analytics
-    console.log(`[INFO] User feedback received:`, {
+    logger.info(`[INFO] User feedback received:`, {
       messageId,
       feedback,
       studentIdNumber,
@@ -710,7 +686,7 @@ router.post('/feedback', [
     });
 
   } catch (error) {
-    console.error('[ERROR] Error processing feedback:', error);
+    logger.error('[ERROR] Error processing feedback:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while processing feedback',
@@ -740,7 +716,7 @@ router.get('/user-knowledge/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[ERROR] Error getting user knowledge:', error);
+    logger.error('[ERROR] Error getting user knowledge:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting user knowledge',
@@ -774,7 +750,7 @@ router.get('/conversation-starter/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[ERROR] Error getting conversation starter:', error);
+    logger.error('[ERROR] Error getting conversation starter:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting conversation starter',
@@ -804,7 +780,7 @@ router.get('/reading-history/:studentIdNumber', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[ERROR] Error analyzing reading history:', error);
+    logger.error('[ERROR] Error analyzing reading history:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while analyzing reading history',
@@ -817,7 +793,7 @@ router.get('/reading-history/:studentIdNumber', async (req, res) => {
 router.get('/analytics', auth, async (req, res) => {
   try {
     // Check if user is admin
-    if (req.user.userType !== 'admin') {
+    if (req.user.type !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -833,7 +809,7 @@ router.get('/analytics', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[ERROR] Error getting reading analytics:', error);
+    logger.error('[ERROR] Error getting reading analytics:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while getting reading analytics',

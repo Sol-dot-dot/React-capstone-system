@@ -3,14 +3,15 @@ const router = express.Router();
 const db = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 
+const { logger } = require('../config/logger');
 // Get comprehensive dashboard statistics
 router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
   try {
     const connection = await db.getConnection();
-    
+
     // User Statistics
     const [userStats] = await connection.execute(`
-      SELECT 
+      SELECT
         COUNT(*) as totalUsers,
         COUNT(CASE WHEN email_verified = 1 THEN 1 END) as verifiedUsers,
         COUNT(CASE WHEN DATE(last_login) = CURDATE() THEN 1 END) as todayLogins,
@@ -21,7 +22,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // Book Statistics
     const [bookStats] = await connection.execute(`
-      SELECT 
+      SELECT
         COUNT(*) as totalBooks,
         COUNT(CASE WHEN status = 'available' THEN 1 END) as availableBooks,
         COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as borrowedBooks,
@@ -32,7 +33,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // Borrowing Statistics
     const [borrowingStats] = await connection.execute(`
-      SELECT 
+      SELECT
         COUNT(CASE WHEN status IN ('borrowed', 'overdue') THEN 1 END) as currentlyBorrowed,
         COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdueBooks,
         COUNT(CASE WHEN DATE(borrowed_date) = CURDATE() THEN 1 END) as todayBorrowings,
@@ -43,7 +44,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // Penalty Statistics
     const [penaltyStats] = await connection.execute(`
-      SELECT 
+      SELECT
         COUNT(*) as totalFines,
         COUNT(CASE WHEN paid_amount = 0 THEN 1 END) as unpaidFines,
         COALESCE(SUM(fine_amount), 0) as totalAmount,
@@ -54,7 +55,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // Activity Statistics
     const [activityStats] = await connection.execute(`
-      SELECT 
+      SELECT
         COUNT(*) as totalLogs,
         COUNT(CASE WHEN DATE(login_time) = CURDATE() THEN 1 END) as todayLogins,
         COUNT(CASE WHEN DATE(login_time) = CURDATE() THEN 1 END) as todayLogins,
@@ -65,7 +66,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // Recent Activity
     const [recentActivity] = await connection.execute(`
-      SELECT 
+      SELECT
         ll.id,
         ll.login_time as time,
         ll.user_type,
@@ -80,7 +81,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
 
     // System Health
     const [systemHealth] = await connection.execute(`
-      SELECT 
+      SELECT
         'Online' as status,
         NOW() as lastCheck,
         (SELECT COUNT(*) FROM users WHERE last_login > DATE_SUB(NOW(), INTERVAL 1 HOUR)) as activeUsers
@@ -95,7 +96,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
         todayLogins: userStats[0].todayLogins,
         students: userStats[0].totalStudents,
         admins: userStats[0].totalAdmins,
-        verificationRate: userStats[0].totalUsers > 0 ? 
+        verificationRate: userStats[0].totalUsers > 0 ?
           Math.round((userStats[0].verifiedUsers / userStats[0].totalUsers) * 100) : 0
       },
       books: {
@@ -146,7 +147,7 @@ router.get('/api/dashboard/stats', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Dashboard stats error:', error);
+    logger.error('Dashboard stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard statistics',

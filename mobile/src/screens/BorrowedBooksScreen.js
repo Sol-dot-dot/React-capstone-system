@@ -28,6 +28,7 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
   const [recommendedBooks, setRecommendedBooks] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [expandedBookId, setExpandedBookId] = useState(null);
 
   useEffect(() => {
     loadBorrowedBooks();
@@ -306,55 +307,159 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
     </Animatable.View>
   );
 
-  const renderRecommendedBook = (book, index) => (
-    <Animatable.View
-      key={book.id || index}
-      animation="fadeInUp"
-      duration={600}
-      delay={index * 100}
-      style={styles.recommendedBookCard}
-    >
-      <ModernCard style={styles.recommendedBook}>
-        <View style={styles.recommendedBookHeader}>
-          <View style={styles.recommendedBookInfo}>
-            <Text style={styles.recommendedBookTitle} numberOfLines={2}>
-              {book.title}
-            </Text>
-            <Text style={styles.recommendedBookAuthor} numberOfLines={1}>
-              by {book.author}
-            </Text>
-            {book.genre && (
-              <Text style={styles.recommendedBookGenre}>{book.genre}</Text>
+  const toggleBookExpansion = (bookId) => {
+    setExpandedBookId(expandedBookId === bookId ? null : bookId);
+  };
+
+  const renderRecommendedBook = (book, index) => {
+    const isExpanded = expandedBookId === book.id;
+
+    return (
+      <Animatable.View
+        key={book.id || index}
+        animation="fadeInUp"
+        duration={600}
+        delay={index * 100}
+        style={styles.recommendedBookCard}
+      >
+        <ModernCard style={styles.recommendedBook}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => toggleBookExpansion(book.id)}
+          >
+            <View style={styles.recommendedBookHeader}>
+              <View style={styles.recommendedBookInfo}>
+                <Text style={styles.recommendedBookTitle} numberOfLines={isExpanded ? undefined : 2}>
+                  {book.title}
+                </Text>
+                <Text style={styles.recommendedBookAuthor} numberOfLines={1}>
+                  by {book.author}
+                </Text>
+                {book.category && (
+                  <Text style={styles.recommendedBookGenre}>{book.category}</Text>
+                )}
+              </View>
+              <Icon
+                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={ModernTheme.colors.textSecondary}
+              />
+            </View>
+
+            {book.description && (
+              <Text style={styles.recommendedBookDescription} numberOfLines={isExpanded ? undefined : 2}>
+                {book.description}
+              </Text>
             )}
-          </View>
-        </View>
-        
-        {book.description && (
-          <Text style={styles.recommendedBookDescription} numberOfLines={2}>
-            {book.description}
-          </Text>
-        )}
-        
-        <View style={styles.recommendedBookFooter}>
-          <View style={styles.recommendedBookMeta}>
-            <Icon name="library-outline" size={14} color={ModernTheme.colors.textTertiary} />
-            <Text style={styles.recommendedBookCode}>Code: {book.number_code || book.isbn}</Text>
-          </View>
-          {book.availability && (
-            <ModernBadge
-              text={book.availability}
-              variant={
-                book.status === 'available' ? 'success' : 
-                book.status === 'borrowed' ? 'warning' : 
-                'error'
-              }
-              size="small"
-            />
+
+            <View style={styles.recommendedBookFooter}>
+              <View style={styles.recommendedBookMeta}>
+                <Icon name="library-outline" size={14} color={ModernTheme.colors.textTertiary} />
+                <Text style={styles.recommendedBookCode}>Code: {book.number_code || book.isbn}</Text>
+              </View>
+              {book.availability && (
+                <ModernBadge
+                  text={book.availability}
+                  variant={
+                    book.status === 'available' ? 'success' :
+                    book.status === 'borrowed' ? 'warning' :
+                    'error'
+                  }
+                  size="small"
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* Expanded Details */}
+          {isExpanded && (
+            <Animatable.View
+              animation="fadeIn"
+              duration={300}
+              style={styles.expandedDetails}
+            >
+              <View style={styles.expandedDivider} />
+
+              <Text style={styles.expandedSectionTitle}>Book Details</Text>
+
+              <View style={styles.expandedGrid}>
+                {book.isbn && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="barcode-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>ISBN</Text>
+                      <Text style={styles.expandedValue}>{book.isbn}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {book.publisher && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="business-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>Publisher</Text>
+                      <Text style={styles.expandedValue} numberOfLines={2}>{book.publisher}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {book.publication_year && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="calendar-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>Year</Text>
+                      <Text style={styles.expandedValue}>{book.publication_year}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {book.pages && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="document-text-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>Pages</Text>
+                      <Text style={styles.expandedValue}>{book.pages}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {book.category && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="pricetag-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>Category</Text>
+                      <Text style={styles.expandedValue}>{book.category}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {(book.available_copies !== undefined || book.book_copies !== undefined) && (
+                  <View style={styles.expandedItem}>
+                    <Icon name="copy-outline" size={16} color={ModernTheme.colors.primary} />
+                    <View style={styles.expandedItemText}>
+                      <Text style={styles.expandedLabel}>Copies</Text>
+                      <Text style={styles.expandedValue}>
+                        {book.available_copies !== undefined ? book.available_copies : '?'} / {book.book_copies || '?'} available
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {book.status === 'available' && (
+                <View style={styles.availableHint}>
+                  <Icon name="checkmark-circle" size={16} color={ModernTheme.colors.success} />
+                  <Text style={styles.availableHintText}>
+                    This book is available! Visit the library to borrow it.
+                  </Text>
+                </View>
+              )}
+            </Animatable.View>
           )}
-        </View>
-      </ModernCard>
-    </Animatable.View>
-  );
+        </ModernCard>
+      </Animatable.View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -438,58 +543,60 @@ const BorrowedBooksScreen = ({ userData, onBack }) => {
             <View style={styles.booksContainer}>
               {borrowedBooks.map((book, index) => renderBookCard(book, index))}
             </View>
-
-            {/* Recommended Books Section */}
-            <Animatable.View
-              animation="fadeInUp"
-              duration={600}
-              delay={400}
-              style={styles.recommendationsSection}
-            >
-              <View style={styles.recommendationsHeader}>
-                <View style={styles.recommendationsTitleContainer}>
-                  <Icon name="sparkles-outline" size={20} color={ModernTheme.colors.primary} />
-                  <Text style={styles.recommendationsTitle}>Recommended for You</Text>
-                </View>
-                <Text style={styles.recommendationsSubtitle}>
-                  Based on your reading history and patterns
-                </Text>
-              </View>
-
-              {!showRecommendations ? (
-                <TouchableOpacity
-                  style={styles.getRecommendationsButton}
-                  onPress={getPersonalizedRecommendations}
-                  disabled={loadingRecommendations}
-                >
-                  {loadingRecommendations ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <>
-                      <Icon name="book-outline" size={16} color="#ffffff" />
-                      <Text style={styles.getRecommendationsButtonText}>
-                        Get Smart Recommendations
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.recommendedBooksContainer}>
-                  {recommendedBooks.length > 0 ? (
-                    recommendedBooks.map((book, index) => renderRecommendedBook(book, index))
-                  ) : (
-                    <View style={styles.noRecommendationsContainer}>
-                      <Icon name="book-outline" size={32} color={ModernTheme.colors.textMuted} />
-                      <Text style={styles.noRecommendationsText}>
-                        No recommendations available at the moment.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </Animatable.View>
           </>
         )}
+
+        {/* Recommended Books Section - Always visible */}
+        <Animatable.View
+          animation="fadeInUp"
+          duration={600}
+          delay={borrowedBooks.length === 0 ? 200 : 400}
+          style={styles.recommendationsSection}
+        >
+          <View style={styles.recommendationsHeader}>
+            <View style={styles.recommendationsTitleContainer}>
+              <Icon name="sparkles-outline" size={20} color={ModernTheme.colors.primary} />
+              <Text style={styles.recommendationsTitle}>Recommended for You</Text>
+            </View>
+            <Text style={styles.recommendationsSubtitle}>
+              {borrowedBooks.length > 0
+                ? 'Based on your reading history and patterns'
+                : 'Discover books you might enjoy'}
+            </Text>
+          </View>
+
+          {!showRecommendations ? (
+            <TouchableOpacity
+              style={styles.getRecommendationsButton}
+              onPress={getPersonalizedRecommendations}
+              disabled={loadingRecommendations}
+            >
+              {loadingRecommendations ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Icon name="book-outline" size={16} color="#ffffff" />
+                  <Text style={styles.getRecommendationsButtonText}>
+                    Get Smart Recommendations
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.recommendedBooksContainer}>
+              {recommendedBooks.length > 0 ? (
+                recommendedBooks.map((book, index) => renderRecommendedBook(book, index))
+              ) : (
+                <View style={styles.noRecommendationsContainer}>
+                  <Icon name="book-outline" size={32} color={ModernTheme.colors.textMuted} />
+                  <Text style={styles.noRecommendationsText}>
+                    No recommendations available at the moment.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </Animatable.View>
       </ScrollView>
     </View>
   );
@@ -768,6 +875,67 @@ const styles = StyleSheet.create({
     color: ModernTheme.colors.textSecondary,
     marginTop: ModernTheme.spacing.sm,
     textAlign: 'center',
+  },
+  // Expanded Book Details Styles
+  expandedDetails: {
+    marginTop: ModernTheme.spacing.md,
+  },
+  expandedDivider: {
+    height: 1,
+    backgroundColor: ModernTheme.colors.border,
+    marginBottom: ModernTheme.spacing.md,
+  },
+  expandedSectionTitle: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: ModernTheme.spacing.md,
+  },
+  expandedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -ModernTheme.spacing.xs,
+  },
+  expandedItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    width: '50%',
+    paddingHorizontal: ModernTheme.spacing.xs,
+    marginBottom: ModernTheme.spacing.md,
+  },
+  expandedItemText: {
+    marginLeft: ModernTheme.spacing.sm,
+    flex: 1,
+  },
+  expandedLabel: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  expandedValue: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textPrimary,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  availableHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: ModernTheme.colors.success + '15',
+    padding: ModernTheme.spacing.md,
+    borderRadius: ModernTheme.borderRadius.md,
+    marginTop: ModernTheme.spacing.sm,
+  },
+  availableHintText: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.success,
+    marginLeft: ModernTheme.spacing.sm,
+    flex: 1,
+    fontWeight: '500',
   },
 });
 

@@ -18,15 +18,15 @@ const logFormat = winston.format.combine(
   winston.format.json(),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
     let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-    
+
     if (stack) {
       log += `\n${stack}`;
     }
-    
+
     if (Object.keys(meta).length > 0) {
       log += `\n${JSON.stringify(meta, null, 2)}`;
     }
-    
+
     return log;
   })
 );
@@ -44,7 +44,7 @@ const logger = winston.createLogger({
         winston.format.simple()
       )
     }),
-    
+
     // General application logs
     new DailyRotateFile({
       filename: path.join(logsDir, 'application-%DATE%.log'),
@@ -53,7 +53,7 @@ const logger = winston.createLogger({
       maxFiles: '14d',
       level: 'info'
     }),
-    
+
     // Error logs
     new DailyRotateFile({
       filename: path.join(logsDir, 'error-%DATE%.log'),
@@ -62,7 +62,7 @@ const logger = winston.createLogger({
       maxFiles: '30d',
       level: 'error'
     }),
-    
+
     // Audit logs
     new DailyRotateFile({
       filename: path.join(logsDir, 'audit-%DATE%.log'),
@@ -71,7 +71,7 @@ const logger = winston.createLogger({
       maxFiles: '90d',
       level: 'audit'
     }),
-    
+
     // Performance logs
     new DailyRotateFile({
       filename: path.join(logsDir, 'performance-%DATE%.log'),
@@ -81,7 +81,7 @@ const logger = winston.createLogger({
       level: 'performance'
     })
   ],
-  
+
   // Handle exceptions and rejections
   exceptionHandlers: [
     new DailyRotateFile({
@@ -91,7 +91,7 @@ const logger = winston.createLogger({
       maxFiles: '30d'
     })
   ],
-  
+
   rejectionHandlers: [
     new DailyRotateFile({
       filename: path.join(logsDir, 'rejections-%DATE%.log'),
@@ -150,13 +150,13 @@ const requestLogger = (req, res, next) => {
       userId: req.user?.id || null,
       studentId: req.user?.id_number || null
     };
-    
+
     if (res.statusCode >= 400) {
       logger.error('HTTP Request Error', logData);
     } else {
       logger.api('HTTP Request', logData);
     }
-    
+
     // Log performance for slow requests
     if (duration > 1000) {
       logger.performance('Slow Request Detected', {
@@ -165,7 +165,7 @@ const requestLogger = (req, res, next) => {
       });
     }
   });
-  
+
   next();
 };
 
@@ -180,7 +180,7 @@ const errorLogger = (err, req, res, next) => {
     userId: req.user?.id || null,
     studentId: req.user?.id_number || null
   });
-  
+
   next(err);
 };
 
@@ -189,4 +189,3 @@ module.exports = {
   requestLogger,
   errorLogger
 };
-

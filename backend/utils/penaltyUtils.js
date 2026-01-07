@@ -1,41 +1,49 @@
 const db = require('../config/database');
 
+const { logger } = require('../config/logger');
 // Centralized function to calculate overdue days consistently
 function calculateOverdueDays(dueDate, currentDate = new Date()) {
     const due = new Date(dueDate);
     const now = new Date(currentDate);
-    
+
     // Reset time to compare only dates (avoid timezone issues)
     due.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
-    
+
     // If due date is in the future or today, not overdue
     if (due >= now) {
         return 0;
     }
-    
+
     // Calculate days overdue
     const timeDiff = now - due;
     const daysOverdue = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-    
+
     return Math.max(0, daysOverdue);
 }
 
 // Get system settings
 async function getSystemSettings() {
     try {
+        // Get only the most recent entry for each setting_key (handles duplicates)
         const [rows] = await db.execute(
-            'SELECT setting_key, setting_value FROM system_settings'
+            `SELECT s1.setting_key, s1.setting_value
+             FROM system_settings s1
+             INNER JOIN (
+                 SELECT setting_key, MAX(updated_at) as max_updated
+                 FROM system_settings
+                 GROUP BY setting_key
+             ) s2 ON s1.setting_key = s2.setting_key AND s1.updated_at = s2.max_updated`
         );
-        
+
         const settings = {};
         rows.forEach(row => {
             settings[row.setting_key] = row.setting_value;
         });
-        
+
         return settings;
     } catch (error) {
-        console.error('Error getting system settings:', error);
+        logger.error('Error getting system settings:', error);
         throw error;
     }
 }
@@ -43,18 +51,31 @@ async function getSystemSettings() {
 // Update system setting
 async function updateSystemSetting(key, value, adminId) {
     try {
-        await db.execute(
-            `INSERT INTO system_settings (setting_key, setting_value, updated_by) 
-             VALUES (?, ?, ?) 
-             ON DUPLICATE KEY UPDATE 
-             setting_value = VALUES(setting_value), 
-             updated_by = VALUES(updated_by), 
-             updated_at = CURRENT_TIMESTAMP`,
-            [key, value, adminId]
+        // First check if setting exists
+        const [existing] = await db.execute(
+            'SELECT id FROM system_settings WHERE setting_key = ? LIMIT 1',
+            [key]
         );
+
+        if (existing.length > 0) {
+            // Update existing setting
+            await db.execute(
+                `UPDATE system_settings
+                 SET setting_value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE setting_key = ?`,
+                [value, adminId, key]
+            );
+        } else {
+            // Insert new setting
+            await db.execute(
+                `INSERT INTO system_settings (setting_key, setting_value, updated_by)
+                 VALUES (?, ?, ?)`,
+                [key, value, adminId]
+            );
+        }
         return true;
     } catch (error) {
-        console.error('Error updating system setting:', error);
+        logger.error('Error updating system setting:', error);
         throw error;
     }
 }
@@ -63,7 +84,7 @@ async function updateSystemSetting(key, value, adminId) {
 async function calculateFine(transactionId) {
     try {
         const [rows] = await db.execute(
-            `SELECT 
+            `SELECT
                 bt.id,
                 bt.student_id_number,
                 bt.due_date,
@@ -88,7 +109,7 @@ async function calculateFine(transactionId) {
         }
 
         const daysOverdue = calculateOverdueDays(transaction.due_date);
-        
+
         if (daysOverdue === 0) {
             return { fineAmount: 0, daysOverdue: 0 };
         }
@@ -103,7 +124,7 @@ async function calculateFine(transactionId) {
             transaction: transaction
         };
     } catch (error) {
-        console.error('Error calculating fine:', error);
+        logger.error('Error calculating fine:', error);
         throw error;
     }
 }
@@ -112,13 +133,13 @@ async function calculateFine(transactionId) {
 async function createOrUpdateFine(transactionId, adminId) {
     try {
         const fineCalculation = await calculateFine(transactionId);
-        
+
         if (fineCalculation.fineAmount === 0) {
             return { created: false, message: 'No fine needed' };
         }
 
         const connection = await db.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
@@ -132,10 +153,10 @@ async function createOrUpdateFine(transactionId, adminId) {
                 const existingFine = existingFines[0];
                 const newTotalFine = fineCalculation.fineAmount;
                 const remainingAmount = newTotalFine - existingFine.paid_amount;
-                
+
                 if (remainingAmount > 0) {
                     await connection.execute(
-                        `UPDATE fines 
+                        `UPDATE fines
                          SET fine_amount = ?, days_overdue = ?, updated_at = CURRENT_TIMESTAMP
                          WHERE transaction_id = ?`,
                         [newTotalFine, fineCalculation.daysOverdue, transactionId]
@@ -144,8 +165,8 @@ async function createOrUpdateFine(transactionId, adminId) {
             } else {
                 // Create new fine record
                 await connection.execute(
-                    `INSERT INTO fines 
-                     (student_id_number, transaction_id, fine_amount, days_overdue, fine_date) 
+                    `INSERT INTO fines
+                     (student_id_number, transaction_id, fine_amount, days_overdue, fine_date)
                      VALUES (?, ?, ?, ?, CURDATE())`,
                     [
                         fineCalculation.transaction.student_id_number,
@@ -180,7 +201,7 @@ async function createOrUpdateFine(transactionId, adminId) {
         }
 
     } catch (error) {
-        console.error('Error creating/updating fine:', error);
+        logger.error('Error creating/updating fine:', error);
         throw error;
     }
 }
@@ -194,7 +215,7 @@ async function getStudentFines(studentIdNumber, status = null, recalculate = tru
         }
 
         let query = `
-            SELECT 
+            SELECT
                 f.id,
                 f.transaction_id,
                 f.fine_amount,
@@ -214,20 +235,20 @@ async function getStudentFines(studentIdNumber, status = null, recalculate = tru
             JOIN books b ON bt.book_id = b.id
             WHERE f.student_id_number = ?
         `;
-        
+
         const params = [studentIdNumber];
-        
+
         if (status) {
             query += ' AND f.status = ?';
             params.push(status);
         }
-        
+
         query += ' ORDER BY f.fine_date DESC';
-        
+
         const [rows] = await db.execute(query, params);
         return rows;
     } catch (error) {
-        console.error('Error getting student fines:', error);
+        logger.error('Error getting student fines:', error);
         throw error;
     }
 }
@@ -247,27 +268,27 @@ async function recalculateStudentFines(studentIdNumber) {
             try {
                 // Calculate current fine amount
                 const fineCalculation = await calculateFine(fine.transaction_id);
-                
+
                 if (fineCalculation.fineAmount > 0) {
                     // Update fine if amount has changed
-                    if (fine.fine_amount !== fineCalculation.fineAmount || 
+                    if (fine.fine_amount !== fineCalculation.fineAmount ||
                         fine.days_overdue !== fineCalculation.daysOverdue) {
-                        
+
                         await db.execute(`
-                            UPDATE fines 
-                            SET fine_amount = ?, 
-                                days_overdue = ?, 
+                            UPDATE fines
+                            SET fine_amount = ?,
+                                days_overdue = ?,
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = ?
                         `, [fineCalculation.fineAmount, fineCalculation.daysOverdue, fine.id]);
                     }
                 }
             } catch (error) {
-                console.error(`Error recalculating fine ${fine.id}:`, error);
+                logger.error(`Error recalculating fine ${fine.id}:`, error);
             }
         }
     } catch (error) {
-        console.error('Error recalculating student fines:', error);
+        logger.error('Error recalculating student fines:', error);
         throw error;
     }
 }
@@ -276,7 +297,7 @@ async function recalculateStudentFines(studentIdNumber) {
 async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId, notes = null) {
     try {
         const connection = await db.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
@@ -296,8 +317,8 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
 
             // Record payment
             await connection.execute(
-                `INSERT INTO fine_payments 
-                 (fine_id, payment_amount, payment_method, processed_by, notes) 
+                `INSERT INTO fine_payments
+                 (fine_id, payment_amount, payment_method, processed_by, notes)
                  VALUES (?, ?, ?, ?, ?)`,
                 [fineId, paymentAmount, paymentMethod, adminId, notes]
             );
@@ -309,7 +330,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
             }
 
             await connection.execute(
-                `UPDATE fines 
+                `UPDATE fines
                  SET paid_amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ?`,
                 [newPaidAmount, newStatus, fineId]
@@ -328,36 +349,36 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
 
                 if (transactionRows.length > 0) {
                     const transaction = transactionRows[0];
-                    
+
                     // Update borrowing transaction to returned
                     await connection.execute(
-                        `UPDATE borrowing_transactions 
-                         SET status = 'returned', 
+                        `UPDATE borrowing_transactions
+                         SET status = 'returned',
                              returned_date = CURDATE(),
                              returned_by_admin = ?
                          WHERE id = ?`,
                         [adminId, fine.transaction_id]
                     );
 
-                    // Update book status to available
+                    // Increment available_copies (trigger will update status automatically)
                     await connection.execute(
-                        `UPDATE books 
-                         SET status = 'available'
-                         WHERE id = ?`,
+                        `UPDATE books
+                         SET available_copies = available_copies + 1
+                         WHERE id = ? AND available_copies < book_copies`,
                         [transaction.book_id]
                     );
 
                     // Create return transaction record
                     const { createReturnTransaction } = require('./borrowingUtils');
                     await createReturnTransaction(
-                        fine.transaction_id, 
-                        adminId, 
-                        'good', 
-                        'Overdue book returned after fine payment', 
+                        fine.transaction_id,
+                        adminId,
+                        'good',
+                        'Overdue book returned after fine payment',
                         'Fine fully paid - book returned'
                     );
-                    
-                    console.log('[OK] Book returned after fine payment:', transaction.title);
+
+                    logger.info('[OK] Book returned after fine payment:', transaction.title);
                 }
 
                 // Check if student can now borrow (if all fines are paid)
@@ -382,7 +403,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
         }
 
     } catch (error) {
-        console.error('Error processing fine payment:', error);
+        logger.error('Error processing fine payment:', error);
         throw error;
     }
 }
@@ -391,7 +412,7 @@ async function processFinePayment(fineId, paymentAmount, paymentMethod, adminId,
 async function checkAndUpdateStudentBorrowingStatus(studentIdNumber, connection = null) {
     try {
         const dbConnection = connection || db;
-        
+
         // Check if student has unpaid fines
         const [unpaidFines] = await dbConnection.execute(
             'SELECT COUNT(*) as count FROM fines WHERE student_id_number = ? AND status = "unpaid"',
@@ -413,12 +434,12 @@ async function checkAndUpdateStudentBorrowingStatus(studentIdNumber, connection 
 
         // Update or insert borrowing status
         await dbConnection.execute(
-            `INSERT INTO student_borrowing_status 
-             (student_id_number, can_borrow, reason, updated_by) 
-             VALUES (?, ?, ?, ?) 
-             ON DUPLICATE KEY UPDATE 
-             can_borrow = VALUES(can_borrow), 
-             reason = VALUES(reason), 
+            `INSERT INTO student_borrowing_status
+             (student_id_number, can_borrow, reason, updated_by)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+             can_borrow = VALUES(can_borrow),
+             reason = VALUES(reason),
              updated_by = VALUES(updated_by),
              updated_at = CURRENT_TIMESTAMP`,
             [studentIdNumber, canBorrow, reasonBlocked, 1]
@@ -427,7 +448,7 @@ async function checkAndUpdateStudentBorrowingStatus(studentIdNumber, connection 
         return { canBorrow, reasonBlocked };
 
     } catch (error) {
-        console.error('Error checking student borrowing status:', error);
+        logger.error('Error checking student borrowing status:', error);
         throw error;
     }
 }
@@ -436,7 +457,7 @@ async function checkAndUpdateStudentBorrowingStatus(studentIdNumber, connection 
 async function getSemesterTracking(studentIdNumber) {
     try {
         const [rows] = await db.execute(
-            `SELECT 
+            `SELECT
                 st.*,
                 u.email
              FROM semester_tracking st
@@ -447,7 +468,7 @@ async function getSemesterTracking(studentIdNumber) {
         );
         return rows;
     } catch (error) {
-        console.error('Error getting semester tracking:', error);
+        logger.error('Error getting semester tracking:', error);
         throw error;
     }
 }
@@ -467,7 +488,7 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
         if (existingSemester.length > 0) {
             // Update existing semester
             await db.execute(
-                `UPDATE semester_tracking 
+                `UPDATE semester_tracking
                  SET semester_start_date = ?, semester_end_date = ?, max_books_allowed = ?
                  WHERE student_id_number = ? AND status = "active"`,
                 [semesterStartDate, semesterEndDate, maxBooksAllowed, studentIdNumber]
@@ -475,8 +496,8 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
         } else {
             // Create new semester
             await db.execute(
-                `INSERT INTO semester_tracking 
-                 (student_id_number, semester_start_date, semester_end_date, max_books_allowed) 
+                `INSERT INTO semester_tracking
+                 (student_id_number, semester_start_date, semester_end_date, max_books_allowed)
                  VALUES (?, ?, ?, ?)`,
                 [studentIdNumber, semesterStartDate, semesterEndDate, maxBooksAllowed]
             );
@@ -484,7 +505,7 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
 
         return true;
     } catch (error) {
-        console.error('Error creating/updating semester tracking:', error);
+        logger.error('Error creating/updating semester tracking:', error);
         throw error;
     }
 }
@@ -493,20 +514,20 @@ async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate
 async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1, connection = null) {
     try {
         const dbConnection = connection || db;
-        
+
         // Increment the semester count by the specified amount (only when book is borrowed)
         await dbConnection.execute(
-            `UPDATE semester_tracking 
+            `UPDATE semester_tracking
              SET books_borrowed_count = books_borrowed_count + ?,
                  updated_at = CURRENT_TIMESTAMP
              WHERE student_id_number = ? AND status = "active"`,
             [incrementBy, studentIdNumber]
         );
 
-        console.log(`[OK] Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
+        logger.info(`[OK] Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
         return true;
     } catch (error) {
-        console.error('Error updating semester books count:', error);
+        logger.error('Error updating semester books count:', error);
         throw error;
     }
 }
@@ -514,53 +535,85 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1, connec
 // Clean up duplicate fines for the same transaction
 async function cleanupDuplicateFines() {
     try {
-        const connection = await db.getConnection();
-        
-        try {
-            await connection.beginTransaction();
-            
-            // Find transactions with multiple fines
-            const [duplicateFines] = await connection.execute(`
-                SELECT transaction_id, COUNT(*) as count, 
-                       MIN(id) as keep_id, 
-                       SUM(fine_amount) as total_fine_amount,
-                       MAX(days_overdue) as max_days_overdue
-                FROM fines 
-                WHERE status = 'unpaid'
-                GROUP BY transaction_id 
-                HAVING COUNT(*) > 1
-            `);
-            
-            console.log(`[INFO] Found ${duplicateFines.length} transactions with duplicate fines`);
-            
-            for (const duplicate of duplicateFines) {
-                // Keep the first fine record and update it with the correct total
-                await connection.execute(`
-                    UPDATE fines 
-                    SET fine_amount = ?, days_overdue = ?
-                    WHERE id = ?
-                `, [duplicate.total_fine_amount, duplicate.max_days_overdue, duplicate.keep_id]);
-                
-                // Delete all other duplicate fines for this transaction
-                await connection.execute(`
-                    DELETE FROM fines 
-                    WHERE transaction_id = ? AND id != ?
-                `, [duplicate.transaction_id, duplicate.keep_id]);
-                
-                console.log(`[OK] Cleaned up ${duplicate.count - 1} duplicate fines for transaction ${duplicate.transaction_id}`);
-            }
-            
-            await connection.commit();
-            console.log(`[OK] Cleanup completed. Processed ${duplicateFines.length} transactions`);
-            
-        } catch (error) {
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
+        // Find transactions with multiple fines (limit to prevent overwhelming queries)
+        const [duplicateFines] = await db.execute(`
+            SELECT transaction_id, COUNT(*) as count,
+                   MIN(id) as keep_id,
+                   MAX(days_overdue) as max_days_overdue
+            FROM fines
+            WHERE status = 'unpaid'
+            GROUP BY transaction_id
+            HAVING COUNT(*) > 1
+            LIMIT 100
+        `);
+
+        if (duplicateFines.length === 0) {
+            logger.info('[INFO] No duplicate fines found');
+            return { cleaned: 0 };
         }
+
+        logger.info(`[INFO] Found ${duplicateFines.length} transactions with duplicate fines`);
+        let totalCleaned = 0;
+
+        // Process in batches of 10 to avoid lock timeouts
+        const batchSize = 10;
+        for (let i = 0; i < duplicateFines.length; i += batchSize) {
+            const batch = duplicateFines.slice(i, i + batchSize);
+            const connection = await db.getConnection();
+
+            try {
+                await connection.beginTransaction();
+
+                for (const duplicate of batch) {
+                    // Get the transaction details to calculate correct fine
+                    const [transaction] = await connection.execute(`
+                        SELECT bt.due_date, bt.student_id_number
+                        FROM borrowing_transactions bt
+                        WHERE bt.id = ?
+                    `, [duplicate.transaction_id]);
+
+                    if (transaction.length > 0) {
+                        const daysOverdue = calculateOverdueDays(transaction[0].due_date);
+                        const [settings] = await connection.execute(
+                            `SELECT setting_value FROM system_settings WHERE setting_key = 'fine_per_day'`
+                        );
+                        const finePerDay = settings.length > 0 ? parseFloat(settings[0].setting_value) : 5;
+                        const correctFineAmount = daysOverdue * finePerDay;
+
+                        // Update the kept fine with correct amount
+                        await connection.execute(`
+                            UPDATE fines
+                            SET fine_amount = ?, days_overdue = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        `, [correctFineAmount, daysOverdue, duplicate.keep_id]);
+
+                        // Delete all other duplicate fines for this transaction
+                        const [deleteResult] = await connection.execute(`
+                            DELETE FROM fines
+                            WHERE transaction_id = ? AND id != ?
+                        `, [duplicate.transaction_id, duplicate.keep_id]);
+
+                        totalCleaned += deleteResult.affectedRows;
+                        logger.info(`[OK] Cleaned up ${deleteResult.affectedRows} duplicate fines for transaction ${duplicate.transaction_id}`);
+                    }
+                }
+
+                await connection.commit();
+                logger.info(`[OK] Batch completed. Cleaned ${batch.length} transactions`);
+
+            } catch (error) {
+                await connection.rollback();
+                logger.error(`[ERROR] Batch cleanup failed:`, error.message);
+            } finally {
+                connection.release();
+            }
+        }
+
+        logger.info(`[OK] Cleanup completed. Removed ${totalCleaned} duplicate fines`);
+        return { cleaned: totalCleaned };
+
     } catch (error) {
-        console.error('Error cleaning up duplicate fines:', error);
+        logger.error('Error cleaning up duplicate fines:', error);
         throw error;
     }
 }
@@ -569,42 +622,42 @@ async function cleanupDuplicateFines() {
 async function processAllOverdueFines() {
     try {
         const connection = await db.getConnection();
-        
+
         try {
             await connection.beginTransaction();
-            
+
             // Step 0: Clean up any existing duplicate fines
             await cleanupDuplicateFines();
-            
+
             // Step 1: Update all borrowed books that are past due to overdue status
             const [updateResult] = await connection.execute(
-                `UPDATE borrowing_transactions 
-                 SET status = 'overdue' 
-                 WHERE status = 'borrowed' 
+                `UPDATE borrowing_transactions
+                 SET status = 'overdue'
+                 WHERE status = 'borrowed'
                  AND due_date < CURDATE()`
             );
-            
-            console.log(`[OK] Updated ${updateResult.affectedRows} books to overdue status`);
-            
+
+            logger.info(`[OK] Updated ${updateResult.affectedRows} books to overdue status`);
+
             // Step 2: Get all overdue transactions
             const [overdueTransactions] = await connection.execute(
                 `SELECT bt.id, bt.student_id_number, bt.due_date
                  FROM borrowing_transactions bt
-                 WHERE bt.status = 'overdue' 
+                 WHERE bt.status = 'overdue'
                  AND bt.due_date < CURDATE()`
             );
-            
-            console.log(`[INFO] Found ${overdueTransactions.length} overdue transactions`);
-            
+
+            logger.info(`[INFO] Found ${overdueTransactions.length} overdue transactions`);
+
             // Step 3: Get fine per day setting
             const [settings] = await connection.execute(
                 `SELECT setting_value FROM system_settings WHERE setting_key = 'fine_per_day'`
             );
             const finePerDay = settings.length > 0 ? parseFloat(settings[0].setting_value) : 5;
-            
+
             const results = [];
             let finesCreated = 0;
-            
+
             // Step 4: Create fines for all overdue books that don't have fines
             for (const transaction of overdueTransactions) {
                 try {
@@ -613,19 +666,19 @@ async function processAllOverdueFines() {
                         `SELECT id FROM fines WHERE transaction_id = ?`,
                         [transaction.id]
                     );
-                    
+
                     const daysOverdue = calculateOverdueDays(transaction.due_date);
                     const fineAmount = daysOverdue * finePerDay;
-                    
+
                     if (existingFines.length > 0) {
                         // Fine already exists, just update it
                         await connection.execute(
-                            `UPDATE fines 
+                            `UPDATE fines
                              SET fine_amount = ?, days_overdue = ?, updated_at = CURRENT_TIMESTAMP
                              WHERE transaction_id = ?`,
                             [fineAmount, daysOverdue, transaction.id]
                         );
-                        
+
                         results.push({
                             transactionId: transaction.id,
                             action: 'updated',
@@ -634,19 +687,19 @@ async function processAllOverdueFines() {
                         });
                     } else {
                         // Create new fine
-                        
+
                         await connection.execute(
                             `INSERT INTO fines (
-                                student_id_number, 
-                                transaction_id, 
-                                fine_amount, 
-                                days_overdue, 
-                                fine_date, 
+                                student_id_number,
+                                transaction_id,
+                                fine_amount,
+                                days_overdue,
+                                fine_date,
                                 status
                             ) VALUES (?, ?, ?, ?, CURDATE(), 'unpaid')`,
                             [transaction.student_id_number, transaction.id, fineAmount, daysOverdue]
                         );
-                        
+
                         finesCreated++;
                         results.push({
                             transactionId: transaction.id,
@@ -656,34 +709,34 @@ async function processAllOverdueFines() {
                         });
                     }
                 } catch (error) {
-                    console.error(`Error processing fine for transaction ${transaction.id}:`, error);
+                    logger.error(`Error processing fine for transaction ${transaction.id}:`, error);
                     results.push({
                         transactionId: transaction.id,
                         error: error.message
                     });
                 }
             }
-            
+
             await connection.commit();
-            
-            console.log(`[OK] Created ${finesCreated} new fines for overdue books`);
-            
+
+            logger.info(`[OK] Created ${finesCreated} new fines for overdue books`);
+
             return {
                 booksUpdatedToOverdue: updateResult.affectedRows,
                 finesCreated,
                 totalProcessed: results.length,
                 results
             };
-            
+
         } catch (error) {
             await connection.rollback();
             throw error;
         } finally {
             connection.release();
         }
-        
+
     } catch (error) {
-        console.error('Error processing all overdue fines:', error);
+        logger.error('Error processing all overdue fines:', error);
         throw error;
     }
 }
@@ -701,9 +754,9 @@ async function recalculateAllSemesterCounts() {
             try {
                 // Count all books borrowed during this semester (accumulative count)
                 const [countRows] = await db.execute(
-                    `SELECT COUNT(*) as total_borrowed 
-                     FROM borrowing_transactions 
-                     WHERE student_id_number = ? 
+                    `SELECT COUNT(*) as total_borrowed
+                     FROM borrowing_transactions
+                     WHERE student_id_number = ?
                      AND borrowed_date >= ?`,
                     [semester.student_id_number, semester.semester_start_date]
                 );
@@ -712,7 +765,7 @@ async function recalculateAllSemesterCounts() {
 
                 // Update the semester tracking
                 await db.execute(
-                    `UPDATE semester_tracking 
+                    `UPDATE semester_tracking
                      SET books_borrowed_count = ?,
                          updated_at = CURRENT_TIMESTAMP
                      WHERE student_id_number = ? AND status = "active"`,
@@ -721,13 +774,13 @@ async function recalculateAllSemesterCounts() {
 
                 updatedCount++;
             } catch (error) {
-                console.error(`Error updating semester count for student ${semester.student_id_number}:`, error);
+                logger.error(`Error updating semester count for student ${semester.student_id_number}:`, error);
             }
         }
 
         return { updatedCount, totalStudents: semesterRows.length };
     } catch (error) {
-        console.error('Error recalculating semester counts:', error);
+        logger.error('Error recalculating semester counts:', error);
         throw error;
     }
 }
@@ -751,7 +804,55 @@ async function getPenaltyStats() {
             blockedStudents: blockedStudents[0].count
         };
     } catch (error) {
-        console.error('Error getting penalty stats:', error);
+        logger.error('Error getting penalty stats:', error);
+        throw error;
+    }
+}
+
+// Cleanup duplicate system settings entries (keeps only the most recent for each key)
+async function cleanupDuplicateSettings() {
+    try {
+        // Find all setting_keys that have duplicates
+        const [duplicates] = await db.execute(
+            `SELECT setting_key, COUNT(*) as cnt
+             FROM system_settings
+             GROUP BY setting_key
+             HAVING cnt > 1`
+        );
+
+        if (duplicates.length === 0) {
+            logger.info('No duplicate system settings found');
+            return { cleaned: 0 };
+        }
+
+        let totalCleaned = 0;
+
+        for (const dup of duplicates) {
+            // Get the ID of the most recent entry for this key
+            const [mostRecent] = await db.execute(
+                `SELECT id FROM system_settings
+                 WHERE setting_key = ?
+                 ORDER BY updated_at DESC
+                 LIMIT 1`,
+                [dup.setting_key]
+            );
+
+            if (mostRecent.length > 0) {
+                // Delete all other entries for this key
+                const [result] = await db.execute(
+                    `DELETE FROM system_settings
+                     WHERE setting_key = ? AND id != ?`,
+                    [dup.setting_key, mostRecent[0].id]
+                );
+                totalCleaned += result.affectedRows;
+                logger.info(`Cleaned ${result.affectedRows} duplicate(s) for setting: ${dup.setting_key}`);
+            }
+        }
+
+        logger.info(`Total duplicate settings cleaned: ${totalCleaned}`);
+        return { cleaned: totalCleaned };
+    } catch (error) {
+        logger.error('Error cleaning up duplicate settings:', error);
         throw error;
     }
 }
@@ -772,5 +873,6 @@ module.exports = {
     recalculateAllSemesterCounts,
     processAllOverdueFines,
     cleanupDuplicateFines,
+    cleanupDuplicateSettings,
     getPenaltyStats
 };

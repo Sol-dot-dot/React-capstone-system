@@ -37,7 +37,12 @@ const ModernReturningManagement = ({ user }) => {
   const [searchedStudent, setSearchedStudent] = useState(null);
   const [studentBooks, setStudentBooks] = useState([]);
   const [returnLoading, setReturnLoading] = useState(false);
-  
+
+  // Search suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
   // Return condition tracking
   const [returnConditions, setReturnConditions] = useState({});
   const [conditionNotes, setConditionNotes] = useState({});
@@ -147,6 +152,49 @@ const ModernReturningManagement = ({ user }) => {
     };
   }, [searchedStudent]);
 
+
+  // Fetch student suggestions for autocomplete
+  const fetchSuggestions = useCallback(
+    debounce(async (searchTerm) => {
+      if (!searchTerm || searchTerm.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        setSuggestionsLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/api/admin/search-students?q=${encodeURIComponent(searchTerm)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.data.success && response.data.data) {
+          setSuggestions(response.data.data);
+          setShowSuggestions(response.data.data.length > 0);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  // Handle selecting a suggestion
+  const handleSelectSuggestion = (student) => {
+    setReturnSearchId(student.id_number);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    // Trigger search for the selected student
+    debouncedSearchStudentBooks(student.id_number);
+  };
 
   // Create debounced search function
   const debouncedSearchStudentBooks = useCallback(
@@ -343,7 +391,6 @@ const ModernReturningManagement = ({ user }) => {
     }
   };
 
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -399,29 +446,6 @@ const ModernReturningManagement = ({ user }) => {
               <CardDescription>
                 Search for students and process their book returns
               </CardDescription>
-              
-              {/* Barcode Scanner Status */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-                    <span className="text-sm font-medium text-blue-700">
-                      {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-blue-600">
-                    <span>Current Field: Student ID Search</span>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-blue-600">
-                  <p>💡 <strong>Barcode Scanner Tips:</strong></p>
-                  <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                    <li>Scan student ID barcode directly into the highlighted field</li>
-                    <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to search automatically</li>
-                    <li>Student books will load automatically after scanning</li>
-                  </ul>
-                </div>
-              </div>
             </CardHeader>
             <CardContent>
               {message && (
@@ -438,32 +462,92 @@ const ModernReturningManagement = ({ user }) => {
 
               {/* Student Search Section */}
               <div className="space-y-6">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Search Student by ID Number
                   </label>
                   <div className="flex gap-2">
-                    <Input
-                      id="barcode-field-returning-student-id"
-                      placeholder="Enter student ID (e.g., C22-0044)"
-                      value={returnSearchId}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setReturnSearchId(value);
-                        // Trigger live search for any input
-                        if (value.trim().length > 0) {
-                          debouncedSearchStudentBooks(value);
-                        } else {
-                          setSearchedStudent(null);
-                          setStudentBooks([]);
-                          setMessage('');
-                        }
-                      }}
-                      className={`flex-1 border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
-                        isScanning ? 'ring-2 ring-blue-400 bg-blue-50' : ''
-                      }`}
-                      autoComplete="off"
-                    />
+                    <div className="relative flex-1">
+                      <Input
+                        id="barcode-field-returning-student-id"
+                        placeholder="Enter student ID (e.g., S24-0001)"
+                        value={returnSearchId}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setReturnSearchId(value);
+                          // Fetch suggestions as user types
+                          fetchSuggestions(value);
+                          // Also trigger live search
+                          if (value.trim().length > 0) {
+                            debouncedSearchStudentBooks(value);
+                          } else {
+                            setSearchedStudent(null);
+                            setStudentBooks([]);
+                            setMessage('');
+                            setSuggestions([]);
+                            setShowSuggestions(false);
+                          }
+                        }}
+                        onFocus={() => {
+                          if (suggestions.length > 0) {
+                            setShowSuggestions(true);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Delay hiding to allow click on suggestion
+                          setTimeout(() => setShowSuggestions(false), 200);
+                        }}
+                        className={`w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 ${
+                          isScanning ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+                        }`}
+                        autoComplete="off"
+                      />
+
+                      {/* Suggestions Dropdown */}
+                      <AnimatePresence>
+                        {showSuggestions && suggestions.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                          >
+                            {suggestionsLoading ? (
+                              <div className="p-3 text-center text-slate-500">
+                                <RefreshCw className="h-4 w-4 animate-spin inline mr-2" />
+                                Loading...
+                              </div>
+                            ) : (
+                              suggestions.map((student) => (
+                                <button
+                                  key={student.id}
+                                  type="button"
+                                  onClick={() => handleSelectSuggestion(student)}
+                                  className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-b-0 flex items-center gap-3 transition-colors"
+                                >
+                                  <div className="p-2 bg-blue-100 rounded-full">
+                                    <User className="h-4 w-4 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-slate-900">
+                                      {student.first_name} {student.last_name}
+                                    </div>
+                                    <div className="text-sm text-slate-500">
+                                      ID: {student.id_number}
+                                    </div>
+                                  </div>
+                                  {student.email && (
+                                    <div className="text-xs text-slate-400 truncate max-w-[150px]">
+                                      {student.email}
+                                    </div>
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                     <Button
                       onClick={searchStudentBooks}
                       disabled={returnLoading}
@@ -518,7 +602,7 @@ const ModernReturningManagement = ({ user }) => {
                   <div className="space-y-4">
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <h3 className="font-semibold text-blue-900 mb-2">Student Information</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-slate-600">ID Number:</span>
                           <p className="font-medium">{searchedStudent.idNumber}</p>
@@ -526,12 +610,6 @@ const ModernReturningManagement = ({ user }) => {
                         <div>
                           <span className="text-slate-600">Email:</span>
                           <p className="font-medium">{searchedStudent.email}</p>
-                        </div>
-                        <div>
-                          <span className="text-slate-600">Status:</span>
-                          <Badge variant={searchedStudent.isVerified ? "default" : "secondary"}>
-                            {searchedStudent.isVerified ? "Verified" : "Not Verified"}
-                          </Badge>
                         </div>
                       </div>
                     </div>

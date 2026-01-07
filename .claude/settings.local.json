@@ -27,7 +27,9 @@
       "Bash(ls:*)",
       "Bash(taskkill /F /PID 31604)",
       "Bash(taskkill:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(echo $env:ANDROID_HOME)",
+      "Bash(where.exe:*)"
     ]
   }
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Settings,
   User,
   ChevronDown,
   LogOut,
@@ -39,24 +38,7 @@ const ModernTopBar = ({ onToggleSidebar, onLogout, user, isMobile }) => {
         animate={{ y: 0, opacity: 1 }}
         className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-sm"
       >
-        <div className="flex h-16 items-center justify-between px-6">
-          {/* Left Section */}
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleSidebar}
-              className="p-2 hover:bg-slate-100 rounded-lg"
-            >
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Settings className="h-5 w-5" />
-              </motion.div>
-            </Button>
-          </div>
-
+        <div className="flex h-16 items-center justify-end px-6">
           {/* Right Section */}
           <div className="flex items-center space-x-4">
             {/* User Profile */}

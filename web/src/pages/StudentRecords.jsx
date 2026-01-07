@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   FileText,
   Calendar,
-  Download,
   Printer
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -42,6 +41,7 @@ const StudentRecords = () => {
       });
 
       if (response.data.success) {
+        console.log('[Search] Query:', query, 'Results:', response.data.data.map(s => ({ id: s.id, id_number: s.id_number, name: `${s.first_name} ${s.last_name}` })));
         setSearchResults(response.data.data);
       }
     } catch (error) {
@@ -53,19 +53,29 @@ const StudentRecords = () => {
   };
 
   // Load student record
-  const loadStudentRecord = async (studentId) => {
+  const loadStudentRecord = async (studentId, studentIdNumber) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('[LoadRecord] Requesting record for studentId:', studentId, 'studentIdNumber:', studentIdNumber);
       const token = localStorage.getItem('token');
       const response = await axios.get(`/api/student-records/${studentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.data.success) {
-        setStudentRecord(response.data.data);
-        if (response.data.data.academicYears.length > 0) {
-          setActiveYear(response.data.data.academicYears[0].academicYearId);
+        const returnedStudent = response.data.data.student;
+        console.log('[LoadRecord] API returned student:', { id: returnedStudent.id, id_number: returnedStudent.id_number, name: `${returnedStudent.first_name} ${returnedStudent.last_name}` });
+        console.log('[LoadRecord] ID number match check:', returnedStudent.id_number, '===', studentIdNumber, '→', returnedStudent.id_number === studentIdNumber);
+
+        // Verify the returned record matches the requested student using id_number (unique identifier)
+        if (returnedStudent.id_number === studentIdNumber) {
+          setStudentRecord(response.data.data);
+          if (response.data.data.academicYears.length > 0) {
+            setActiveYear(response.data.data.academicYears[0].academicYearId);
+          }
+        } else {
+          console.error('[LoadRecord] ID number mismatch! Requested:', studentIdNumber, 'Got:', returnedStudent.id_number);
         }
       }
     } catch (error) {
@@ -78,10 +88,12 @@ const StudentRecords = () => {
 
   // Handle student selection
   const selectStudent = (student) => {
+    console.log('[Select] Clicked student:', { id: student.id, id_number: student.id_number, name: `${student.first_name} ${student.last_name}` });
     setSelectedStudent(student);
     setSearchResults([]);
     setSearchQuery(`${student.first_name} ${student.last_name}`);
-    loadStudentRecord(student.id);
+    // Use id_number for lookup since it's unique (id column has issues with duplicate 0 values)
+    loadStudentRecord(student.id_number, student.id_number);
   };
 
   // Clear selection
@@ -120,12 +132,7 @@ const StudentRecords = () => {
     }
   };
 
-  // Print clearance
-  const handlePrintClearance = () => {
-    window.print();
-  };
-
-  // Export PDF functionality
+  // Print clearance (opens in new window for printing)
   const handleExportPDF = () => {
     if (!studentRecord || !selectedStudent) return;
 
@@ -180,27 +187,26 @@ const StudentRecords = () => {
         <div class="student-info">
           <p><span class="label">Student Name:</span> ${selectedStudent.first_name} ${selectedStudent.last_name}</p>
           <p><span class="label">Student ID:</span> ${selectedStudent.id_number}</p>
-          <p><span class="label">Course:</span> ${selectedStudent.course}</p>
-          <p><span class="label">Year Level:</span> ${getYearLevelLabel(selectedStudent.year_level)}</p>
+          <p><span class="label">Email:</span> ${selectedStudent.email || 'N/A'}</p>
         </div>
 
         <div class="section">
           <div class="section-title">Library Summary</div>
           <div class="summary-grid">
             <div class="summary-item">
-              <div class="value">${studentRecord.summary.totalBooks}</div>
+              <div class="value">${studentRecord.summary.total_borrowed || 0}</div>
               <span class="label">Total Books Borrowed</span>
             </div>
             <div class="summary-item">
-              <div class="value">${studentRecord.summary.returnedBooks}</div>
+              <div class="value">${studentRecord.summary.total_returned || 0}</div>
               <span class="label">Books Returned</span>
             </div>
             <div class="summary-item">
-              <div class="value">₱${studentRecord.summary.totalFines.toFixed(2)}</div>
+              <div class="value">₱${(studentRecord.summary.total_fines_incurred || 0).toFixed(2)}</div>
               <span class="label">Total Fines Incurred</span>
             </div>
             <div class="summary-item">
-              <div class="value">₱${studentRecord.summary.unpaidFines.toFixed(2)}</div>
+              <div class="value">₱${(studentRecord.summary.outstanding_balance || 0).toFixed(2)}</div>
               <span class="label">Unpaid Fines</span>
             </div>
           </div>
@@ -267,7 +273,7 @@ const StudentRecords = () => {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
               <input
                 type="text"
                 placeholder="Search by Student ID, Name, or Course..."
@@ -293,27 +299,32 @@ const StudentRecords = () => {
                   ✕
                 </button>
               )}
-            </div>
 
-            {/* Search Results Dropdown */}
-            {searchResults.length > 0 && !selectedStudent && (
-              <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                {searchResults.map((student) => (
-                  <button
-                    key={student.id}
-                    onClick={() => selectStudent(student)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b last:border-b-0"
-                  >
-                    <div className="font-medium text-gray-900">
-                      {student.first_name} {student.last_name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      ID: {student.id_number} | {student.course} - Year {student.year_level}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && !selectedStudent && (
+                <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-20 absolute left-0 right-0 top-full">
+                  {searchResults.map((student) => (
+                    <button
+                      key={student.id}
+                      onClick={() => selectStudent(student)}
+                      className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b last:border-b-0 flex justify-between items-center"
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {student.email}
+                        </div>
+                      </div>
+                      <div className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        {student.id_number}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -333,12 +344,13 @@ const StudentRecords = () => {
         )}
 
         {/* Student Record */}
-        {studentRecord && selectedStudent && (
+        {studentRecord && selectedStudent &&
+         studentRecord.student.id_number === selectedStudent.id_number && (
           <div className="space-y-6">
             {/* Student Profile Header */}
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-6">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-4">
                     <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                       <User className="h-8 w-8 text-blue-600" />
@@ -348,7 +360,7 @@ const StudentRecords = () => {
                         {studentRecord.student.first_name} {studentRecord.student.last_name}
                       </h2>
                       <p className="text-gray-600">
-                        ID: {studentRecord.student.id_number} | {studentRecord.student.course} - Year {studentRecord.student.year_level}
+                        ID: {studentRecord.student.id_number}
                       </p>
                       <p className="text-sm text-gray-500">{studentRecord.student.email}</p>
                     </div>
@@ -356,46 +368,6 @@ const StudentRecords = () => {
                   <Badge className={getStatusColor(studentRecord.summary.accountStatus)}>
                     {getStatusLabel(studentRecord.summary.accountStatus)}
                   </Badge>
-                </div>
-
-                {/* Summary Statistics */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {studentRecord.summary.total_borrowed || 0}
-                    </div>
-                    <div className="text-xs text-gray-600">Total Borrowed</div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {studentRecord.summary.total_returned || 0}
-                    </div>
-                    <div className="text-xs text-gray-600">Returned</div>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-600">
-                      {studentRecord.summary.currently_borrowed || 0}
-                    </div>
-                    <div className="text-xs text-gray-600">Currently Borrowed</div>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">
-                      ₱{parseFloat(studentRecord.summary.total_fines_incurred || 0).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-600">Fines Incurred</div>
-                  </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      ₱{parseFloat(studentRecord.summary.total_fines_paid || 0).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-600">Fines Paid</div>
-                  </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">
-                      ₱{parseFloat(studentRecord.summary.outstanding_balance || 0).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-600">Balance</div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -422,103 +394,120 @@ const StudentRecords = () => {
                         {year.semesters.map((semester) => (
                           <div
                             key={semester.semesterId}
-                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                            className={`border rounded-lg p-4 transition-shadow ${
+                              semester.booksBorrowed > 0
+                                ? 'border-gray-200 hover:shadow-md'
+                                : 'border-gray-100 bg-gray-50'
+                            }`}
                           >
                             <div className="flex items-center justify-between mb-3">
                               <h4 className="font-semibold text-gray-900">
                                 {semester.semesterName}
                                 {semester.isCurrent && <span className="ml-2 text-xs text-blue-600">● Ongoing</span>}
                               </h4>
-                              {semester.isCleared ? (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
+                              {semester.booksBorrowed > 0 ? (
+                                semester.isCleared ? (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                                )
                               ) : (
-                                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                                <span className="text-xs text-gray-400">No Activity</span>
                               )}
                             </div>
 
                             <p className="text-sm text-gray-600 mb-3">{semester.period}</p>
 
-                            <div className="space-y-2 mb-3">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Books Borrowed:</span>
-                                <span className="font-medium">
-                                  {semester.booksBorrowed}/{semester.booksRequired}
-                                </span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full"
-                                  style={{
-                                    width: `${Math.min((semester.booksBorrowed / semester.booksRequired) * 100, 100)}%`
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                              <div>
-                                <span className="text-gray-600">On-Time:</span>{' '}
-                                <span className="text-green-600 font-medium">{semester.onTimeReturns}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Late:</span>{' '}
-                                <span className="text-red-600 font-medium">{semester.lateReturns}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Fines:</span>{' '}
-                                <span className="font-medium">₱{semester.finesIncurred.toFixed(2)}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">Paid:</span>{' '}
-                                <span className="font-medium">₱{semester.finesPaid.toFixed(2)}</span>
-                              </div>
-                            </div>
-
-                            {/* Borrowings Table */}
-                            {semester.borrowings.length > 0 && (
-                              <details className="mt-3">
-                                <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 font-medium">
-                                  View {semester.borrowings.length} Transaction(s)
-                                </summary>
-                                <div className="mt-3 overflow-x-auto">
-                                  <table className="min-w-full text-xs">
-                                    <thead className="bg-gray-50">
-                                      <tr>
-                                        <th className="px-2 py-1 text-left">Book</th>
-                                        <th className="px-2 py-1 text-left">Borrowed</th>
-                                        <th className="px-2 py-1 text-left">Due</th>
-                                        <th className="px-2 py-1 text-left">Status</th>
-                                        <th className="px-2 py-1 text-right">Fine</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                      {semester.borrowings.map((b, idx) => (
-                                        <tr key={idx}>
-                                          <td className="px-2 py-1">{b.bookTitle}</td>
-                                          <td className="px-2 py-1">{new Date(b.borrowDate).toLocaleDateString()}</td>
-                                          <td className="px-2 py-1">{new Date(b.dueDate).toLocaleDateString()}</td>
-                                          <td className="px-2 py-1">
-                                            <span
-                                              className={`px-1 py-0.5 rounded text-xs ${
-                                                b.status === 'returned_on_time'
-                                                  ? 'bg-green-100 text-green-700'
-                                                  : b.status === 'returned_late'
-                                                  ? 'bg-orange-100 text-orange-700'
-                                                  : b.status === 'overdue'
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-blue-100 text-blue-700'
-                                              }`}
-                                            >
-                                              {b.status.replace('_', ' ')}
-                                            </span>
-                                          </td>
-                                          <td className="px-2 py-1 text-right">₱{b.fine.toFixed(2)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                            {semester.booksBorrowed > 0 ? (
+                              <>
+                                <div className="space-y-2 mb-3">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Books Borrowed:</span>
+                                    <span className="font-medium">
+                                      {semester.booksBorrowed}/{semester.booksRequired}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-blue-600 h-2 rounded-full"
+                                      style={{
+                                        width: `${Math.min((semester.booksBorrowed / semester.booksRequired) * 100, 100)}%`
+                                      }}
+                                    ></div>
+                                  </div>
                                 </div>
-                              </details>
+
+                                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                                  <div>
+                                    <span className="text-gray-600">On-Time:</span>{' '}
+                                    <span className="text-green-600 font-medium">{semester.onTimeReturns}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Late:</span>{' '}
+                                    <span className="text-red-600 font-medium">{semester.lateReturns}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Fines:</span>{' '}
+                                    <span className="font-medium">₱{semester.finesIncurred.toFixed(2)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-600">Paid:</span>{' '}
+                                    <span className="font-medium">₱{semester.finesPaid.toFixed(2)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Borrowings Table */}
+                                {semester.borrowings.length > 0 && (
+                                  <details className="mt-3">
+                                    <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 font-medium">
+                                      View {semester.borrowings.length} Transaction(s)
+                                    </summary>
+                                    <div className="mt-3 overflow-x-auto">
+                                      <table className="min-w-full text-xs">
+                                        <thead className="bg-gray-50">
+                                          <tr>
+                                            <th className="px-2 py-1 text-left">Book</th>
+                                            <th className="px-2 py-1 text-left">Borrowed</th>
+                                            <th className="px-2 py-1 text-left">Due</th>
+                                            <th className="px-2 py-1 text-left">Status</th>
+                                            <th className="px-2 py-1 text-right">Fine</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                          {semester.borrowings.map((b, idx) => (
+                                            <tr key={idx}>
+                                              <td className="px-2 py-1">{b.bookTitle}</td>
+                                              <td className="px-2 py-1">{new Date(b.borrowDate).toLocaleDateString()}</td>
+                                              <td className="px-2 py-1">{new Date(b.dueDate).toLocaleDateString()}</td>
+                                              <td className="px-2 py-1">
+                                                <span
+                                                  className={`px-1 py-0.5 rounded text-xs ${
+                                                    b.status === 'returned_on_time'
+                                                      ? 'bg-green-100 text-green-700'
+                                                      : b.status === 'returned_late'
+                                                      ? 'bg-orange-100 text-orange-700'
+                                                      : b.status === 'overdue'
+                                                      ? 'bg-red-100 text-red-700'
+                                                      : 'bg-blue-100 text-blue-700'
+                                                  }`}
+                                                >
+                                                  {b.status.replace('_', ' ')}
+                                                </span>
+                                              </td>
+                                              <td className="px-2 py-1 text-right">₱{b.fine.toFixed(2)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </details>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-center py-4">
+                                <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-400">No borrowing records</p>
+                              </div>
                             )}
                           </div>
                         ))}
@@ -577,13 +566,9 @@ const StudentRecords = () => {
 
                 {studentRecord.clearance.isCleared && (
                   <div className="flex space-x-3">
-                    <Button onClick={handlePrintClearance} className="flex items-center space-x-2">
+                    <Button onClick={handleExportPDF} className="flex items-center space-x-2">
                       <Printer className="h-4 w-4" />
                       <span>Print Clearance</span>
-                    </Button>
-                    <Button variant="outline" className="flex items-center space-x-2" onClick={handleExportPDF}>
-                      <Download className="h-4 w-4" />
-                      <span>Export PDF</span>
                     </Button>
                   </div>
                 )}

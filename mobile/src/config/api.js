@@ -32,6 +32,7 @@ const API_CONFIG = {
     // Borrowing endpoints
     BORROWING: {
       GET_USER_BORROWED_BOOKS: (idNumber) => `/api/borrowing/user/${idNumber}`,
+      GET_USER_BORROWING_HISTORY: (idNumber) => `/api/borrowing/user/${idNumber}/history`,
     },
 
     // Chatbot endpoints

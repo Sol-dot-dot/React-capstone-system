@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 
+const { logger } = require('../config/logger');
 const router = express.Router();
 
 // Get login logs (admin only)
@@ -14,7 +15,7 @@ router.get('/login-logs', authMiddleware, async (req, res) => {
         }
 
         const [logs] = await pool.execute(`
-            SELECT 
+            SELECT
                 ll.id,
                 ll.user_type,
                 ll.login_time,
@@ -33,7 +34,7 @@ router.get('/login-logs', authMiddleware, async (req, res) => {
             logs
         });
     } catch (error) {
-        console.error('Get login logs error:', error);
+        logger.error('Get login logs error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -49,7 +50,7 @@ router.get('/user-stats', authMiddleware, async (req, res) => {
         const [totalUsers] = await pool.execute('SELECT COUNT(*) as total FROM users');
         const [verifiedUsers] = await pool.execute('SELECT COUNT(*) as verified FROM users WHERE is_verified = TRUE');
         const [todayLogins] = await pool.execute(`
-            SELECT COUNT(*) as today FROM login_logs 
+            SELECT COUNT(*) as today FROM login_logs
             WHERE DATE(login_time) = CURDATE()
         `);
 
@@ -62,7 +63,7 @@ router.get('/user-stats', authMiddleware, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get user stats error:', error);
+        logger.error('Get user stats error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -76,7 +77,7 @@ router.get('/users', authMiddleware, async (req, res) => {
         }
 
         const [users] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id,
                 u.id_number,
                 u.email,
@@ -101,7 +102,7 @@ router.get('/users', authMiddleware, async (req, res) => {
             users
         });
     } catch (error) {
-        console.error('Get users error:', error);
+        logger.error('Get users error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -117,7 +118,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
         const { idNumber } = req.params;
 
         const [users] = await pool.execute(`
-            SELECT 
+            SELECT
                 u.id,
                 u.id_number,
                 u.email,
@@ -145,11 +146,11 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         // Get user's login history
         const [loginHistory] = await pool.execute(`
-            SELECT 
+            SELECT
                 login_time,
                 ip_address,
                 user_agent
-            FROM login_logs 
+            FROM login_logs
             WHERE user_id = ?
             ORDER BY login_time DESC
             LIMIT 20
@@ -157,7 +158,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         // Get user's borrowing history
         const [borrowingHistory] = await pool.execute(`
-            SELECT 
+            SELECT
                 bt.id,
                 bt.borrowed_date,
                 bt.due_date,
@@ -176,7 +177,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         // Get user's fines history
         const [finesHistory] = await pool.execute(`
-            SELECT 
+            SELECT
                 f.id,
                 f.fine_amount,
                 f.paid_amount,
@@ -198,7 +199,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         // Get user's semester tracking
         const [semesterTracking] = await pool.execute(`
-            SELECT 
+            SELECT
                 semester_start_date,
                 semester_end_date,
                 books_borrowed_count,
@@ -211,7 +212,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
 
         // Get user's borrowing status
         const [borrowingStatus] = await pool.execute(`
-            SELECT 
+            SELECT
                 can_borrow,
                 reason,
                 updated_at
@@ -231,7 +232,7 @@ router.get('/users/:idNumber', authMiddleware, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get user details error:', error);
+        logger.error('Get user details error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -265,7 +266,7 @@ router.put('/users/:idNumber/verify', authMiddleware, async (req, res) => {
             message: `User verification status updated to ${isVerified ? 'verified' : 'unverified'}`
         });
     } catch (error) {
-        console.error('Update user verification error:', error);
+        logger.error('Update user verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -330,7 +331,7 @@ router.put('/users/:idNumber', authMiddleware, async (req, res) => {
             message: 'User information updated successfully'
         });
     } catch (error) {
-        console.error('Update user error:', error);
+        logger.error('Update user error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -370,8 +371,65 @@ router.delete('/users/:idNumber', authMiddleware, async (req, res) => {
             message: 'User deleted successfully'
         });
     } catch (error) {
-        console.error('Delete user error:', error);
+        logger.error('Delete user error:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Search students for autocomplete (admin only)
+router.get('/search-students', authMiddleware, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({ message: 'Access denied. Admin only.' });
+        }
+
+        const { q } = req.query;
+
+        if (!q || q.length < 2) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const searchTerm = `%${q}%`;
+
+        const [students] = await pool.execute(`
+            SELECT
+                id,
+                id_number,
+                first_name,
+                last_name,
+                email
+            FROM users
+            WHERE role = 'student'
+            AND (
+                id_number LIKE ?
+                OR first_name LIKE ?
+                OR last_name LIKE ?
+                OR CONCAT(first_name, ' ', last_name) LIKE ?
+            )
+            ORDER BY
+                CASE
+                    WHEN id_number LIKE ? THEN 1
+                    WHEN first_name LIKE ? THEN 2
+                    ELSE 3
+                END,
+                id_number
+            LIMIT 10
+        `, [searchTerm, searchTerm, searchTerm, searchTerm, `${q}%`, `${q}%`]);
+
+        res.json({
+            success: true,
+            data: students
+        });
+    } catch (error) {
+        logger.error('Search students error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
     }
 });
 
@@ -385,25 +443,25 @@ router.get('/dashboard-stats', authMiddleware, async (req, res) => {
 
         // Total users
         const [totalUsers] = await pool.execute('SELECT COUNT(*) as total FROM users');
-        
+
         // Verified users
         const [verifiedUsers] = await pool.execute('SELECT COUNT(*) as verified FROM users WHERE is_verified = TRUE');
-        
+
         // Today's logins
         const [todayLogins] = await pool.execute(`
-            SELECT COUNT(*) as today FROM login_logs 
+            SELECT COUNT(*) as today FROM login_logs
             WHERE DATE(login_time) = CURDATE()
         `);
-        
+
         // This week's registrations
         const [weekRegistrations] = await pool.execute(`
-            SELECT COUNT(*) as week FROM users 
+            SELECT COUNT(*) as week FROM users
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         `);
-        
+
         // Recent activity (last 24 hours)
         const [recentActivity] = await pool.execute(`
-            SELECT COUNT(*) as recent FROM login_logs 
+            SELECT COUNT(*) as recent FROM login_logs
             WHERE login_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
         `);
 
@@ -418,7 +476,7 @@ router.get('/dashboard-stats', authMiddleware, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get dashboard stats error:', error);
+        logger.error('Get dashboard stats error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

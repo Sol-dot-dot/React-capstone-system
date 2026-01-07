@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/database');
 
+const { logger } = require('../config/logger');
 // Report 1: Currently Borrowed Books
 router.get('/currently-borrowed', auth, async (req, res) => {
   try {
@@ -53,7 +54,7 @@ router.get('/currently-borrowed', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Currently borrowed report error:', error);
+    logger.error('Currently borrowed report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch currently borrowed books report',
@@ -90,7 +91,7 @@ router.get('/overdue-books', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Overdue books report error:', error);
+    logger.error('Overdue books report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch overdue books report',
@@ -141,7 +142,7 @@ router.get('/returned-books', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Returned books report error:', error);
+    logger.error('Returned books report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch returned books report',
@@ -189,7 +190,7 @@ router.get('/most-borrowed', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Most borrowed books report error:', error);
+    logger.error('Most borrowed books report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch most borrowed books report',
@@ -238,7 +239,7 @@ router.get('/inventory-summary', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Inventory summary report error:', error);
+    logger.error('Inventory summary report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch inventory summary report',
@@ -334,7 +335,7 @@ router.get('/user-history/:idNumber', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('User history report error:', error);
+    logger.error('User history report error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user history report',

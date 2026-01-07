@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../config/database');
 const auth = require('../middleware/auth');
 
+const { logger } = require('../config/logger');
 // GET /api/semesters/academic-years - Get all academic years
 router.get('/academic-years', auth, async (req, res) => {
     try {
@@ -19,7 +20,7 @@ router.get('/academic-years', auth, async (req, res) => {
             data: years
         });
     } catch (error) {
-        console.error('Error fetching academic years:', error);
+        logger.error('Error fetching academic years:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch academic years',
@@ -56,7 +57,7 @@ router.get('/', auth, async (req, res) => {
             data: semesters
         });
     } catch (error) {
-        console.error('Error fetching semesters:', error);
+        logger.error('Error fetching semesters:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch semesters',
@@ -114,7 +115,7 @@ router.get('/current', auth, async (req, res) => {
             data: semesters[0]
         });
     } catch (error) {
-        console.error('Error fetching current semester:', error);
+        logger.error('Error fetching current semester:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch current semester',
@@ -158,7 +159,7 @@ router.post('/academic-years', auth, async (req, res) => {
             data: { id: result.insertId, year_name, start_date, end_date, is_current }
         });
     } catch (error) {
-        console.error('Error creating academic year:', error);
+        logger.error('Error creating academic year:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create academic year',
@@ -202,7 +203,7 @@ router.post('/', auth, async (req, res) => {
             data: { id: result.insertId }
         });
     } catch (error) {
-        console.error('Error creating semester:', error);
+        logger.error('Error creating semester:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create semester',
@@ -247,7 +248,7 @@ router.put('/:id/set-current', auth, async (req, res) => {
             message: 'Semester set as current successfully'
         });
     } catch (error) {
-        console.error('Error setting current semester:', error);
+        logger.error('Error setting current semester:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to set current semester',
@@ -285,7 +286,7 @@ router.put('/academic-years/:id', auth, async (req, res) => {
             message: 'Academic year updated successfully'
         });
     } catch (error) {
-        console.error('Error updating academic year:', error);
+        logger.error('Error updating academic year:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update academic year',
@@ -323,7 +324,7 @@ router.put('/:id', auth, async (req, res) => {
             message: 'Semester updated successfully'
         });
     } catch (error) {
-        console.error('Error updating semester:', error);
+        logger.error('Error updating semester:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update semester',
@@ -362,7 +363,7 @@ router.get('/stats', auth, async (req, res) => {
             data: stats[0]
         });
     } catch (error) {
-        console.error('Error fetching semester stats:', error);
+        logger.error('Error fetching semester stats:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch semester statistics',
@@ -400,7 +401,7 @@ router.post('/update-existing-borrowings', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating existing borrowings:', error);
+        logger.error('Error updating existing borrowings:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update existing borrowings',
@@ -603,7 +604,7 @@ router.post('/run-migration', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error running migration:', error);
+        logger.error('Error running migration:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to run migration',

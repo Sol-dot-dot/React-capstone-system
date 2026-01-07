@@ -5,13 +5,14 @@ const router = express.Router();
 const pool = require('../config/database');
 const authMiddleware = require('../middleware/auth');
 
+const { logger } = require('../config/logger');
 // Get user profile
 router.get('/user/profile/:idNumber', async (req, res) => {
     try {
         const { idNumber } = req.params;
 
         const [users] = await pool.execute(
-            'SELECT id, id_number, email, is_verified, created_at FROM users WHERE id_number = ?',
+            'SELECT id, id_number, first_name, last_name, email, student_barcode, is_verified, created_at FROM users WHERE id_number = ?',
             [idNumber]
         );
 
@@ -25,13 +26,16 @@ router.get('/user/profile/:idNumber', async (req, res) => {
             user: {
                 id: user.id,
                 idNumber: user.id_number,
+                firstName: user.first_name,
+                lastName: user.last_name,
                 email: user.email,
+                studentBarcode: user.student_barcode,
                 isVerified: user.is_verified,
                 createdAt: user.created_at
             }
         });
     } catch (error) {
-        console.error('Get profile error:', error);
+        logger.error('Get profile error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -44,9 +48,9 @@ router.put('/user/profile/:idNumber', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -88,7 +92,7 @@ router.put('/user/profile/:idNumber', [
             message: 'Profile updated successfully'
         });
     } catch (error) {
-        console.error('Update profile error:', error);
+        logger.error('Update profile error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -101,9 +105,9 @@ router.put('/user/change-password/:idNumber', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -142,7 +146,7 @@ router.put('/user/change-password/:idNumber', [
             message: 'Password changed successfully'
         });
     } catch (error) {
-        console.error('Change password error:', error);
+        logger.error('Change password error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -154,9 +158,9 @@ router.delete('/user/profile/:idNumber', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -192,7 +196,7 @@ router.delete('/user/profile/:idNumber', [
             message: 'Account deleted successfully'
         });
     } catch (error) {
-        console.error('Delete account error:', error);
+        logger.error('Delete account error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -203,7 +207,7 @@ router.get('/admin/profile', authMiddleware, async (req, res) => {
     try {
         // Get admin ID from token (assuming middleware sets req.user)
         const adminId = req.user?.id;
-        
+
         if (!adminId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -231,7 +235,7 @@ router.get('/admin/profile', authMiddleware, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get admin profile error:', error);
+        logger.error('Get admin profile error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -245,14 +249,14 @@ router.put('/admin/profile', authMiddleware, [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
         const adminId = req.user?.id;
-        
+
         if (!adminId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -311,7 +315,7 @@ router.put('/admin/profile', authMiddleware, [
             message: 'Profile updated successfully'
         });
     } catch (error) {
-        console.error('Update admin profile error:', error);
+        logger.error('Update admin profile error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -324,14 +328,14 @@ router.put('/admin/change-password', authMiddleware, [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
         const adminId = req.user?.id;
-        
+
         if (!adminId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
@@ -370,7 +374,7 @@ router.put('/admin/change-password', authMiddleware, [
             message: 'Password changed successfully'
         });
     } catch (error) {
-        console.error('Change admin password error:', error);
+        logger.error('Change admin password error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

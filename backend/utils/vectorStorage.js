@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 
+const { logger } = require('../config/logger');
 class VectorStorage {
   constructor() {
     this.storagePath = path.join(__dirname, '../data/vector_storage.json');
@@ -18,20 +19,20 @@ class VectorStorage {
       try {
         const data = await fs.readFile(this.storagePath, 'utf8');
         const parsed = JSON.parse(data);
-        
+
         if (parsed.embeddings) {
           this.embeddings = new Map(parsed.embeddings);
         }
         if (parsed.metadata) {
           this.metadata = new Map(parsed.metadata);
         }
-        
-        console.log(`[INFO] Loaded ${this.embeddings.size} embeddings from storage`);
+
+        logger.info(`[INFO] Loaded ${this.embeddings.size} embeddings from storage`);
       } catch (error) {
-        console.log('[INFO] No existing vector storage found, starting fresh');
+        logger.info('[INFO] No existing vector storage found, starting fresh');
       }
     } catch (error) {
-      console.error('[ERROR] Error initializing vector storage:', error);
+      logger.error('[ERROR] Error initializing vector storage:', error);
       throw error;
     }
   }
@@ -44,11 +45,11 @@ class VectorStorage {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      
+
       await this.persist();
-      console.log(`[OK] Saved embedding for book ${bookId}`);
+      logger.info(`[OK] Saved embedding for book ${bookId}`);
     } catch (error) {
-      console.error('[ERROR] Error saving embedding:', error);
+      logger.error('[ERROR] Error saving embedding:', error);
       throw error;
     }
   }
@@ -74,9 +75,9 @@ class VectorStorage {
       this.embeddings.delete(bookId);
       this.metadata.delete(bookId);
       await this.persist();
-      console.log(`[INFO] Removed embedding for book ${bookId}`);
+      logger.info(`[INFO] Removed embedding for book ${bookId}`);
     } catch (error) {
-      console.error('[ERROR] Error removing embedding:', error);
+      logger.error('[ERROR] Error removing embedding:', error);
       throw error;
     }
   }
@@ -86,9 +87,9 @@ class VectorStorage {
       this.embeddings.clear();
       this.metadata.clear();
       await this.persist();
-      console.log('[INFO] Cleared all embeddings');
+      logger.info('[INFO] Cleared all embeddings');
     } catch (error) {
-      console.error('[ERROR] Error clearing embeddings:', error);
+      logger.error('[ERROR] Error clearing embeddings:', error);
       throw error;
     }
   }
@@ -101,10 +102,10 @@ class VectorStorage {
         lastUpdated: new Date().toISOString(),
         version: '1.0.0'
       };
-      
+
       await fs.writeFile(this.storagePath, JSON.stringify(data, null, 2));
     } catch (error) {
-      console.error('[ERROR] Error persisting vector storage:', error);
+      logger.error('[ERROR] Error persisting vector storage:', error);
       throw error;
     }
   }
@@ -114,7 +115,7 @@ class VectorStorage {
       totalEmbeddings: this.embeddings.size,
       totalMetadata: this.metadata.size,
       storagePath: this.storagePath,
-      lastUpdated: this.metadata.size > 0 ? 
+      lastUpdated: this.metadata.size > 0 ?
         Math.max(...Array.from(this.metadata.values()).map(m => new Date(m.updatedAt).getTime())) : null
     };
   }

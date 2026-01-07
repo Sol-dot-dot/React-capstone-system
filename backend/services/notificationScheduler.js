@@ -7,6 +7,7 @@ const cron = require('node-cron');
 const pool = require('../config/database');
 const { sendDueDateReminderEmail } = require('../utils/emailService');
 
+const { logger } = require('../config/logger');
 // Notification message templates
 const templates = {
     due_soon: {
@@ -73,7 +74,7 @@ async function getBooksNeedingNotifications() {
         const [rows] = await pool.execute(query);
         return rows;
     } catch (error) {
-        console.error('[NotificationScheduler] Error getting books:', error.message);
+        logger.error('[NotificationScheduler] Error getting books:', error.message);
         return [];
     }
 }
@@ -138,7 +139,7 @@ async function sendBookNotificationEmail(user, book, notificationType) {
 
         return result.success;
     } catch (error) {
-        console.error('[NotificationScheduler] Email error:', error.message);
+        logger.error('[NotificationScheduler] Email error:', error.message);
         return false;
     }
 }
@@ -147,10 +148,10 @@ async function sendBookNotificationEmail(user, book, notificationType) {
  * Main function to process and send all notifications
  */
 async function sendNearOverdueNotifications() {
-    console.log('[NotificationScheduler] Starting notification check...');
+    logger.info('[NotificationScheduler] Starting notification check...');
 
     const books = await getBooksNeedingNotifications();
-    console.log(`[NotificationScheduler] Found ${books.length} books needing attention`);
+    logger.info(`[NotificationScheduler] Found ${books.length} books needing attention`);
 
     let emailsSent = 0;
     let skipped = 0;
@@ -203,7 +204,7 @@ async function sendNearOverdueNotifications() {
         }
     }
 
-    console.log(`[NotificationScheduler] Complete. Emails sent: ${emailsSent}, Skipped: ${skipped}`);
+    logger.info(`[NotificationScheduler] Complete. Emails sent: ${emailsSent}, Skipped: ${skipped}`);
 
     return {
         totalBooks: books.length,
@@ -219,11 +220,11 @@ async function sendNearOverdueNotifications() {
 function initializeScheduler() {
     // Run every day at 8:00 AM
     cron.schedule('0 8 * * *', async () => {
-        console.log('[NotificationScheduler] Running scheduled notification check...');
+        logger.info('[NotificationScheduler] Running scheduled notification check...');
         await sendNearOverdueNotifications();
     });
 
-    console.log('[NotificationScheduler] Scheduler initialized - will run daily at 8:00 AM');
+    logger.info('[NotificationScheduler] Scheduler initialized - will run daily at 8:00 AM');
 }
 
 /**

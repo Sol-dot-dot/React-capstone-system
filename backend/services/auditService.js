@@ -16,7 +16,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`Authentication ${action}`, {
         userId,
         action,
@@ -42,7 +42,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`Book ${action}`, {
         userId,
         bookId,
@@ -69,7 +69,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`Borrowing ${action}`, {
         userId,
         borrowingId,
@@ -96,7 +96,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`Penalty ${action}`, {
         userId,
         penaltyId,
@@ -122,7 +122,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`Admin ${action}`, {
         adminId,
         action,
@@ -147,7 +147,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.audit(`System Event: ${event}`, {
         event,
         details
@@ -171,7 +171,7 @@ class AuditService {
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.security(`Security Event: ${event}`, {
         event,
         details
@@ -211,7 +211,7 @@ class AuditService {
   async getAuditLogs(filters = {}) {
     try {
       let query = `
-        SELECT 
+        SELECT
           al.id,
           al.user_id,
           al.action,
@@ -229,49 +229,49 @@ class AuditService {
         LEFT JOIN users a ON al.user_id = a.id AND a.role = 'admin'
         WHERE 1=1
       `;
-      
+
       const params = [];
-      
+
       if (filters.userId) {
         query += ' AND al.user_id = ?';
         params.push(filters.userId);
       }
-      
+
       if (filters.category) {
         query += ' AND al.category = ?';
         params.push(filters.category);
       }
-      
+
       if (filters.action) {
         query += ' AND al.action LIKE ?';
         params.push(`%${filters.action}%`);
       }
-      
+
       if (filters.startDate) {
         query += ' AND al.created_at >= ?';
         params.push(filters.startDate);
       }
-      
+
       if (filters.endDate) {
         query += ' AND al.created_at <= ?';
         params.push(filters.endDate);
       }
-      
+
       query += ' ORDER BY al.created_at DESC';
-      
+
       if (filters.limit) {
         query += ' LIMIT ?';
         params.push(filters.limit);
       }
-      
+
       const [logs] = await pool.execute(query, params);
-      
+
       // Parse JSON details
       return logs.map(log => ({
         ...log,
         details: JSON.parse(log.details || '{}')
       }));
-      
+
     } catch (error) {
       logger.error('Failed to get audit logs', { error: error.message, filters });
       throw error;
@@ -285,7 +285,7 @@ class AuditService {
     try {
       let dateFilter = '';
       const params = [];
-      
+
       switch (period) {
         case '1d':
           dateFilter = 'AND al.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
@@ -300,10 +300,10 @@ class AuditService {
           dateFilter = 'AND al.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)';
           break;
       }
-      
+
       // Get category statistics
       const [categoryStats] = await pool.execute(`
-        SELECT 
+        SELECT
           category,
           COUNT(*) as count,
           COUNT(DISTINCT user_id) as unique_users
@@ -312,10 +312,10 @@ class AuditService {
         GROUP BY category
         ORDER BY count DESC
       `, params);
-      
+
       // Get action statistics
       const [actionStats] = await pool.execute(`
-        SELECT 
+        SELECT
           action,
           COUNT(*) as count
         FROM audit_logs al
@@ -324,10 +324,10 @@ class AuditService {
         ORDER BY count DESC
         LIMIT 20
       `, params);
-      
+
       // Get daily activity
       const [dailyActivity] = await pool.execute(`
-        SELECT 
+        SELECT
           DATE(al.created_at) as date,
           COUNT(*) as count,
           COUNT(DISTINCT user_id) as unique_users
@@ -336,14 +336,14 @@ class AuditService {
         GROUP BY DATE(al.created_at)
         ORDER BY date DESC
       `, params);
-      
+
       return {
         categoryStats,
         actionStats,
         dailyActivity,
         period
       };
-      
+
     } catch (error) {
       logger.error('Failed to get audit statistics', { error: error.message, period });
       throw error;
@@ -352,4 +352,3 @@ class AuditService {
 }
 
 module.exports = new AuditService();
-

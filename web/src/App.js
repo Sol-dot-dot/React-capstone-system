@@ -111,13 +111,13 @@ function App() {
           <div className="flex h-screen bg-slate-50 relative">
             {/* Mobile Overlay */}
             {isMobile && sidebarOpen && (
-              <div 
+              <div
                 className="fixed inset-0 bg-black bg-opacity-50 z-40"
                 onClick={() => setSidebarOpen(false)}
               />
             )}
-            
-            <Sidebar 
+
+            <Sidebar
               isCollapsed={sidebarCollapsed}
               isMobile={isMobile}
               isOpen={sidebarOpen}
@@ -125,7 +125,12 @@ function App() {
               onLogout={handleLogout}
               user={user}
             />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div
+              className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+              style={{
+                marginLeft: isMobile ? 0 : (sidebarCollapsed ? 80 : 280)
+              }}
+            >
               <TopBar 
                 onToggleSidebar={toggleSidebar}
                 onLogout={handleLogout}

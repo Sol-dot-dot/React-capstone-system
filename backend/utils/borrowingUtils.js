@@ -1,6 +1,7 @@
 const db = require('../config/database');
-const { 
-    getSystemSettings, 
+const { logger } = require('../config/logger');
+const {
+    getSystemSettings,
     checkAndUpdateStudentBorrowingStatus,
     updateSemesterBooksCount,
     createOrUpdateSemesterTracking
@@ -15,7 +16,7 @@ async function calculateDueDate(borrowDate = new Date()) {
         dueDate.setDate(dueDate.getDate() + days);
         return dueDate;
     } catch (error) {
-        console.error('Error getting system settings for due date calculation:', error);
+        logger.error('Error getting system settings for due date calculation:', error);
         // Fallback to 7 days if settings can't be retrieved
         const dueDate = new Date(borrowDate);
         dueDate.setDate(dueDate.getDate() + 7);
@@ -38,7 +39,7 @@ async function checkStudentExists(idNumber) {
         );
         return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-        console.error('Error checking student existence:', error);
+        logger.error('Error checking student existence:', error);
         throw error;
     }
 }
@@ -50,24 +51,24 @@ async function checkBookAvailability(bookCode) {
             'SELECT id, title, author, number_code, status, available_copies FROM books WHERE number_code = ?',
             [bookCode]
         );
-        
+
         if (rows.length === 0) {
             return { exists: false, message: 'Book not found' };
         }
-        
+
         const book = rows[0];
         if (book.available_copies <= 0) {
-            return { 
-                exists: true, 
-                available: false, 
+            return {
+                exists: true,
+                available: false,
                 message: `Book is not available (${book.available_copies} copies available)`,
-                book 
+                book
             };
         }
-        
+
         return { exists: true, available: true, book };
     } catch (error) {
-        console.error('Error checking book availability:', error);
+        logger.error('Error checking book availability:', error);
         throw error;
     }
 }
@@ -76,14 +77,14 @@ async function checkBookAvailability(bookCode) {
 async function getStudentBorrowedCount(studentIdNumber) {
     try {
         const [rows] = await db.execute(
-            `SELECT COUNT(*) as count 
-             FROM borrowing_transactions 
+            `SELECT COUNT(*) as count
+             FROM borrowing_transactions
              WHERE student_id_number = ? AND status IN ('borrowed', 'overdue')`,
             [studentIdNumber]
         );
         return rows[0].count;
     } catch (error) {
-        console.error('Error getting student borrowed count:', error);
+        logger.error('Error getting student borrowed count:', error);
         throw error;
     }
 }
@@ -134,7 +135,7 @@ async function validateBorrowingRequest(studentIdNumber, bookCodes) {
     for (const bookCode of bookCodes) {
         const bookValidation = await checkBookAvailability(bookCode);
         validations.push({ bookCode, ...bookValidation });
-        
+
         if (!bookValidation.exists) {
             errors.push(`Book with code ${bookCode} not found`);
         } else if (!bookValidation.available) {
@@ -187,7 +188,7 @@ async function getCurrentSemesterInfo(connection = null) {
         // No semester found
         return { semesterId: null, academicYearId: null };
     } catch (error) {
-        console.error('Error getting current semester info:', error);
+        logger.error('Error getting current semester info:', error);
         return { semesterId: null, academicYearId: null };
     }
 }
@@ -273,7 +274,7 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
                 `, [semesterId, bookCodes.length, studentIdNumber, bookCodes.length]);
             } catch (clearanceError) {
                 // Silently fail if semester_clearances table doesn't exist yet
-                console.log('Note: Could not update semester_clearances - table may not exist yet');
+                logger.info('Note: Could not update semester_clearances - table may not exist yet');
             }
         }
 
@@ -324,7 +325,7 @@ async function getBorrowingStats() {
             todayReturns: todayReturns[0].count
         };
     } catch (error) {
-        console.error('Error getting borrowing stats:', error);
+        logger.error('Error getting borrowing stats:', error);
         throw error;
     }
 }
@@ -332,11 +333,11 @@ async function getBorrowingStats() {
 // Create return transaction record
 async function createReturnTransaction(transactionId, adminId, returnCondition = 'good', conditionNotes = null, processingNotes = null) {
     const connection = await db.getConnection();
-    
+
     try {
         await connection.beginTransaction();
 
-        console.log(`[INFO] Creating return transaction for borrowing transaction ID: ${transactionId}`);
+        logger.info(`[INFO] Creating return transaction for borrowing transaction ID: ${transactionId}`);
 
         // Get the borrowing transaction details
         const [transactionRows] = await connection.execute(
@@ -360,15 +361,15 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
         );
 
         if (existingReturns.length > 0) {
-            console.log(`Return transaction already exists for borrowing transaction ${transactionId}`);
+            logger.info(`Return transaction already exists for borrowing transaction ${transactionId}`);
             return { created: false, returnId: existingReturns[0].id };
         }
 
         // Create return transaction record
         const [returnResult] = await connection.execute(
-            `INSERT INTO return_transactions 
-             (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
-              return_condition, condition_notes, processing_notes, status) 
+            `INSERT INTO return_transactions
+             (transaction_id, student_id_number, book_id, returned_at, returned_by_admin,
+              return_condition, condition_notes, processing_notes, status)
              VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, 'completed')`,
             [
                 transactionId,
@@ -383,9 +384,9 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
 
         await connection.commit();
 
-        console.log(`[OK] Return transaction created successfully! ID: ${returnResult.insertId}`);
-        console.log(`[INFO] Book: ${transaction.book_title}, Student: ${transaction.student_id_number}`);
-        
+        logger.info(`[OK] Return transaction created successfully! ID: ${returnResult.insertId}`);
+        logger.info(`[INFO] Book: ${transaction.book_title}, Student: ${transaction.student_id_number}`);
+
         return {
             created: true,
             returnId: returnResult.insertId,
@@ -396,7 +397,7 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error creating return transaction:', error);
+        logger.error('Error creating return transaction:', error);
         throw error;
     } finally {
         connection.release();
@@ -406,11 +407,11 @@ async function createReturnTransaction(transactionId, adminId, returnCondition =
 // Ensure all returned books have return transaction records
 async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
     const connection = await db.getConnection();
-    
+
     try {
         await connection.beginTransaction();
 
-        console.log(`[INFO] Checking for missing return transaction records for student: ${studentIdNumber}`);
+        logger.info(`[INFO] Checking for missing return transaction records for student: ${studentIdNumber}`);
 
         // Find all returned books that don't have return transaction records
         const [missingReturns] = await connection.execute(`
@@ -419,22 +420,22 @@ async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
             FROM borrowing_transactions bt
             JOIN books b ON bt.book_id = b.id
             LEFT JOIN return_transactions rt ON bt.id = rt.transaction_id
-            WHERE bt.student_id_number = ? 
-            AND bt.status = 'returned' 
+            WHERE bt.student_id_number = ?
+            AND bt.status = 'returned'
             AND rt.id IS NULL
         `, [studentIdNumber]);
 
-        console.log(`[INFO] Found ${missingReturns.length} returned books without return transaction records`);
+        logger.info(`[INFO] Found ${missingReturns.length} returned books without return transaction records`);
 
         let createdCount = 0;
         for (const book of missingReturns) {
             try {
                 const wasOverdue = book.returned_date && book.due_date && new Date(book.returned_date) > new Date(book.due_date);
-                
+
                 await connection.execute(
-                    `INSERT INTO return_transactions 
-                     (transaction_id, student_id_number, book_id, returned_at, returned_by_admin, 
-                      return_condition, condition_notes, processing_notes, status) 
+                    `INSERT INTO return_transactions
+                     (transaction_id, student_id_number, book_id, returned_at, returned_by_admin,
+                      return_condition, condition_notes, processing_notes, status)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
                     [
                         book.transaction_id,
@@ -449,20 +450,20 @@ async function ensureReturnTransactionRecords(studentIdNumber, adminId) {
                 );
 
                 createdCount++;
-                console.log(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
+                logger.info(`[OK] Created retroactive return transaction for book: ${book.book_title}`);
             } catch (error) {
-                console.error(`[ERROR] Error creating retroactive return transaction for book ${book.book_title}:`, error);
+                logger.error(`[ERROR] Error creating retroactive return transaction for book ${book.book_title}:`, error);
             }
         }
 
         await connection.commit();
-        
-        console.log(`[OK] Created ${createdCount} retroactive return transaction records for student ${studentIdNumber}`);
+
+        logger.info(`[OK] Created ${createdCount} retroactive return transaction records for student ${studentIdNumber}`);
         return { created: createdCount, total: missingReturns.length };
 
     } catch (error) {
         await connection.rollback();
-        console.error('Error ensuring return transaction records:', error);
+        logger.error('Error ensuring return transaction records:', error);
         throw error;
     } finally {
         connection.release();
@@ -482,4 +483,3 @@ module.exports = {
     ensureReturnTransactionRecords,
     getCurrentSemesterInfo
 };
-

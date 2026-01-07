@@ -1,12 +1,15 @@
 const { processAllOverdueFines, calculateFine } = require('../utils/penaltyUtils');
 const pool = require('../config/database');
 
+const { logger } = require('../config/logger');
 class FineCalculationService {
     constructor() {
         this.isRunning = false;
         this.intervalId = null;
-        this.intervalMs = 5000; // 5 seconds
+        this.intervalMs = 60000; // 60 seconds (1 minute) - reduced frequency
         this.lastProcessedTime = null;
+        this.isProcessing = false; // Prevent concurrent processing
+        this.batchSize = 100; // Process 100 transactions at a time
     }
 
     /**
@@ -14,23 +17,27 @@ class FineCalculationService {
      */
     start() {
         if (this.isRunning) {
-            console.log('[WARN] Fine calculation service is already running');
+            logger.info('[WARN] Fine calculation service is already running');
             return;
         }
 
-        console.log('[INFO] Starting fine calculation service...');
+        logger.info('[INFO] Starting fine calculation service...');
         this.isRunning = true;
         this.lastProcessedTime = new Date();
 
-        // Run immediately on start
-        this.processFines();
+        // Run immediately on start (with error handling)
+        this.processFines().catch(error => {
+            logger.error('[ERROR] Error in initial fine processing:', error);
+        });
 
         // Set up interval
         this.intervalId = setInterval(() => {
-            this.processFines();
+            this.processFines().catch(error => {
+                logger.error('[ERROR] Error in scheduled fine processing:', error);
+            });
         }, this.intervalMs);
 
-        console.log(`[OK] Fine calculation service started (checking every ${this.intervalMs / 1000} seconds)`);
+        logger.info(`[OK] Fine calculation service started (checking every ${this.intervalMs / 1000} seconds)`);
     }
 
     /**
@@ -38,11 +45,11 @@ class FineCalculationService {
      */
     stop() {
         if (!this.isRunning) {
-            console.log('[WARN] Fine calculation service is not running');
+            logger.info('[WARN] Fine calculation service is not running');
             return;
         }
 
-        console.log('[INFO] Stopping fine calculation service...');
+        logger.info('[INFO] Stopping fine calculation service...');
         this.isRunning = false;
 
         if (this.intervalId) {
@@ -50,7 +57,7 @@ class FineCalculationService {
             this.intervalId = null;
         }
 
-        console.log('[OK] Fine calculation service stopped');
+        logger.info('[OK] Fine calculation service stopped');
     }
 
     /**
@@ -58,66 +65,12 @@ class FineCalculationService {
      */
     async populateOverdueHistory() {
         try {
-            console.log('[INFO] Populating overdue history for existing overdue books...');
-            
-            const [overdueTransactions] = await pool.execute(`
-                SELECT 
-                    bt.id as transaction_id,
-                    bt.student_id_number,
-                    bt.borrowed_date,
-                    bt.due_date,
-                    bt.status,
-                    b.title as book_title,
-                    b.author as book_author,
-                    b.number_code as book_code,
-                    f.fine_amount,
-                    f.paid_amount,
-                    DATEDIFF(CURDATE(), bt.due_date) as days_overdue
-                FROM borrowing_transactions bt
-                JOIN books b ON bt.book_id = b.id
-                LEFT JOIN fines f ON bt.id = f.transaction_id
-                WHERE bt.status = 'overdue' 
-                AND bt.due_date < CURDATE()
-                AND NOT EXISTS (
-                    SELECT 1 FROM overdue_history oh 
-                    WHERE oh.transaction_id = bt.id
-                )
-                ORDER BY bt.due_date ASC
-            `);
-
-            if (overdueTransactions.length === 0) {
-                console.log('[OK] No overdue transactions need history records');
-                return;
-            }
-
-            console.log(`[INFO] Creating overdue history for ${overdueTransactions.length} transactions`);
-
-            for (const transaction of overdueTransactions) {
-                await pool.execute(`
-                    INSERT INTO overdue_history 
-                    (student_id_number, transaction_id, book_title, book_author, book_code,
-                     borrowed_at, due_date, returned_at, days_overdue, fine_amount, paid_amount,
-                     returned_by_admin, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NOW())
-                `, [
-                    transaction.student_id_number,
-                    transaction.transaction_id,
-                    transaction.book_title,
-                    transaction.book_author,
-                    transaction.book_code,
-                    transaction.borrowed_date,
-                    transaction.due_date,
-                    transaction.days_overdue,
-                    transaction.fine_amount || 0,
-                    transaction.paid_amount || 0,
-                    1 // Default admin ID
-                ]);
-            }
-
-            console.log(`[OK] Successfully created ${overdueTransactions.length} overdue history records`);
-
+            // DISABLED: This function was causing memory issues with hundreds of thousands of records
+            // Skip this for now to reduce load - can be run manually if needed
+            // If you need to populate overdue history, create a separate migration script
+            return;
         } catch (error) {
-            console.error('[ERROR] Error populating overdue history:', error);
+            logger.error('[ERROR] Error populating overdue history:', error);
         }
     }
 
@@ -125,15 +78,22 @@ class FineCalculationService {
      * Process fines for all overdue books
      */
     async processFines() {
+        // Prevent concurrent processing
+        if (this.isProcessing) {
+            logger.info('[WARN] Fine calculation already in progress, skipping...');
+            return;
+        }
+
         try {
+            this.isProcessing = true;
             const startTime = new Date();
-            
-            // First, populate overdue history for existing overdue books
+
+            // First, populate overdue history for existing overdue books (with limit)
             await this.populateOverdueHistory();
-            
-            // Get all overdue transactions that need fine updates
+
+            // Get overdue transactions that need fine updates (BATCH PROCESSING)
             const [overdueTransactions] = await pool.execute(`
-                SELECT 
+                SELECT
                     bt.id,
                     bt.student_id_number,
                     bt.due_date,
@@ -144,10 +104,12 @@ class FineCalculationService {
                     f.updated_at as last_updated
                 FROM borrowing_transactions bt
                 LEFT JOIN fines f ON bt.id = f.transaction_id
-                WHERE bt.status IN ('borrowed', 'overdue') 
+                WHERE bt.status IN ('borrowed', 'overdue')
                 AND bt.due_date < NOW()
                 AND (f.id IS NULL OR f.status = 'unpaid')
-            `);
+                ORDER BY bt.due_date ASC
+                LIMIT ?
+            `, [this.batchSize]);
 
             if (overdueTransactions.length === 0) {
                 // No overdue books, just update last processed time
@@ -155,7 +117,7 @@ class FineCalculationService {
                 return;
             }
 
-            console.log(`[INFO] Processing ${overdueTransactions.length} overdue transactions...`);
+            logger.info(`[INFO] Processing ${overdueTransactions.length} overdue transactions (batch processing)...`);
 
             let updatedCount = 0;
             let errorCount = 0;
@@ -164,10 +126,10 @@ class FineCalculationService {
                 try {
                     // Calculate current fine amount
                     const fineCalculation = await calculateFine(transaction.id);
-                    
+
                     if (fineCalculation.fineAmount > 0) {
                         // Check if fine needs updating
-                        const needsUpdate = !transaction.fine_id || 
+                        const needsUpdate = !transaction.fine_id ||
                                           transaction.current_fine_amount !== fineCalculation.fineAmount ||
                                           transaction.current_days_overdue !== fineCalculation.daysOverdue;
 
@@ -175,17 +137,17 @@ class FineCalculationService {
                             if (transaction.fine_id) {
                                 // Update existing fine
                                 await pool.execute(`
-                                    UPDATE fines 
-                                    SET fine_amount = ?, 
-                                        days_overdue = ?, 
+                                    UPDATE fines
+                                    SET fine_amount = ?,
+                                        days_overdue = ?,
                                         updated_at = CURRENT_TIMESTAMP
                                     WHERE id = ?
                                 `, [fineCalculation.fineAmount, fineCalculation.daysOverdue, transaction.fine_id]);
                             } else {
                                 // Create new fine
                                 await pool.execute(`
-                                    INSERT INTO fines 
-                                    (student_id_number, transaction_id, fine_amount, days_overdue, fine_date, status) 
+                                    INSERT INTO fines
+                                    (student_id_number, transaction_id, fine_amount, days_overdue, fine_date, status)
                                     VALUES (?, ?, ?, ?, CURDATE(), 'unpaid')
                                 `, [
                                     transaction.student_id_number,
@@ -198,8 +160,8 @@ class FineCalculationService {
                             // Update transaction status to overdue if still borrowed
                             if (transaction.status === 'borrowed') {
                                 await pool.execute(`
-                                    UPDATE borrowing_transactions 
-                                    SET status = 'overdue' 
+                                    UPDATE borrowing_transactions
+                                    SET status = 'overdue'
                                     WHERE id = ?
                                 `, [transaction.id]);
                             }
@@ -208,7 +170,7 @@ class FineCalculationService {
                         }
                     }
                 } catch (error) {
-                    console.error(`[ERROR] Error processing transaction ${transaction.id}:`, error.message);
+                    logger.error(`[ERROR] Error processing transaction ${transaction.id}:`, error.message);
                     errorCount++;
                 }
             }
@@ -216,11 +178,13 @@ class FineCalculationService {
             this.lastProcessedTime = startTime;
 
             if (updatedCount > 0 || errorCount > 0) {
-                console.log(`[INFO] Fine calculation completed: ${updatedCount} updated, ${errorCount} errors`);
+                logger.info(`[INFO] Fine calculation completed: ${updatedCount} updated, ${errorCount} errors`);
             }
 
         } catch (error) {
-            console.error('[ERROR] Error in fine calculation service:', error);
+            logger.error('[ERROR] Error in fine calculation service:', error);
+        } finally {
+            this.isProcessing = false;
         }
     }
 
@@ -240,7 +204,7 @@ class FineCalculationService {
      * Force immediate processing of fines
      */
     async forceProcess() {
-        console.log('[INFO] Force processing fines...');
+        logger.info('[INFO] Force processing fines...');
         await this.processFines();
     }
 

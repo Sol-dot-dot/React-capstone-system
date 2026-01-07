@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const natural = require('natural');
 
+const { logger } = require('../config/logger');
 /**
  * Advanced Recommendation Service
  * Implements collaborative filtering and content-based filtering for personalized book recommendations
@@ -23,20 +24,20 @@ class AdvancedRecommendationService {
    */
   async generateHybridRecommendations(studentIdNumber, query = '', limit = 5) {
     try {
-      console.log(`[INFO] Generating hybrid recommendations for: ${studentIdNumber}`);
+      logger.info(`[INFO] Generating hybrid recommendations for: ${studentIdNumber}`);
 
       // Get user's reading history
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
-      
+
       // Generate collaborative filtering recommendations
       const collaborativeRecs = await this.generateCollaborativeRecommendations(studentIdNumber, limit * 2);
-      
+
       // Generate content-based filtering recommendations
       const contentBasedRecs = await this.generateContentBasedRecommendations(studentIdNumber, query, limit * 2);
-      
+
       // Generate query-based recommendations if query provided
       const queryBasedRecs = query ? await this.generateQueryBasedRecommendations(query, limit * 2) : [];
-      
+
       // Combine and rank recommendations
       const hybridRecs = this.combineRecommendations(
         collaborativeRecs,
@@ -54,7 +55,7 @@ class AdvancedRecommendationService {
       };
 
     } catch (error) {
-      console.error('[ERROR] Error generating hybrid recommendations:', error);
+      logger.error('[ERROR] Error generating hybrid recommendations:', error);
       throw error;
     }
   }
@@ -67,18 +68,18 @@ class AdvancedRecommendationService {
    */
   async generateCollaborativeRecommendations(studentIdNumber, limit = 10) {
     try {
-      console.log(`[INFO] Generating collaborative recommendations for: ${studentIdNumber}`);
+      logger.info(`[INFO] Generating collaborative recommendations for: ${studentIdNumber}`);
 
       // Get user's reading history
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
-      
+
       if (userHistory.length === 0) {
         return [];
       }
 
       // Find similar users based on reading patterns
       const similarUsers = await this.findSimilarUsers(studentIdNumber, userHistory);
-      
+
       if (similarUsers.length === 0) {
         return [];
       }
@@ -98,7 +99,7 @@ class AdvancedRecommendationService {
       }));
 
     } catch (error) {
-      console.error('[ERROR] Error in collaborative filtering:', error);
+      logger.error('[ERROR] Error in collaborative filtering:', error);
       return [];
     }
   }
@@ -112,20 +113,20 @@ class AdvancedRecommendationService {
    */
   async generateContentBasedRecommendations(studentIdNumber, query = '', limit = 10) {
     try {
-      console.log(`[INFO] Generating content-based recommendations for: ${studentIdNumber}`);
+      logger.info(`[INFO] Generating content-based recommendations for: ${studentIdNumber}`);
 
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
-      
+
       if (userHistory.length === 0) {
         return [];
       }
 
       // Create user profile from reading history
       const userProfile = this.createUserProfile(userHistory);
-      
+
       // Get all available books
       const [availableBooks] = await pool.execute(`
-        SELECT 
+        SELECT
           b.id,
           b.title,
           b.author,
@@ -141,8 +142,8 @@ class AdvancedRecommendationService {
         FROM books b
         WHERE b.status = 'available'
         AND b.id NOT IN (
-          SELECT DISTINCT book_id 
-          FROM borrowing_transactions 
+          SELECT DISTINCT book_id
+          FROM borrowing_transactions
           WHERE student_id_number = ?
         )
         ORDER BY b.title
@@ -165,7 +166,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('[ERROR] Error in content-based filtering:', error);
+      logger.error('[ERROR] Error in content-based filtering:', error);
       return [];
     }
   }
@@ -178,7 +179,7 @@ class AdvancedRecommendationService {
    */
   async generateQueryBasedRecommendations(query, limit = 10) {
     try {
-      console.log(`[INFO] Generating query-based recommendations for: "${query}"`);
+      logger.info(`[INFO] Generating query-based recommendations for: "${query}"`);
 
       // Tokenize and process query
       const queryTokens = this.tokenizer.tokenize(query.toLowerCase());
@@ -186,7 +187,7 @@ class AdvancedRecommendationService {
 
       // Get all available books
       const [availableBooks] = await pool.execute(`
-        SELECT 
+        SELECT
           b.id,
           b.title,
           b.author,
@@ -221,7 +222,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('[ERROR] Error in query-based recommendations:', error);
+      logger.error('[ERROR] Error in query-based recommendations:', error);
       return [];
     }
   }
@@ -236,7 +237,7 @@ class AdvancedRecommendationService {
     try {
       // Get all other users' reading histories
       const [allUsers] = await pool.execute(`
-        SELECT 
+        SELECT
           bt.student_id_number,
           b.id as book_id,
           b.title,
@@ -244,9 +245,9 @@ class AdvancedRecommendationService {
           b.category,
           bt.borrowed_date,
           bt.returned_date,
-          CASE 
-            WHEN bt.returned_date IS NOT NULL THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.returned_date IS NOT NULL THEN 1
+            ELSE 0
           END as completed_reading
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
@@ -282,7 +283,7 @@ class AdvancedRecommendationService {
         .slice(0, 10);
 
     } catch (error) {
-      console.error('[ERROR] Error finding similar users:', error);
+      logger.error('[ERROR] Error finding similar users:', error);
       return [];
     }
   }
@@ -326,8 +327,8 @@ class AdvancedRecommendationService {
 
       // Get user's already read books
       const [userBooks] = await pool.execute(`
-        SELECT DISTINCT book_id 
-        FROM borrowing_transactions 
+        SELECT DISTINCT book_id
+        FROM borrowing_transactions
         WHERE student_id_number = ?
       `, [studentIdNumber]);
 
@@ -350,7 +351,7 @@ class AdvancedRecommendationService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('[ERROR] Error getting books from similar users:', error);
+      logger.error('[ERROR] Error getting books from similar users:', error);
       return [];
     }
   }
@@ -438,8 +439,8 @@ class AdvancedRecommendationService {
 
     // Query similarity (if query provided)
     if (query) {
-      const querySimilarity = this.calculateQuerySimilarity(book, 
-        this.tokenizer.tokenize(query.toLowerCase()), 
+      const querySimilarity = this.calculateQuerySimilarity(book,
+        this.tokenizer.tokenize(query.toLowerCase()),
         this.tokenizer.tokenize(query.toLowerCase()).map(t => this.stemmer.stem(t))
       );
       similarity += querySimilarity * 0.3;
@@ -449,7 +450,7 @@ class AdvancedRecommendationService {
     // Keyword similarity
     if (book.title) {
       const bookTokens = this.tokenizer.tokenize(book.title.toLowerCase());
-      const commonKeywords = bookTokens.filter(token => 
+      const commonKeywords = bookTokens.filter(token =>
         userProfile.keywords.includes(token)
       );
       if (bookTokens.length > 0) {
@@ -478,8 +479,8 @@ class AdvancedRecommendationService {
     if (book.title) {
       const titleTokens = this.tokenizer.tokenize(book.title.toLowerCase());
       const titleStems = titleTokens.map(token => this.stemmer.stem(token));
-      
-      const titleMatches = queryTokens.filter(token => 
+
+      const titleMatches = queryTokens.filter(token =>
         titleTokens.some(titleToken => titleToken.includes(token) || token.includes(titleToken))
       );
       similarity += (titleMatches.length / totalTokens) * 0.5;
@@ -488,7 +489,7 @@ class AdvancedRecommendationService {
     // Check author similarity
     if (book.author) {
       const authorTokens = this.tokenizer.tokenize(book.author.toLowerCase());
-      const authorMatches = queryTokens.filter(token => 
+      const authorMatches = queryTokens.filter(token =>
         authorTokens.some(authorToken => authorToken.includes(token) || token.includes(authorToken))
       );
       similarity += (authorMatches.length / totalTokens) * 0.3;
@@ -497,7 +498,7 @@ class AdvancedRecommendationService {
     // Check category similarity
     if (book.category) {
       const categoryTokens = this.tokenizer.tokenize(book.category.toLowerCase());
-      const categoryMatches = queryTokens.filter(token => 
+      const categoryMatches = queryTokens.filter(token =>
         categoryTokens.some(catToken => catToken.includes(token) || token.includes(catToken))
       );
       similarity += (categoryMatches.length / totalTokens) * 0.2;
@@ -515,18 +516,18 @@ class AdvancedRecommendationService {
   calculateUserSimilarity(user1History, user2History) {
     const user1Books = new Set(user1History.map(book => book.book_id));
     const user2Books = new Set(user2History.map(book => book.book_id));
-    
+
     const intersection = new Set([...user1Books].filter(id => user2Books.has(id)));
     const union = new Set([...user1Books, ...user2Books]);
-    
+
     // Jaccard similarity
     const jaccardSimilarity = intersection.size / union.size;
-    
+
     // Weight by reading completion rate
     const user1Completed = user1History.filter(book => book.completed_reading).length;
     const user2Completed = user2History.filter(book => book.completed_reading).length;
     const completionRate = (user1Completed + user2Completed) / (user1History.length + user2History.length);
-    
+
     return jaccardSimilarity * (0.7 + 0.3 * completionRate);
   }
 
@@ -541,7 +542,7 @@ class AdvancedRecommendationService {
    */
   combineRecommendations(collaborativeRecs, contentBasedRecs, queryBasedRecs, userHistory, limit) {
     const combined = new Map();
-    
+
     // Weight different recommendation types
     const weights = {
       collaborative: 0.3,
@@ -599,25 +600,25 @@ class AdvancedRecommendationService {
   addDiversityBonus(recommendations) {
     const seenGenres = new Set();
     const seenAuthors = new Set();
-    
+
     return recommendations.map((rec, index) => {
       let diversityBonus = 0;
-      
+
       // Genre diversity bonus
       if (rec.category && !seenGenres.has(rec.category)) {
         diversityBonus += 0.1;
         seenGenres.add(rec.category);
       }
-      
+
       // Author diversity bonus
       if (rec.author && !seenAuthors.has(rec.author)) {
         diversityBonus += 0.05;
         seenAuthors.add(rec.author);
       }
-      
+
       // Position bonus (prefer earlier recommendations)
       const positionBonus = (recommendations.length - index) / recommendations.length * 0.05;
-      
+
       return {
         ...rec,
         finalScore: rec.finalScore + diversityBonus + positionBonus,
@@ -639,22 +640,22 @@ class AdvancedRecommendationService {
     const collaborativeCount = recommendations.filter(r => r.sources.includes('collaborative')).length;
     const contentBasedCount = recommendations.filter(r => r.sources.includes('content-based')).length;
     const queryBasedCount = recommendations.filter(r => r.sources.includes('query-based')).length;
-    
+
     let explanation = `Based on your reading history of ${totalBooks} books`;
-    
+
     if (query) {
       explanation += ` and your search for "${query}"`;
     }
-    
+
     explanation += `, I've found ${recommendations.length} personalized recommendations using:`;
-    
+
     const methods = [];
     if (collaborativeCount > 0) methods.push(`${collaborativeCount} from similar readers`);
     if (contentBasedCount > 0) methods.push(`${contentBasedCount} from your reading preferences`);
     if (queryBasedCount > 0) methods.push(`${queryBasedCount} from your search terms`);
-    
+
     explanation += ` ${methods.join(', ')}.`;
-    
+
     return explanation;
   }
 
@@ -667,7 +668,7 @@ class AdvancedRecommendationService {
     try {
       const userHistory = await this.getUserReadingHistory(studentIdNumber);
       const profile = this.createUserProfile(userHistory);
-      
+
       return {
         totalBooksRead: profile.totalBooks,
         completedBooks: profile.completedBooks,
@@ -682,7 +683,7 @@ class AdvancedRecommendationService {
         readingDiversity: this.calculateReadingDiversity(profile)
       };
     } catch (error) {
-      console.error('[ERROR] Error generating user profile:', error);
+      logger.error('[ERROR] Error generating user profile:', error);
       return null;
     }
   }
@@ -696,10 +697,10 @@ class AdvancedRecommendationService {
     const genreCount = Object.keys(profile.favoriteGenres).length;
     const authorCount = Object.keys(profile.favoriteAuthors).length;
     const maxPossible = Math.min(profile.totalBooks, 10); // Assume max 10 different genres/authors
-    
+
     const genreDiversity = Math.min(genreCount / maxPossible, 1);
     const authorDiversity = Math.min(authorCount / maxPossible, 1);
-    
+
     return (genreDiversity + authorDiversity) / 2;
   }
 
@@ -711,11 +712,11 @@ class AdvancedRecommendationService {
    */
   calculateConfidence(recommendations, userHistory) {
     if (recommendations.length === 0) return 0;
-    
+
     const avgScore = recommendations.reduce((sum, rec) => sum + rec.finalScore, 0) / recommendations.length;
     const historyWeight = Math.min(userHistory.length / 10, 1); // More history = higher confidence
     const diversityWeight = this.calculateDiversityScore(recommendations);
-    
+
     return Math.min(avgScore * 0.5 + historyWeight * 0.3 + diversityWeight * 0.2, 1);
   }
 
@@ -727,10 +728,10 @@ class AdvancedRecommendationService {
   calculateDiversityScore(recommendations) {
     const genres = new Set(recommendations.map(r => r.category).filter(Boolean));
     const authors = new Set(recommendations.map(r => r.author).filter(Boolean));
-    
+
     const genreDiversity = genres.size / Math.min(recommendations.length, 5);
     const authorDiversity = authors.size / Math.min(recommendations.length, 5);
-    
+
     return (genreDiversity + authorDiversity) / 2;
   }
 
@@ -750,7 +751,7 @@ class AdvancedRecommendationService {
       `A must-read according to readers with your taste`,
       `This book resonated with readers who share your interests`
     ];
-    
+
     return reasons[Math.floor(Math.random() * reasons.length)];
   }
 
@@ -762,7 +763,7 @@ class AdvancedRecommendationService {
    */
   generateDynamicContentBasedReason(book, userProfile) {
     const reasons = [];
-    
+
     if (book.category && userProfile.favoriteGenres[book.category]) {
       const score = Math.round(userProfile.favoriteGenres[book.category] * 100);
       const categoryReasons = [
@@ -774,7 +775,7 @@ class AdvancedRecommendationService {
       ];
       reasons.push(categoryReasons[Math.floor(Math.random() * categoryReasons.length)]);
     }
-    
+
     if (book.author && userProfile.favoriteAuthors[book.author]) {
       const score = Math.round(userProfile.favoriteAuthors[book.author] * 100);
       const authorReasons = [
@@ -786,7 +787,7 @@ class AdvancedRecommendationService {
       ];
       reasons.push(authorReasons[Math.floor(Math.random() * authorReasons.length)]);
     }
-    
+
     if (reasons.length === 0) {
       const genericReasons = [
         `This book aligns perfectly with your reading taste`,
@@ -798,7 +799,7 @@ class AdvancedRecommendationService {
       ];
       return genericReasons[Math.floor(Math.random() * genericReasons.length)];
     }
-    
+
     return reasons.join(' and ');
   }
 
@@ -819,7 +820,7 @@ class AdvancedRecommendationService {
       `A perfect match for your query`,
       `This book delivers on your "${query}" search`
     ];
-    
+
     return queryReasons[Math.floor(Math.random() * queryReasons.length)];
   }
 
@@ -831,21 +832,21 @@ class AdvancedRecommendationService {
    */
   generateContentBasedReason(book, userProfile) {
     const reasons = [];
-    
+
     if (book.category && userProfile.favoriteGenres[book.category]) {
       const score = Math.round(userProfile.favoriteGenres[book.category] * 100);
       reasons.push(`matches your interest in ${book.category} (${score}% match)`);
     }
-    
+
     if (book.author && userProfile.favoriteAuthors[book.author]) {
       const score = Math.round(userProfile.favoriteAuthors[book.author] * 100);
       reasons.push(`by ${book.author} who you've enjoyed before (${score}% match)`);
     }
-    
+
     if (reasons.length === 0) {
       return 'similar to books you might enjoy';
     }
-    
+
     return reasons.join(' and ');
   }
 
@@ -857,7 +858,7 @@ class AdvancedRecommendationService {
   async getUserReadingHistory(studentIdNumber) {
     try {
       const [history] = await pool.execute(`
-        SELECT 
+        SELECT
           bt.id,
           bt.borrowed_date,
           bt.returned_date,
@@ -870,9 +871,9 @@ class AdvancedRecommendationService {
           b.publication_year,
           b.publisher,
           DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.borrowed_date) as days_kept,
-          CASE 
-            WHEN bt.returned_date IS NOT NULL THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.returned_date IS NOT NULL THEN 1
+            ELSE 0
           END as completed_reading
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
@@ -882,7 +883,7 @@ class AdvancedRecommendationService {
 
       return history;
     } catch (error) {
-      console.error('[ERROR] Error getting user reading history:', error);
+      logger.error('[ERROR] Error getting user reading history:', error);
       return [];
     }
   }

@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/database');
 
+const { logger } = require('../config/logger');
 // Helper function to get category colors
 const getCategoryColor = (category) => {
   const colors = {
@@ -44,7 +45,7 @@ const getBookStatusColor = (status) => {
 router.get('/dashboard', auth, async (req, res) => {
   try {
     const { range = '3months' } = req.query;
-    
+
     // Calculate date range
     const now = new Date();
     let startDate;
@@ -67,12 +68,12 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Get user growth data
     const userGrowthQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(created_at, '%b') as month,
         COUNT(*) as users,
         SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) as verified,
         COUNT(CASE WHEN last_login >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as active
-      FROM users 
+      FROM users
       WHERE created_at >= ? AND role = 'student'
       GROUP BY DATE_FORMAT(created_at, '%Y-%m')
       ORDER BY created_at
@@ -80,23 +81,23 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Get book categories data
     const bookCategoriesQuery = `
-      SELECT 
+      SELECT
         category,
         COUNT(*) as count,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
-      FROM books 
+      FROM books
       GROUP BY category
       ORDER BY count DESC
     `;
 
     // Get borrowing trends
     const borrowingTrendsQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(borrowed_date, '%b') as month,
         COUNT(*) as borrowed,
         COUNT(CASE WHEN returned_date IS NOT NULL THEN 1 END) as returned,
         COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue
-      FROM borrowing_transactions 
+      FROM borrowing_transactions
       WHERE borrowed_date >= ?
       GROUP BY DATE_FORMAT(borrowed_date, '%Y-%m')
       ORDER BY borrowed_date
@@ -104,12 +105,12 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Get penalty analysis
     const penaltyAnalysisQuery = `
-      SELECT 
+      SELECT
         'overdue' as type,
         COUNT(*) as count,
         SUM(fine_amount) as amount,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM fines), 1) as percentage
-      FROM fines 
+      FROM fines
       WHERE created_at >= ?
       GROUP BY 'overdue'
       ORDER BY count DESC
@@ -117,12 +118,12 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Get system metrics
     const systemMetricsQuery = `
-      SELECT 
+      SELECT
         DATE(login_time) as date,
         COUNT(DISTINCT user_id) as logins,
         COUNT(CASE WHEN user_type = 'student' THEN 1 END) as student_logins,
         COUNT(CASE WHEN user_type = 'admin' THEN 1 END) as admin_logins
-      FROM login_logs 
+      FROM login_logs
       WHERE login_time >= ?
       GROUP BY DATE(login_time)
       ORDER BY login_time
@@ -130,7 +131,7 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Get top books
     const topBooksQuery = `
-      SELECT 
+      SELECT
         b.title,
         COUNT(bt.id) as borrows,
         0 as rating
@@ -144,52 +145,52 @@ router.get('/dashboard', auth, async (req, res) => {
 
     // Execute queries with error handling
     let userGrowth, bookCategories, borrowingTrends, penaltyAnalysis, systemMetrics, topBooks, monthlyStats;
-    
+
     try {
       [userGrowth] = await db.execute(userGrowthQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching user growth data:', error);
+      logger.error('Error fetching user growth data:', error);
       userGrowth = [];
     }
 
     try {
       [bookCategories] = await db.execute(bookCategoriesQuery);
     } catch (error) {
-      console.error('Error fetching book categories:', error);
+      logger.error('Error fetching book categories:', error);
       bookCategories = [];
     }
 
     try {
       [borrowingTrends] = await db.execute(borrowingTrendsQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching borrowing trends:', error);
+      logger.error('Error fetching borrowing trends:', error);
       borrowingTrends = [];
     }
 
     try {
       [penaltyAnalysis] = await db.execute(penaltyAnalysisQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching penalty analysis:', error);
+      logger.error('Error fetching penalty analysis:', error);
       penaltyAnalysis = [];
     }
 
     try {
       [systemMetrics] = await db.execute(systemMetricsQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching system metrics:', error);
+      logger.error('Error fetching system metrics:', error);
       systemMetrics = [];
     }
 
     try {
       [topBooks] = await db.execute(topBooksQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching top books:', error);
+      logger.error('Error fetching top books:', error);
       topBooks = [];
     }
 
     // Get monthly statistics
     const monthlyStatsQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(b.created_at, '%b') as month,
         COUNT(DISTINCT b.id) as books,
         COUNT(DISTINCT u.id) as users,
@@ -205,7 +206,7 @@ router.get('/dashboard', auth, async (req, res) => {
     try {
       [monthlyStats] = await db.execute(monthlyStatsQuery, [startDate, startDate]);
     } catch (error) {
-      console.error('Error fetching monthly stats:', error);
+      logger.error('Error fetching monthly stats:', error);
       monthlyStats = [];
     }
 
@@ -277,7 +278,7 @@ router.get('/dashboard', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Analytics dashboard error:', error);
+    logger.error('Analytics dashboard error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch analytics data',
@@ -290,7 +291,7 @@ router.get('/dashboard', auth, async (req, res) => {
 router.get('/users', auth, async (req, res) => {
   try {
     const { range = '3months' } = req.query;
-    
+
     const now = new Date();
     let startDate;
     switch (range) {
@@ -312,12 +313,12 @@ router.get('/users', auth, async (req, res) => {
 
     // Get registration trends
     const registrationTrendsQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(created_at, '%b') as month,
         COUNT(*) as newUsers,
         SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) as verified,
         COUNT(CASE WHEN last_login >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as active
-      FROM users 
+      FROM users
       WHERE created_at >= ? AND role = 'student'
       GROUP BY DATE_FORMAT(created_at, '%Y-%m')
       ORDER BY created_at
@@ -325,22 +326,22 @@ router.get('/users', auth, async (req, res) => {
 
     // Get user types
     const userTypesQuery = `
-      SELECT 
+      SELECT
         role as type,
         COUNT(*) as count,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 1) as percentage
-      FROM users 
+      FROM users
       GROUP BY role
       ORDER BY count DESC
     `;
 
     // Get activity patterns
     const activityPatternsQuery = `
-      SELECT 
+      SELECT
         HOUR(login_time) as hour,
         COUNT(DISTINCT user_id) as users,
         COUNT(*) as sessions
-      FROM login_logs 
+      FROM login_logs
       WHERE login_time >= ?
       GROUP BY HOUR(login_time)
       ORDER BY hour
@@ -348,17 +349,17 @@ router.get('/users', auth, async (req, res) => {
 
     // Get verification stats
     const verificationStatsQuery = `
-      SELECT 
-        CASE 
+      SELECT
+        CASE
           WHEN is_verified = 1 THEN 'Verified'
           WHEN verification_code IS NOT NULL THEN 'Pending'
           ELSE 'Unverified'
         END as status,
         COUNT(*) as count,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM users), 1) as percentage
-      FROM users 
-      GROUP BY 
-        CASE 
+      FROM users
+      GROUP BY
+        CASE
           WHEN is_verified = 1 THEN 'Verified'
           WHEN verification_code IS NOT NULL THEN 'Pending'
           ELSE 'Unverified'
@@ -367,12 +368,12 @@ router.get('/users', auth, async (req, res) => {
 
     // Get user engagement
     const userEngagementQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(login_time, '%b') as month,
         COUNT(DISTINCT user_id) as avgSessions,
         AVG(TIMESTAMPDIFF(MINUTE, login_time, login_time)) as avgDuration,
         ROUND(COUNT(DISTINCT user_id) * 100.0 / (SELECT COUNT(*) FROM users WHERE role = 'student'), 1) as retention
-      FROM login_logs 
+      FROM login_logs
       WHERE login_time >= ?
       GROUP BY DATE_FORMAT(login_time, '%Y-%m')
       ORDER BY login_time
@@ -380,7 +381,7 @@ router.get('/users', auth, async (req, res) => {
 
     // Get top users
     const topUsersQuery = `
-      SELECT 
+      SELECT
         CONCAT(u.first_name, ' ', u.last_name) as name,
         u.id_number as id,
         COUNT(bt.id) as borrows,
@@ -396,46 +397,46 @@ router.get('/users', auth, async (req, res) => {
 
     // Execute queries with error handling
     let registrationTrends, userTypes, activityPatterns, verificationStats, userEngagement, topUsers;
-    
+
     try {
       [registrationTrends] = await db.execute(registrationTrendsQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching registration trends:', error);
+      logger.error('Error fetching registration trends:', error);
       registrationTrends = [];
     }
 
     try {
       [userTypes] = await db.execute(userTypesQuery);
     } catch (error) {
-      console.error('Error fetching user types:', error);
+      logger.error('Error fetching user types:', error);
       userTypes = [];
     }
 
     try {
       [activityPatterns] = await db.execute(activityPatternsQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching activity patterns:', error);
+      logger.error('Error fetching activity patterns:', error);
       activityPatterns = [];
     }
 
     try {
       [verificationStats] = await db.execute(verificationStatsQuery);
     } catch (error) {
-      console.error('Error fetching verification stats:', error);
+      logger.error('Error fetching verification stats:', error);
       verificationStats = [];
     }
 
     try {
       [userEngagement] = await db.execute(userEngagementQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching user engagement:', error);
+      logger.error('Error fetching user engagement:', error);
       userEngagement = [];
     }
 
     try {
       [topUsers] = await db.execute(topUsersQuery, [startDate, startDate]);
     } catch (error) {
-      console.error('Error fetching top users:', error);
+      logger.error('Error fetching top users:', error);
       topUsers = [];
     }
 
@@ -443,7 +444,7 @@ router.get('/users', auth, async (req, res) => {
     const totalUsers = userTypes.reduce((sum, item) => sum + (parseInt(item.count) || 0), 0);
     const verifiedUsers = verificationStats.find(item => item.status === 'Verified')?.count || 0;
     const activeUsers = registrationTrends.reduce((sum, item) => sum + (parseInt(item.active) || 0), 0);
-    const avgSession = userEngagement.length > 0 ? 
+    const avgSession = userEngagement.length > 0 ?
       userEngagement.reduce((sum, item) => sum + (parseFloat(item.avgSessions) || 0), 0) / userEngagement.length : 0;
 
     // Transform data for frontend consumption
@@ -501,7 +502,7 @@ router.get('/users', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('User analytics error:', error);
+    logger.error('User analytics error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user analytics data',
@@ -514,7 +515,7 @@ router.get('/users', auth, async (req, res) => {
 router.get('/books', auth, async (req, res) => {
   try {
     const { range = '3months', category = 'all' } = req.query;
-    
+
     const now = new Date();
     let startDate;
     switch (range) {
@@ -542,7 +543,7 @@ router.get('/books', auth, async (req, res) => {
 
     // Get borrowing trends
     const borrowingTrendsQuery = `
-      SELECT 
+      SELECT
         DATE_FORMAT(bt.borrowed_date, '%b') as month,
         COUNT(*) as borrowed,
         COUNT(CASE WHEN bt.returned_date IS NOT NULL THEN 1 END) as returned,
@@ -557,11 +558,11 @@ router.get('/books', auth, async (req, res) => {
 
     // Get category distribution
     const categoryDistributionQuery = `
-      SELECT 
+      SELECT
         category,
         COUNT(*) as count,
         ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
-      FROM books 
+      FROM books
       ${categoryFilter ? `WHERE category = '${category}'` : ''}
       GROUP BY category
       ORDER BY count DESC
@@ -569,7 +570,7 @@ router.get('/books', auth, async (req, res) => {
 
     // Get top books
     const topBooksQuery = `
-      SELECT 
+      SELECT
         b.title,
         b.author,
         b.category,
@@ -585,7 +586,7 @@ router.get('/books', auth, async (req, res) => {
 
     // Get book status - simplified approach
     const bookStatusQuery = `
-      SELECT 
+      SELECT
         'Available' as status,
         (SELECT COUNT(*) FROM books WHERE id NOT IN (
           SELECT DISTINCT book_id FROM borrowing_transactions WHERE returned_date IS NULL
@@ -594,17 +595,17 @@ router.get('/books', auth, async (req, res) => {
           SELECT DISTINCT book_id FROM borrowing_transactions WHERE returned_date IS NULL
         ) AND status != 'maintenance') * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
       UNION ALL
-      SELECT 
+      SELECT
         'Borrowed' as status,
         (SELECT COUNT(*) FROM borrowing_transactions WHERE returned_date IS NULL AND due_date >= NOW()) as count,
         ROUND((SELECT COUNT(*) FROM borrowing_transactions WHERE returned_date IS NULL AND due_date >= NOW()) * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
       UNION ALL
-      SELECT 
+      SELECT
         'Overdue' as status,
         (SELECT COUNT(*) FROM borrowing_transactions WHERE returned_date IS NULL AND due_date < NOW()) as count,
         ROUND((SELECT COUNT(*) FROM borrowing_transactions WHERE returned_date IS NULL AND due_date < NOW()) * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
       UNION ALL
-      SELECT 
+      SELECT
         'Maintenance' as status,
         (SELECT COUNT(*) FROM books WHERE status = 'maintenance') as count,
         ROUND((SELECT COUNT(*) FROM books WHERE status = 'maintenance') * 100.0 / (SELECT COUNT(*) FROM books), 1) as percentage
@@ -612,12 +613,12 @@ router.get('/books', auth, async (req, res) => {
 
     // Get search analytics
     const searchAnalyticsQuery = `
-      SELECT 
+      SELECT
         search_term as term,
         COUNT(*) as searches,
         COUNT(DISTINCT result_count) as results,
         COUNT(CASE WHEN clicked = 1 THEN 1 END) as clicks
-      FROM search_logs 
+      FROM search_logs
       WHERE created_at >= ?
       GROUP BY search_term
       ORDER BY searches DESC
@@ -626,32 +627,32 @@ router.get('/books', auth, async (req, res) => {
 
     // Execute queries with error handling
     let borrowingTrends, categoryDistribution, topBooks, bookStatus, searchAnalytics;
-    
+
     try {
       [borrowingTrends] = await db.execute(borrowingTrendsQuery, [startDate, startDate]);
     } catch (error) {
-      console.error('Error fetching borrowing trends:', error);
+      logger.error('Error fetching borrowing trends:', error);
       borrowingTrends = [];
     }
 
     try {
       [categoryDistribution] = await db.execute(categoryDistributionQuery);
     } catch (error) {
-      console.error('Error fetching category distribution:', error);
+      logger.error('Error fetching category distribution:', error);
       categoryDistribution = [];
     }
 
     try {
       [topBooks] = await db.execute(topBooksQuery, [startDate]);
     } catch (error) {
-      console.error('Error fetching top books:', error);
+      logger.error('Error fetching top books:', error);
       topBooks = [];
     }
 
     try {
       [bookStatus] = await db.execute(bookStatusQuery);
     } catch (error) {
-      console.error('Error fetching book status:', error);
+      logger.error('Error fetching book status:', error);
       bookStatus = [];
     }
 
@@ -659,7 +660,7 @@ router.get('/books', auth, async (req, res) => {
     // try {
     //   [searchAnalytics] = await db.execute(searchAnalyticsQuery, [startDate]);
     // } catch (error) {
-    //   console.error('Error fetching search analytics:', error);
+    //   logger.error('Error fetching search analytics:', error);
     //   searchAnalytics = [];
     // }
     searchAnalytics = [];
@@ -667,11 +668,11 @@ router.get('/books', auth, async (req, res) => {
     // Calculate key metrics
     const totalBooks = categoryDistribution.reduce((sum, item) => sum + (parseInt(item.count) || 0), 0);
     const availableBooks = bookStatus.find(item => item.status === 'Available')?.count || 0;
-    
+
     // Use the same logic as dashboard for active borrowings
     const activeBorrowings = borrowingTrends.reduce((sum, item) => sum + (parseInt(item.borrowed) || 0) - (parseInt(item.returned) || 0), 0);
     const borrowedBooks = Math.max(0, activeBorrowings);
-    
+
     const overdueBooks = bookStatus.find(item => item.status === 'Overdue')?.count || 0;
     const availabilityRate = totalBooks > 0 ? `${((parseInt(availableBooks) / totalBooks) * 100).toFixed(1)}%` : '0%';
 
@@ -727,7 +728,7 @@ router.get('/books', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Book analytics error:', error);
+    logger.error('Book analytics error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch book analytics data',

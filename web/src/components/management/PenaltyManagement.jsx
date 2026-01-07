@@ -71,15 +71,15 @@ const ModernPenaltyManagement = ({ user }) => {
   // Handle barcode scanner input
   useEffect(() => {
     let scanTimeout;
-    
+
     const handleKeyDown = (event) => {
-      // Check if it's a barcode scanner input (usually ends with Enter)
-      if (event.key === 'Enter' && isScanning && event.target.id === 'barcode-field-penalty-search') {
+      // Check if it's a barcode scanner input or manual Enter key press
+      if (event.key === 'Enter' && event.target.id === 'barcode-field-penalty-search') {
         event.preventDefault();
         handleBarcodeInput();
         return;
       }
-      
+
       // Start scanning when user starts typing in barcode field
       if (event.target.id === 'barcode-field-penalty-search') {
         setIsScanning(true);
@@ -192,18 +192,21 @@ const ModernPenaltyManagement = ({ user }) => {
     []
   );
 
-  const loadStudentsWithFines = async () => {
+  const loadStudentsWithFines = async (overrideSearchTerm = null) => {
     try {
       const token = localStorage.getItem('token');
-      
+
+      // Use override search term if provided, otherwise use searchTerm from state
+      const searchValue = overrideSearchTerm !== null ? overrideSearchTerm : searchTerm;
+
       const response = await axios.get('/api/penalty/students-detailed', {
         headers: { 'Authorization': `Bearer ${token}` },
         params: {
-          search: searchTerm || undefined,
+          search: searchValue || undefined,
           status: 'unpaid'
         }
       });
-      
+
       if (response.data.success) {
         setStudents(response.data.data || []);
       }
@@ -637,21 +640,13 @@ const ModernPenaltyManagement = ({ user }) => {
                 <DollarSign className="h-4 w-4 mr-2" />
                 Student Fines
               </Button>
-              <Button 
+              <Button
                 onClick={() => setActiveTab('settings')}
                 variant={activeTab === 'settings' ? 'default' : 'outline'}
                 className={activeTab === 'settings' ? 'bg-blue-600 hover:bg-blue-700' : ''}
               >
                 <Settings className="h-4 w-4 mr-2" />
-                System Settings
-              </Button>
-              <Button 
-                onClick={() => setActiveTab('stats')}
-                variant={activeTab === 'stats' ? 'default' : 'outline'}
-                className={activeTab === 'stats' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Statistics
+                Settings
               </Button>
             </div>
           </div>
@@ -685,29 +680,6 @@ const ModernPenaltyManagement = ({ user }) => {
                 <CardDescription>
                   View and manage student penalty records and fine calculations
                 </CardDescription>
-                
-                {/* Barcode Scanner Status */}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-                      <span className="text-sm font-medium text-blue-700">
-                        {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
-                      </span>
-                    </div>
-                    <div className="text-xs text-blue-600">
-                      <span>Current Field: Student Search</span>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-xs text-blue-600">
-                    <p>💡 <strong>Barcode Scanner Tips:</strong></p>
-                    <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                      <li>Scan student ID barcode directly into the highlighted field</li>
-                      <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to search automatically</li>
-                      <li>Student fines will load automatically after scanning</li>
-                    </ul>
-                  </div>
-                </div>
               </CardHeader>
               <CardContent>
                 {message && (
@@ -745,7 +717,10 @@ const ModernPenaltyManagement = ({ user }) => {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={loadStudentsWithFines}
+                      onClick={() => {
+                        setSearchTerm('');
+                        loadStudentsWithFines('');
+                      }}
                       disabled={loading}
                       variant="outline"
                       className="border-slate-300 hover:bg-slate-50"
@@ -1137,56 +1112,14 @@ const ModernPenaltyManagement = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* Semester Management Section */}
-                  <div className="border-t border-slate-200 pt-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Semester Management
-                    </h3>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-yellow-800 mb-1">Reset Semester</h4>
-                          <p className="text-sm text-yellow-700">
-                            This will reset ALL student borrowing counts to 0 and set new semester dates based on current date and duration settings. 
-                            This action cannot be undone and will affect all students.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={resetSemester}
-                      disabled={loading}
-                      variant="outline"
-                      className="border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
-                    >
-                      <div className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`}>
-                        {loading ? (
-                          <div className="h-4 w-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></div>
-                        ) : (
-                          <div className="h-4 w-4 border-2 border-red-600 rounded"></div>
-                        )}
-                      </div>
-                      {loading ? 'Resetting...' : 'Reset Semester'}
-                    </Button>
-                  </div>
-                  
-                  <div className="flex gap-3 pt-4">
-                    <Button 
+                  <div className="flex gap-3 pt-4 border-t border-slate-200">
+                    <Button
                       onClick={saveSettings}
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       {loading ? 'Saving...' : 'Save Settings'}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => loadData()}
-                    >
-                      <div className="h-4 w-4 mr-2 border-2 border-slate-600 rounded"></div>
-                      Reset to Default
                     </Button>
                   </div>
                 </div>

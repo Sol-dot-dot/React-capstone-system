@@ -11,7 +11,7 @@ class PerformanceService {
       memoryUsage: [],
       cpuUsage: []
     };
-    
+
     // Start performance monitoring
     this.startMonitoring();
   }
@@ -43,7 +43,7 @@ class PerformanceService {
    */
   recordAPICall(endpoint, method, duration, statusCode, userId = null) {
     const key = `${method} ${endpoint}`;
-    
+
     if (!this.metrics.apiCalls.has(key)) {
       this.metrics.apiCalls.set(key, {
         endpoint,
@@ -58,7 +58,7 @@ class PerformanceService {
         lastCalled: null
       });
     }
-    
+
     const stats = this.metrics.apiCalls.get(key);
     stats.totalCalls++;
     stats.totalDuration += duration;
@@ -66,13 +66,13 @@ class PerformanceService {
     stats.minDuration = Math.min(stats.minDuration, duration);
     stats.maxDuration = Math.max(stats.maxDuration, duration);
     stats.lastCalled = new Date();
-    
+
     if (statusCode >= 200 && statusCode < 400) {
       stats.successCount++;
     } else {
       stats.errorCount++;
     }
-    
+
     // Log slow API calls
     if (duration > 2000) {
       logger.performance('Slow API Call Detected', {
@@ -84,7 +84,7 @@ class PerformanceService {
         threshold: '2000ms'
       });
     }
-    
+
     // Log high error rate
     const errorRate = stats.errorCount / stats.totalCalls;
     if (stats.totalCalls > 10 && errorRate > 0.1) {
@@ -103,7 +103,7 @@ class PerformanceService {
    */
   recordDatabaseQuery(query, duration, rowsAffected = 0, error = null) {
     const key = this.sanitizeQuery(query);
-    
+
     if (!this.metrics.databaseQueries.has(key)) {
       this.metrics.databaseQueries.set(key, {
         query: key,
@@ -117,7 +117,7 @@ class PerformanceService {
         lastExecuted: null
       });
     }
-    
+
     const stats = this.metrics.databaseQueries.get(key);
     stats.totalQueries++;
     stats.totalDuration += duration;
@@ -126,11 +126,11 @@ class PerformanceService {
     stats.maxDuration = Math.max(stats.maxDuration, duration);
     stats.totalRowsAffected += rowsAffected;
     stats.lastExecuted = new Date();
-    
+
     if (error) {
       stats.errorCount++;
     }
-    
+
     // Log slow database queries
     if (duration > 1000) {
       logger.performance('Slow Database Query Detected', {
@@ -141,7 +141,7 @@ class PerformanceService {
         threshold: '1000ms'
       });
     }
-    
+
     // Log database errors
     if (error) {
       logger.performance('Database Query Error', {
@@ -166,14 +166,14 @@ class PerformanceService {
       external: Math.round(memUsage.external / 1024 / 1024), // MB
       arrayBuffers: Math.round(memUsage.arrayBuffers / 1024 / 1024) // MB
     };
-    
+
     this.metrics.memoryUsage.push(memoryData);
-    
+
     // Keep only last 100 records
     if (this.metrics.memoryUsage.length > 100) {
       this.metrics.memoryUsage = this.metrics.memoryUsage.slice(-100);
     }
-    
+
     // Log high memory usage
     if (memoryData.heapUsed > 500) { // 500MB threshold
       logger.performance('High Memory Usage Detected', {
@@ -194,9 +194,9 @@ class PerformanceService {
       user: cpuUsage.user,
       system: cpuUsage.system
     };
-    
+
     this.metrics.cpuUsage.push(cpuData);
-    
+
     // Keep only last 100 records
     if (this.metrics.cpuUsage.length > 100) {
       this.metrics.cpuUsage = this.metrics.cpuUsage.slice(-100);
@@ -208,7 +208,7 @@ class PerformanceService {
    */
   logPerformanceMetrics() {
     const metrics = this.getPerformanceMetrics();
-    
+
     logger.performance('Performance Metrics Summary', {
       apiMetrics: metrics.apiMetrics,
       databaseMetrics: metrics.databaseMetrics,
@@ -223,14 +223,14 @@ class PerformanceService {
     const apiMetrics = Array.from(this.metrics.apiCalls.values())
       .sort((a, b) => b.totalCalls - a.totalCalls)
       .slice(0, 10);
-    
+
     const databaseMetrics = Array.from(this.metrics.databaseQueries.values())
       .sort((a, b) => b.totalQueries - a.totalQueries)
       .slice(0, 10);
-    
+
     const latestMemory = this.metrics.memoryUsage[this.metrics.memoryUsage.length - 1];
     const latestCPU = this.metrics.cpuUsage[this.metrics.cpuUsage.length - 1];
-    
+
     return {
       apiMetrics,
       databaseMetrics,
@@ -250,30 +250,30 @@ class PerformanceService {
   async getPerformanceStatistics(period = '1h') {
     try {
       const metrics = this.getPerformanceMetrics();
-      
+
       // Calculate response time percentiles
       const responseTimes = Array.from(this.metrics.apiCalls.values())
         .flatMap(api => [api.avgDuration]);
-      
+
       const sortedResponseTimes = responseTimes.sort((a, b) => a - b);
       const p50 = this.percentile(sortedResponseTimes, 0.5);
       const p95 = this.percentile(sortedResponseTimes, 0.95);
       const p99 = this.percentile(sortedResponseTimes, 0.99);
-      
+
       // Calculate error rates
       const totalAPICalls = Array.from(this.metrics.apiCalls.values())
         .reduce((sum, api) => sum + api.totalCalls, 0);
       const totalErrors = Array.from(this.metrics.apiCalls.values())
         .reduce((sum, api) => sum + api.errorCount, 0);
       const errorRate = totalAPICalls > 0 ? (totalErrors / totalAPICalls) * 100 : 0;
-      
+
       // Calculate database performance
       const totalDBQueries = Array.from(this.metrics.databaseQueries.values())
         .reduce((sum, db) => sum + db.totalQueries, 0);
       const totalDBErrors = Array.from(this.metrics.databaseQueries.values())
         .reduce((sum, db) => sum + db.errorCount, 0);
       const dbErrorRate = totalDBQueries > 0 ? (totalDBErrors / totalDBQueries) * 100 : 0;
-      
+
       return {
         responseTime: {
           average: metrics.apiMetrics.reduce((sum, api) => sum + api.avgDuration, 0) / metrics.apiMetrics.length || 0,
@@ -293,7 +293,7 @@ class PerformanceService {
         topAPIs: metrics.apiMetrics.slice(0, 5),
         topQueries: metrics.databaseMetrics.slice(0, 5)
       };
-      
+
     } catch (error) {
       logger.error('Failed to get performance statistics', { error: error.message });
       throw error;
@@ -333,10 +333,9 @@ class PerformanceService {
     this.metrics.errorRates.clear();
     this.metrics.memoryUsage = [];
     this.metrics.cpuUsage = [];
-    
+
     logger.info('Performance metrics reset');
   }
 }
 
 module.exports = new PerformanceService();
-

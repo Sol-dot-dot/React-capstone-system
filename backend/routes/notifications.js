@@ -4,11 +4,12 @@ const auth = require('../middleware/auth');
 const { sendDueDateReminderEmail, sendBulkDueDateReminders } = require('../utils/emailService');
 const pool = require('../config/database');
 
+const { logger } = require('../config/logger');
 // Helper function to format time ago
 const getTimeAgo = (date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-    
+
     if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
@@ -18,11 +19,11 @@ const getTimeAgo = (date) => {
 // Generate notifications from existing data
 const generateNotifications = async (userId = null) => {
     const notifications = [];
-    
+
     try {
         // 1. Overdue books notifications
         const overdueQuery = `
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.student_id_number,
                 u.first_name,
@@ -34,16 +35,16 @@ const generateNotifications = async (userId = null) => {
             FROM borrowing_transactions bt
             JOIN users u ON bt.student_id_number = u.id_number
             JOIN books b ON bt.book_id = b.id
-            WHERE bt.status = 'overdue' 
+            WHERE bt.status = 'overdue'
             AND bt.due_date < CURDATE()
             ${userId ? 'AND u.id = ?' : ''}
             ORDER BY bt.due_date ASC
             LIMIT 10
         `;
-        
+
         const overdueParams = userId ? [userId] : [];
         const [overdueBooks] = await pool.execute(overdueQuery, overdueParams);
-        
+
         if (overdueBooks.length > 0) {
             notifications.push({
                 id: 'overdue_books',
@@ -58,7 +59,7 @@ const generateNotifications = async (userId = null) => {
 
         // 2. Books due today notifications
         const dueTodayQuery = `
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.student_id_number,
                 u.first_name,
@@ -69,15 +70,15 @@ const generateNotifications = async (userId = null) => {
             FROM borrowing_transactions bt
             JOIN users u ON bt.student_id_number = u.id_number
             JOIN books b ON bt.book_id = b.id
-            WHERE bt.status = 'borrowed' 
+            WHERE bt.status = 'borrowed'
             AND bt.due_date = CURDATE()
             ${userId ? 'AND u.id = ?' : ''}
             ORDER BY bt.due_date ASC
             LIMIT 10
         `;
-        
+
         const [dueTodayBooks] = await pool.execute(dueTodayQuery, overdueParams);
-        
+
         if (dueTodayBooks.length > 0) {
             notifications.push({
                 id: 'due_today',
@@ -92,7 +93,7 @@ const generateNotifications = async (userId = null) => {
 
         // 3. Unpaid fines notifications
         const unpaidFinesQuery = `
-            SELECT 
+            SELECT
                 f.id as fine_id,
                 f.student_id_number,
                 u.first_name,
@@ -108,9 +109,9 @@ const generateNotifications = async (userId = null) => {
             ORDER BY f.fine_date DESC
             LIMIT 10
         `;
-        
+
         const [unpaidFines] = await pool.execute(unpaidFinesQuery, overdueParams);
-        
+
         if (unpaidFines.length > 0) {
             const totalUnpaid = unpaidFines.reduce((sum, fine) => sum + parseFloat(fine.unpaid_amount), 0);
             notifications.push({
@@ -127,7 +128,7 @@ const generateNotifications = async (userId = null) => {
         // 4. Recent user registrations (for admins only)
         if (!userId) {
             const recentUsersQuery = `
-                SELECT 
+                SELECT
                     u.id,
                     u.id_number,
                     u.first_name,
@@ -140,9 +141,9 @@ const generateNotifications = async (userId = null) => {
                 ORDER BY u.created_at DESC
                 LIMIT 5
             `;
-            
+
             const [recentUsers] = await pool.execute(recentUsersQuery);
-            
+
             if (recentUsers.length > 0) {
                 notifications.push({
                     id: 'new_registrations',
@@ -158,7 +159,7 @@ const generateNotifications = async (userId = null) => {
 
         // 5. Books due soon (within 3 days)
         const dueSoonQuery = `
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.student_id_number,
                 u.first_name,
@@ -170,15 +171,15 @@ const generateNotifications = async (userId = null) => {
             FROM borrowing_transactions bt
             JOIN users u ON bt.student_id_number = u.id_number
             JOIN books b ON bt.book_id = b.id
-            WHERE bt.status = 'borrowed' 
+            WHERE bt.status = 'borrowed'
             AND bt.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)
             ${userId ? 'AND u.id = ?' : ''}
             ORDER BY bt.due_date ASC
             LIMIT 10
         `;
-        
+
         const [dueSoonBooks] = await pool.execute(dueSoonQuery, overdueParams);
-        
+
         if (dueSoonBooks.length > 0) {
             notifications.push({
                 id: 'due_soon',
@@ -193,7 +194,7 @@ const generateNotifications = async (userId = null) => {
 
         return notifications;
     } catch (error) {
-        console.error('Error generating notifications:', error);
+        logger.error('Error generating notifications:', error);
         return [];
     }
 };
@@ -211,7 +212,7 @@ router.post('/send-email', async (req, res) => {
         }
 
         const result = await sendDueDateReminderEmail(email, userData, books, reminderType);
-        
+
         if (result.success) {
             res.json({
                 success: true,
@@ -226,7 +227,7 @@ router.post('/send-email', async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Error sending email notification:', error);
+        logger.error('Error sending email notification:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -254,14 +255,14 @@ router.post('/send-bulk', auth, async (req, res) => {
         }
 
         const results = await sendBulkDueDateReminders(notifications);
-        
+
         res.json({
             success: true,
             message: `Bulk notifications processed. ${results.length} notifications sent.`,
             results: results
         });
     } catch (error) {
-        console.error('Error sending bulk notifications:', error);
+        logger.error('Error sending bulk notifications:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -368,7 +369,7 @@ router.get('/due-date-reminders', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching due date reminders:', error);
+        logger.error('Error fetching due date reminders:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -433,7 +434,7 @@ router.post('/process-due-date-reminders', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error processing due date reminders:', error);
+        logger.error('Error processing due date reminders:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -487,7 +488,7 @@ router.get('/stats', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching notification stats:', error);
+        logger.error('Error fetching notification stats:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error'
@@ -767,7 +768,7 @@ router.get('/', auth, async (req, res) => {
     try {
         const userId = req.user.type === 'admin' ? null : req.user.id;
         const notifications = await generateNotifications(userId);
-        
+
         res.json({
             success: true,
             data: {
@@ -777,7 +778,7 @@ router.get('/', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+        logger.error('Error fetching notifications:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching notifications'
@@ -791,7 +792,7 @@ router.get('/count', auth, async (req, res) => {
         const userId = req.user.type === 'admin' ? null : req.user.id;
         const notifications = await generateNotifications(userId);
         const unreadCount = notifications.filter(n => n.unread).length;
-        
+
         res.json({
             success: true,
             data: {
@@ -800,7 +801,7 @@ router.get('/count', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching notification count:', error);
+        logger.error('Error fetching notification count:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching notification count'
@@ -812,9 +813,9 @@ router.get('/count', auth, async (req, res) => {
 router.get('/overdue', auth, async (req, res) => {
     try {
         const userId = req.user.type === 'admin' ? null : req.user.id;
-        
+
         const overdueQuery = `
-            SELECT 
+            SELECT
                 bt.id as transaction_id,
                 bt.student_id_number,
                 u.first_name,
@@ -832,7 +833,7 @@ router.get('/overdue', auth, async (req, res) => {
             JOIN users u ON bt.student_id_number = u.id_number
             JOIN books b ON bt.book_id = b.id
             LEFT JOIN (
-                SELECT 
+                SELECT
                     transaction_id,
                     fine_amount,
                     paid_amount,
@@ -840,15 +841,15 @@ router.get('/overdue', auth, async (req, res) => {
                 FROM fines
                 WHERE status = 'unpaid'
             ) f ON bt.id = f.transaction_id AND f.rn = 1
-            WHERE bt.status = 'overdue' 
+            WHERE bt.status = 'overdue'
             AND bt.due_date < CURDATE()
             ${userId ? 'AND u.id = ?' : ''}
             ORDER BY bt.due_date ASC
         `;
-        
+
         const overdueParams = userId ? [userId] : [];
         const [overdueBooks] = await pool.execute(overdueQuery, overdueParams);
-        
+
         res.json({
             success: true,
             data: {
@@ -857,7 +858,7 @@ router.get('/overdue', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching overdue books:', error);
+        logger.error('Error fetching overdue books:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching overdue books'
@@ -869,9 +870,9 @@ router.get('/overdue', auth, async (req, res) => {
 router.get('/fines', auth, async (req, res) => {
     try {
         const userId = req.user.type === 'admin' ? null : req.user.id;
-        
+
         const finesQuery = `
-            SELECT 
+            SELECT
                 f.id as fine_id,
                 f.student_id_number,
                 u.first_name,
@@ -892,12 +893,12 @@ router.get('/fines', auth, async (req, res) => {
             ${userId ? 'AND u.id = ?' : ''}
             ORDER BY f.fine_date DESC
         `;
-        
+
         const finesParams = userId ? [userId] : [];
         const [unpaidFines] = await pool.execute(finesQuery, finesParams);
-        
+
         const totalUnpaid = unpaidFines.reduce((sum, fine) => sum + parseFloat(fine.unpaid_amount), 0);
-        
+
         res.json({
             success: true,
             data: {
@@ -907,7 +908,7 @@ router.get('/fines', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching unpaid fines:', error);
+        logger.error('Error fetching unpaid fines:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching unpaid fines'
@@ -982,7 +983,7 @@ router.post('/test-email', async (req, res) => {
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log('Test email sent successfully:', result.messageId);
+        logger.info('Test email sent successfully:', result.messageId);
 
         res.json({
             success: true,
@@ -990,7 +991,7 @@ router.post('/test-email', async (req, res) => {
             messageId: result.messageId
         });
     } catch (error) {
-        console.error('Test email error:', error);
+        logger.error('Test email error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to send test email: ' + error.message

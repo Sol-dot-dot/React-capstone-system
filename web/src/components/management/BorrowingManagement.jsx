@@ -515,40 +515,40 @@ const ModernBorrowingManagement = ({ user }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-1 sm:mb-2">
                 Book Borrowing Management
               </h1>
-              <p className="text-slate-600 text-lg">
+              <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
                 Manage book borrowing and returns for students
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button 
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
                 onClick={() => setActiveTab('borrow')}
                 variant={activeTab === 'borrow' ? 'default' : 'outline'}
-                className={activeTab === 'borrow' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${activeTab === 'borrow' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
               >
-                <Book className="h-4 w-4 mr-2" />
-                Borrow Books
+                <Book className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Borrow</span> Books
               </Button>
-              <Button 
+              <Button
                 onClick={() => setActiveTab('transactions')}
                 variant={activeTab === 'transactions' ? 'default' : 'outline'}
-                className={activeTab === 'transactions' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                className={`flex-1 sm:flex-none text-xs sm:text-sm ${activeTab === 'transactions' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
               >
-                <List className="h-4 w-4 mr-2" />
-                View Transactions
+                <List className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">View</span> Transactions
               </Button>
             </div>
           </div>
@@ -571,51 +571,6 @@ const ModernBorrowingManagement = ({ user }) => {
                 <CardDescription>
                   Process book borrowing requests for students
                 </CardDescription>
-                
-                {/* Barcode Scanner Status */}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${isScanning ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`}></div>
-                      <span className="text-sm font-medium text-blue-700">
-                        {isScanning ? 'Scanner Active' : 'Ready for Barcode Scan'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-blue-600">
-                      <span>Current Field: {getCurrentFieldName()}</span>
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={moveToPreviousField}
-                          className="h-6 px-2 text-xs"
-                        >
-                          ← Prev
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={moveToNextField}
-                          className="h-6 px-2 text-xs"
-                        >
-                          Next →
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-xs text-blue-600">
-                    <p>💡 <strong>Barcode Scanner Tips:</strong></p>
-                    <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                      <li>Scan barcodes directly into the highlighted field</li>
-                      <li>Press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Enter</kbd> to move to next field</li>
-                      <li>Use <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Tab</kbd> to navigate between fields</li>
-                      <li>Student ID will auto-validate after scanning</li>
-                      <li>Due date is optional and not included in scanner flow</li>
-                    </ul>
-                  </div>
-                </div>
               </CardHeader>
               <CardContent>
                 {message && (
@@ -769,26 +724,6 @@ const ModernBorrowingManagement = ({ user }) => {
                     ))}
                   </div>
 
-                  {/* Due Date Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Due Date (optional)
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      <Input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="border-slate-200 focus:border-blue-500 focus:ring-blue-500"
-                        autoComplete="off"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Default: 14 days from today
-                    </p>
-                  </div>
-
                   {/* Submit Button */}
                   <div className="flex gap-3 pt-4">
                     <Button 
@@ -891,32 +826,32 @@ const ModernBorrowingManagement = ({ user }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className={`border border-slate-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+                        className={`border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-200 ${
                           highlightTransactionId === transaction.id ? 'bg-purple-50 border-purple-200' : ''
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <BookOpen className="h-5 w-5 text-blue-600" />
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
+                            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                             </div>
-                            <div>
-                              <h3 className="font-semibold text-slate-900">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
                                 {transaction.student_id_number}
                               </h3>
-                              <p className="text-sm text-slate-600">
+                              <p className="text-xs sm:text-sm text-slate-600 truncate">
                                 {transaction.title} - {transaction.author}
                               </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge 
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <Badge
                                   variant={transaction.status === 'returned' ? 'default' : 'secondary'}
-                                  className={
-                                    transaction.status === 'returned' 
-                                      ? 'bg-green-100 text-green-700' 
+                                  className={`text-xs ${
+                                    transaction.status === 'returned'
+                                      ? 'bg-green-100 text-green-700'
                                       : transaction.status === 'overdue'
                                       ? 'bg-red-100 text-red-700'
                                       : 'bg-orange-100 text-orange-700'
-                                  }
+                                  }`}
                                 >
                                   {transaction.status === 'returned' && <CheckCircle className="h-3 w-3 mr-1" />}
                                   {transaction.status === 'overdue' && <AlertCircle className="h-3 w-3 mr-1" />}
@@ -929,15 +864,15 @@ const ModernBorrowingManagement = ({ user }) => {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 ml-9 sm:ml-0">
                             {transaction.status === 'borrowed' && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleReturn(transaction.id)}
-                                className="text-green-600 hover:text-green-700"
+                                className="text-green-600 hover:text-green-700 text-xs sm:text-sm h-8 sm:h-9"
                               >
-                                <ArrowLeft className="h-4 w-4 mr-1" />
+                                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                 Return
                               </Button>
                             )}
@@ -945,8 +880,9 @@ const ModernBorrowingManagement = ({ user }) => {
                               variant="outline"
                               size="sm"
                               onClick={() => setViewingTransaction(transaction)}
+                              className="text-xs sm:text-sm h-8 sm:h-9"
                             >
-                              <Eye className="h-4 w-4 mr-1" />
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               View
                             </Button>
                           </div>
@@ -966,8 +902,8 @@ const ModernBorrowingManagement = ({ user }) => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-slate-600">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6">
+                    <p className="text-xs sm:text-sm text-slate-600">
                       Page {currentPage} of {totalPages}
                     </p>
                     <div className="flex gap-2">
@@ -976,18 +912,21 @@ const ModernBorrowingManagement = ({ user }) => {
                         size="sm"
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
+                        className="text-xs sm:text-sm"
                       >
-                        <ArrowLeft className="h-4 w-4 mr-1" />
-                        Previous
+                        <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden xs:inline">Previous</span>
+                        <span className="xs:hidden">Prev</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
+                        className="text-xs sm:text-sm"
                       >
                         Next
-                        <ArrowRight className="h-4 w-4 ml-1" />
+                        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                       </Button>
                     </div>
                   </div>
@@ -1005,18 +944,18 @@ const ModernBorrowingManagement = ({ user }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
             onClick={() => setViewingTransaction(null)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-xl shadow-2xl w-full max-w-lg"
+              className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-900">Transaction Details</h3>
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 sticky top-0 bg-white z-10">
+                <h3 className="text-base sm:text-lg font-semibold text-slate-900">Transaction Details</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1026,22 +965,22 @@ const ModernBorrowingManagement = ({ user }) => {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm font-medium text-slate-500">Transaction ID</p>
-                    <p className="text-slate-900">{viewingTransaction.id}</p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500">Transaction ID</p>
+                    <p className="text-sm sm:text-base text-slate-900">{viewingTransaction.id}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-500">Status</p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500">Status</p>
                     <Badge
-                      className={
+                      className={`text-xs ${
                         viewingTransaction.status === 'returned'
                           ? 'bg-green-100 text-green-700'
                           : viewingTransaction.status === 'overdue'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-orange-100 text-orange-700'
-                      }
+                      }`}
                     >
                       {viewingTransaction.status.charAt(0).toUpperCase() + viewingTransaction.status.slice(1)}
                     </Badge>
@@ -1049,62 +988,62 @@ const ModernBorrowingManagement = ({ user }) => {
                 </div>
 
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="text-sm font-medium text-slate-500 mb-2">Student Information</h4>
+                  <h4 className="text-xs sm:text-sm font-medium text-slate-500 mb-2">Student Information</h4>
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <User className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{viewingTransaction.student_id_number}</p>
-                      <p className="text-sm text-slate-500">{viewingTransaction.student_email || 'No email available'}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900 text-sm sm:text-base">{viewingTransaction.student_id_number}</p>
+                      <p className="text-xs sm:text-sm text-slate-500 truncate">{viewingTransaction.student_email || 'No email available'}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="text-sm font-medium text-slate-500 mb-2">Book Information</h4>
+                  <h4 className="text-xs sm:text-sm font-medium text-slate-500 mb-2">Book Information</h4>
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <BookOpen className="h-5 w-5 text-indigo-600" />
+                    <div className="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                      <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{viewingTransaction.title}</p>
-                      <p className="text-sm text-slate-500">by {viewingTransaction.author}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900 text-sm sm:text-base truncate">{viewingTransaction.title}</p>
+                      <p className="text-xs sm:text-sm text-slate-500">by {viewingTransaction.author}</p>
                       <p className="text-xs text-slate-400">Code: {viewingTransaction.book_code}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="text-sm font-medium text-slate-500 mb-2">Dates</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  <h4 className="text-xs sm:text-sm font-medium text-slate-500 mb-2">Dates</h4>
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <p className="text-xs text-slate-500">Borrowed Date</p>
-                      <p className="text-slate-900">
+                      <p className="text-sm sm:text-base text-slate-900">
                         {new Date(viewingTransaction.borrow_date).toLocaleDateString('en-US', {
                           year: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           day: 'numeric'
                         })}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Due Date</p>
-                      <p className={viewingTransaction.status === 'overdue' ? 'text-red-600 font-medium' : 'text-slate-900'}>
+                      <p className={`text-sm sm:text-base ${viewingTransaction.status === 'overdue' ? 'text-red-600 font-medium' : 'text-slate-900'}`}>
                         {new Date(viewingTransaction.due_date).toLocaleDateString('en-US', {
                           year: 'numeric',
-                          month: 'long',
+                          month: 'short',
                           day: 'numeric'
                         })}
                       </p>
                     </div>
                     {viewingTransaction.return_date && (
-                      <div className="col-span-2">
+                      <div className="col-span-1 xs:col-span-2">
                         <p className="text-xs text-slate-500">Returned Date</p>
-                        <p className="text-green-600">
+                        <p className="text-sm sm:text-base text-green-600">
                           {new Date(viewingTransaction.return_date).toLocaleDateString('en-US', {
                             year: 'numeric',
-                            month: 'long',
+                            month: 'short',
                             day: 'numeric'
                           })}
                         </p>
@@ -1113,10 +1052,11 @@ const ModernBorrowingManagement = ({ user }) => {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-2 p-6 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+              <div className="flex justify-end gap-2 p-4 sm:p-6 border-t border-slate-200 bg-slate-50 rounded-b-xl sticky bottom-0">
                 <Button
                   variant="outline"
                   onClick={() => setViewingTransaction(null)}
+                  className="text-sm"
                 >
                   Close
                 </Button>

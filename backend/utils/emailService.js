@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { logger } = require('../config/logger');
 require('dotenv').config({ path: './config.env' });
 
 const transporter = nodemailer.createTransport({
@@ -12,8 +13,8 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendVerificationEmail = async (email, verificationCode) => {
-    console.log('Attempting to send verification email to:', email);
-    console.log('Email configuration:', {
+    logger.info('Attempting to send verification email to:', email);
+    logger.info('Email configuration:', {
         host: process.env.EMAIL_HOST,
         port: process.env.EMAIL_PORT,
         user: process.env.EMAIL_USER,
@@ -41,17 +42,17 @@ const sendVerificationEmail = async (email, verificationCode) => {
 
     try {
         const result = await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully:', result.messageId);
+        logger.info('Email sent successfully:', result.messageId);
         return true;
     } catch (error) {
-        console.error('Email sending error:', error.message);
-        console.error('Full error:', error);
+        logger.error('Email sending error:', error.message);
+        logger.error('Full error:', error);
         return false;
     }
 };
 
 const sendPasswordResetEmail = async (email, resetCode) => {
-    console.log('Attempting to send password reset email to:', email);
+    logger.info('Attempting to send password reset email to:', email);
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -74,18 +75,18 @@ const sendPasswordResetEmail = async (email, resetCode) => {
 
     try {
         const result = await transporter.sendMail(mailOptions);
-        console.log('Password reset email sent successfully:', result.messageId);
+        logger.info('Password reset email sent successfully:', result.messageId);
         return true;
     } catch (error) {
-        console.error('Password reset email sending error:', error.message);
-        console.error('Full error:', error);
+        logger.error('Password reset email sending error:', error.message);
+        logger.error('Full error:', error);
         return false;
     }
 };
 
 // Smart notification email functions for due date reminders
 const sendDueDateReminderEmail = async (email, userData, books, reminderType) => {
-    console.log(`Attempting to send ${reminderType} reminder email to:`, email);
+    logger.info(`Attempting to send ${reminderType} reminder email to:`, email);
 
     let subject, title, color, urgency;
     let bookListHtml = '';
@@ -122,11 +123,11 @@ const sendDueDateReminderEmail = async (email, userData, books, reminderType) =>
 
     // Generate book list HTML
     books.forEach(book => {
-        const daysText = book.daysUntilDue < 0 ? `${Math.abs(book.daysUntilDue)} days overdue` : 
-                        book.daysUntilDue === 0 ? 'due today' : 
-                        book.daysUntilDue === 1 ? 'due tomorrow' : 
+        const daysText = book.daysUntilDue < 0 ? `${Math.abs(book.daysUntilDue)} days overdue` :
+                        book.daysUntilDue === 0 ? 'due today' :
+                        book.daysUntilDue === 1 ? 'due tomorrow' :
                         `due in ${book.daysUntilDue} days`;
-        
+
         bookListHtml += `
             <div style="background-color: #f8f9fa; border-left: 4px solid ${color}; padding: 15px; margin: 10px 0; border-radius: 5px;">
                 <h4 style="color: #333; margin: 0 0 5px 0;">${book.title}</h4>
@@ -146,10 +147,10 @@ const sendDueDateReminderEmail = async (email, userData, books, reminderType) =>
                 <div style="background-color: ${color}; color: white; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
                     <h1 style="margin: 0; font-size: 24px;">${title}</h1>
                 </div>
-                
+
                 <div style="background-color: white; padding: 20px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 10px 10px;">
                     <p>Hello <strong>${userData.idNumber}</strong>,</p>
-                    
+
                     <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 20px 0;">
                         <h3 style="color: #856404; margin: 0 0 10px 0;">${urgency}</h3>
                         <p style="color: #856404; margin: 0;">Please return your borrowed books to avoid penalties.</p>
@@ -182,19 +183,19 @@ const sendDueDateReminderEmail = async (email, userData, books, reminderType) =>
 
     try {
         const result = await transporter.sendMail(mailOptions);
-        console.log(`${reminderType} reminder email sent successfully:`, result.messageId);
+        logger.info(`${reminderType} reminder email sent successfully:`, result.messageId);
         return { success: true, messageId: result.messageId };
     } catch (error) {
-        console.error(`${reminderType} reminder email sending error:`, error.message);
+        logger.error(`${reminderType} reminder email sending error:`, error.message);
         return { success: false, error: error.message };
     }
 };
 
 const sendBulkDueDateReminders = async (notifications) => {
-    console.log(`Sending bulk due date reminders for ${notifications.length} users`);
-    
+    logger.info(`Sending bulk due date reminders for ${notifications.length} users`);
+
     const results = [];
-    
+
     for (const notification of notifications) {
         try {
             const result = await sendDueDateReminderEmail(
@@ -210,7 +211,7 @@ const sendBulkDueDateReminders = async (notifications) => {
                 ...result
             });
         } catch (error) {
-            console.error(`Error sending reminder to ${notification.email}:`, error);
+            logger.error(`Error sending reminder to ${notification.email}:`, error);
             results.push({
                 userId: notification.userData.idNumber,
                 email: notification.email,
@@ -220,12 +221,12 @@ const sendBulkDueDateReminders = async (notifications) => {
             });
         }
     }
-    
+
     return results;
 };
 
-module.exports = { 
-    sendVerificationEmail, 
+module.exports = {
+    sendVerificationEmail,
     sendPasswordResetEmail,
     sendDueDateReminderEmail,
     sendBulkDueDateReminders

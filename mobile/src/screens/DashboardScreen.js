@@ -92,21 +92,23 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
         setPenalties(transformedPenalties);
       }
 
-      // Use real semester data from database
+      // Use real semester data from database (requiredBooks comes from system_settings)
       if (semesterResponse && semesterResponse.data && semesterResponse.data.success) {
         setClearanceData(semesterResponse.data.data);
       } else {
-        // Gracefully fall back to data derived from actual borrowed books
+        // Fallback when API unavailable - derive from borrowed books count
+        // Note: requiredBooks value should come from API (system_settings.books_required_per_semester)
         const derivedCount = Array.isArray(borrowedResponse?.data?.data?.borrowedBooks)
           ? borrowedResponse.data.data.borrowedBooks.length
           : borrowedBooks.length;
+        const fallbackRequired = clearanceData?.requiredBooks || 20; // Use cached value or default
         setClearanceData({
           booksThisSemester: derivedCount,
-          requiredBooks: 20,
-          booksRemaining: Math.max(0, 20 - derivedCount),
-          clearanceStatus: derivedCount >= 20 ? 'completed' : 
-                          derivedCount >= 15 ? 'near_completion' :
-                          derivedCount >= 10 ? 'in_progress' : 'needs_improvement'
+          requiredBooks: fallbackRequired,
+          booksRemaining: Math.max(0, fallbackRequired - derivedCount),
+          clearanceStatus: derivedCount >= fallbackRequired ? 'completed' :
+                          derivedCount >= Math.ceil(fallbackRequired * 0.75) ? 'near_completion' :
+                          derivedCount >= Math.ceil(fallbackRequired * 0.5) ? 'in_progress' : 'needs_improvement'
         });
       }
     } catch (error) {

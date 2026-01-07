@@ -16,7 +16,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.4")
+        classpath("com.android.tools.build:gradle:8.0.2")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
@@ -28,7 +28,25 @@ allprojects {
         mavenCentral()
         maven { url "https://www.jitpack.io" }
     }
-    
+
+    // Force compatible Kotlin version across all dependencies
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.20")
+            force("org.jetbrains.kotlin:kotlin-reflect:1.9.20")
+        }
+    }
+
+    // Apply Kotlin compiler options to skip metadata version check for all Kotlin compilation tasks
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += ["-Xskip-metadata-version-check"]
+        }
+    }
+
     // Enable buildConfig for all modules
     afterEvaluate { project ->
         if (project.hasProperty("android")) {

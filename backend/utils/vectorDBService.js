@@ -2,6 +2,7 @@ const chatbotService = require('./chatbotService');
 const vectorStorage = require('./vectorStorage');
 const db = require('../config/database');
 
+const { logger } = require('../config/logger');
 class VectorDBService {
   constructor() {
     this.books = [];
@@ -13,11 +14,11 @@ class VectorDBService {
 
   async initialize() {
     try {
-      console.log('Initializing OpenAI-powered similarity database...');
-      
+      logger.info('Initializing OpenAI-powered similarity database...');
+
       // Initialize vector storage
       await vectorStorage.initialize();
-      
+
       // Get ALL books from database (not just available ones)
       const [books] = await db.execute(`
         SELECT id, title, author, category, description, status
@@ -26,12 +27,12 @@ class VectorDBService {
       `);
 
       if (books.length === 0) {
-        console.log('No books found in database');
+        logger.info('No books found in database');
         this.isInitialized = true;
         return;
       }
 
-      console.log(`[INFO] Found ${books.length} books in database`);
+      logger.info(`[INFO] Found ${books.length} books in database`);
 
       // Store books for similarity search
       this.books = books.map(book => ({
@@ -42,25 +43,25 @@ class VectorDBService {
       // Check which books need embeddings
       const booksNeedingEmbeddings = [];
       const existingEmbeddings = [];
-      
+
       for (const book of this.books) {
         const existingEmbedding = vectorStorage.getEmbedding(book.id);
         if (existingEmbedding) {
           existingEmbeddings.push(existingEmbedding);
-          console.log(`[INFO] Using cached embedding for: ${book.title}`);
+          logger.info(`[INFO] Using cached embedding for: ${book.title}`);
         } else {
           booksNeedingEmbeddings.push(book);
         }
       }
 
-      console.log(`[INFO] Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
+      logger.info(`[INFO] Found ${existingEmbeddings.length} cached embeddings, need to generate ${booksNeedingEmbeddings.length} new ones`);
 
       // Prune any embeddings that no longer exist in DB
       const dbBookIds = new Set(this.books.map(b => b.id));
       const allStored = vectorStorage.getAllEmbeddings();
       const orphaned = allStored.filter(e => !dbBookIds.has(e.bookId));
       if (orphaned.length > 0) {
-        console.log(`[INFO] Removing ${orphaned.length} embeddings not present in DB...`);
+        logger.info(`[INFO] Removing ${orphaned.length} embeddings not present in DB...`);
         for (const e of orphaned) {
           await vectorStorage.removeEmbedding(e.bookId);
         }
@@ -68,15 +69,15 @@ class VectorDBService {
 
       // Generate OpenAI embeddings for new books
       if (booksNeedingEmbeddings.length > 0) {
-        console.log('[INFO] Generating OpenAI embeddings for new books...');
+        logger.info('[INFO] Generating OpenAI embeddings for new books...');
         try {
           for (let i = 0; i < booksNeedingEmbeddings.length; i++) {
             const book = booksNeedingEmbeddings[i];
-            console.log(`[INFO] Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
-            
+            logger.info(`[INFO] Generating embedding for book ${i + 1}/${booksNeedingEmbeddings.length}: ${book.title} (Status: ${book.status})`);
+
             const text = `${book.title || ''}\n${book.author || ''}\n${book.category || ''}\n${book.description || ''}`.trim();
             const embedding = await chatbotService.generateEmbedding(text);
-            
+
             // Accept any valid embedding length (model-dependent)
             if (embedding && Array.isArray(embedding) && embedding.length > 0) {
               // Save to persistent storage
@@ -86,19 +87,19 @@ class VectorDBService {
                 category: book.category,
                 status: book.status
               });
-              
+
               existingEmbeddings.push(embedding);
-              console.log(`[OK] OpenAI embedding generated and saved for: ${book.title}`);
+              logger.info(`[OK] OpenAI embedding generated and saved for: ${book.title}`);
             } else {
               throw new Error(`Invalid OpenAI embedding for book: ${book.title} (got ${embedding ? embedding.length : 'null'})`);
             }
           }
         } catch (error) {
-          console.error('[ERROR] Failed to generate OpenAI embeddings:', error.message);
+          logger.error('[ERROR] Failed to generate OpenAI embeddings:', error.message);
           throw new Error('OpenAI embedding generation failed - cannot proceed without real embeddings');
         }
       }
-      
+
       // Load all embeddings into memory
       this.embeddings = [];
       for (const book of this.books) {
@@ -107,10 +108,10 @@ class VectorDBService {
           this.embeddings.push(embedding);
         }
       }
-      
+
       if (this.embeddings.length === this.books.length) {
         this.useRealEmbeddings = true;
-        console.log(`[OK] Successfully loaded OpenAI embeddings for ${this.embeddings.length} books!`);
+        logger.info(`[OK] Successfully loaded OpenAI embeddings for ${this.embeddings.length} books!`);
       } else {
         throw new Error(`Only loaded ${this.embeddings.length} embeddings for ${this.books.length} books`);
       }
@@ -118,10 +119,10 @@ class VectorDBService {
       // Build integrity report comparing DB books and stored metadata
       this.integrityReport = this.buildIntegrityReport();
 
-      console.log(`OpenAI-powered similarity database initialized with ${this.books.length} books`);
+      logger.info(`OpenAI-powered similarity database initialized with ${this.books.length} books`);
       this.isInitialized = true;
     } catch (error) {
-      console.error('Error initializing similarity database:', error);
+      logger.error('Error initializing similarity database:', error);
       throw error; // Re-throw to stop the server if embeddings fail
     }
   }
@@ -136,21 +137,21 @@ class VectorDBService {
         throw new Error('Database not properly initialized with OpenAI embeddings');
       }
 
-      console.log('[INFO] Using OpenAI embeddings for similarity search!');
-      
+      logger.info('[INFO] Using OpenAI embeddings for similarity search!');
+
       // Generate embedding for query
       const queryEmbedding = await chatbotService.generateEmbedding(query);
-      
+
       if (!queryEmbedding || !Array.isArray(queryEmbedding)) {
         throw new Error('Failed to generate query embedding');
       }
-      
+
       // Calculate cosine similarity with all books
       const similarities = this.embeddings.map((embedding, index) => {
         const similarity = this.cosineSimilarity(queryEmbedding, embedding);
         return { index, similarity };
       });
-      
+
       // Sort by similarity and get top results
       const topResults = similarities
         .sort((a, b) => b.similarity - a.similarity)
@@ -164,11 +165,11 @@ class VectorDBService {
           status: this.books[result.index].status,
           similarity: result.similarity
         }));
-      
-      console.log('[OK] OpenAI-powered similarity search completed!');
+
+      logger.info('[OK] OpenAI-powered similarity search completed!');
       return topResults;
     } catch (error) {
-      console.error('Error in similarity search:', error);
+      logger.error('Error in similarity search:', error);
       throw error; // Re-throw to handle in the chatbot route
     }
   }
@@ -177,17 +178,17 @@ class VectorDBService {
     if (!vecA || !vecB || !Array.isArray(vecA) || !Array.isArray(vecB)) {
       return 0;
     }
-    
+
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-    
+
     for (let i = 0; i < Math.min(vecA.length, vecB.length); i++) {
       dotProduct += vecA[i] * vecB[i];
       normA += vecA[i] * vecA[i];
       normB += vecB[i] * vecB[i];
     }
-    
+
     if (normA === 0 || normB === 0) return 0;
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
@@ -198,14 +199,14 @@ class VectorDBService {
       this.books = [];
       this.embeddings = [];
       this.useRealEmbeddings = false;
-      
+
       // Clear persistent storage and regenerate all embeddings
       await vectorStorage.clearAll();
-      
+
       await this.initialize();
-      console.log('OpenAI similarity database refreshed');
+      logger.info('OpenAI similarity database refreshed');
     } catch (error) {
-      console.error('Error refreshing similarity database:', error);
+      logger.error('Error refreshing similarity database:', error);
       throw error;
     }
   }
@@ -267,13 +268,13 @@ class VectorDBService {
     try {
       const [books] = await db.execute(`
         SELECT id, title, author, category, description, status
-        FROM books 
+        FROM books
         WHERE id = ?
       `, [bookId]);
 
       return books.length > 0 ? books[0] : null;
     } catch (error) {
-      console.error('Error getting book by ID:', error);
+      logger.error('Error getting book by ID:', error);
       return null;
     }
   }

@@ -7,12 +7,12 @@ const performanceService = require('../services/performanceService');
  */
 const performanceMonitoring = (req, res, next) => {
   const startTime = Date.now();
-  
+
   // Override res.end to capture response time
   const originalEnd = res.end;
   res.end = function(chunk, encoding) {
     const duration = Date.now() - startTime;
-    
+
     // Record API performance
     performanceService.recordAPICall(
       req.route?.path || req.path,
@@ -21,7 +21,7 @@ const performanceMonitoring = (req, res, next) => {
       res.statusCode,
       req.user?.id || null
     );
-    
+
     // Log slow requests
     if (duration > 1000) {
       logger.performance('Slow Request', {
@@ -32,11 +32,11 @@ const performanceMonitoring = (req, res, next) => {
         userId: req.user?.id || null
       });
     }
-    
+
     // Call original end method
     originalEnd.call(this, chunk, encoding);
   };
-  
+
   next();
 };
 
@@ -48,7 +48,7 @@ const auditLogging = (req, res, next) => {
   if (req.path.includes('/health') || req.path.includes('/static')) {
     return next();
   }
-  
+
   const originalEnd = res.end;
   res.end = function(chunk, encoding) {
     // Log the request after response is sent
@@ -56,7 +56,7 @@ const auditLogging = (req, res, next) => {
       try {
         const action = `${req.method.toLowerCase()}_${req.route?.name || req.path.replace(/\//g, '_')}`;
         const category = getCategoryFromPath(req.path);
-        
+
         await auditService.logEvent({
           userId: req.user?.id || null,
           action,
@@ -76,10 +76,10 @@ const auditLogging = (req, res, next) => {
         logger.error('Failed to log audit event', { error: error.message });
       }
     });
-    
+
     originalEnd.call(this, chunk, encoding);
   };
-  
+
   next();
 };
 
@@ -97,7 +97,7 @@ const errorTracking = (err, req, res, next) => {
     ip: req.ip || req.connection.remoteAddress,
     userAgent: req.get('User-Agent')
   });
-  
+
   // Log security-related errors
   if (err.status === 401 || err.status === 403) {
     auditService.logSecurityEvent('unauthorized_access', {
@@ -109,7 +109,7 @@ const errorTracking = (err, req, res, next) => {
       userAgent: req.get('User-Agent')
     });
   }
-  
+
   next(err);
 };
 
@@ -139,9 +139,9 @@ function getCategoryFromPath(path) {
  */
 function sanitizeRequestBody(body) {
   if (!body) return null;
-  
+
   const sanitized = { ...body };
-  
+
   // Remove sensitive fields
   const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization'];
   sensitiveFields.forEach(field => {
@@ -149,7 +149,7 @@ function sanitizeRequestBody(body) {
       sanitized[field] = '[REDACTED]';
     }
   });
-  
+
   return sanitized;
 }
 
@@ -168,7 +168,7 @@ const securityMonitoring = (req, res, next) => {
   // Monitor for suspicious activity
   const ip = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent');
-  
+
   // Check for suspicious patterns
   if (req.url.includes('..') || req.url.includes('script')) {
     auditService.logSecurityEvent('suspicious_request', {
@@ -179,7 +179,7 @@ const securityMonitoring = (req, res, next) => {
       reason: 'Potential path traversal or XSS attempt'
     });
   }
-  
+
   // Check for rapid requests (basic rate limiting detection)
   if (req.session && req.session.requestCount > 100) {
     auditService.logSecurityEvent('rate_limit_exceeded', {
@@ -188,7 +188,7 @@ const securityMonitoring = (req, res, next) => {
       requestCount: req.session.requestCount
     });
   }
-  
+
   next();
 };
 
@@ -205,7 +205,7 @@ const healthCheck = async (req, res, next) => {
       version: process.version,
       checks: {}
     };
-    
+
     // Check database connection
     try {
       const pool = require('../config/database');
@@ -215,7 +215,7 @@ const healthCheck = async (req, res, next) => {
       health.checks.database = 'unhealthy';
       health.status = 'unhealthy';
     }
-    
+
     // Check memory usage
     const memUsage = process.memoryUsage();
     if (memUsage.heapUsed > 500 * 1024 * 1024) { // 500MB
@@ -224,7 +224,7 @@ const healthCheck = async (req, res, next) => {
     } else {
       health.checks.memory = 'healthy';
     }
-    
+
     res.json(health);
   } catch (error) {
     logger.error('Health check failed', { error: error.message });
@@ -244,4 +244,3 @@ module.exports = {
   securityMonitoring,
   healthCheck
 };
-

@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const natural = require('natural');
 
+const { logger } = require('../config/logger');
 class ReadingHistoryService {
   constructor() {
     this.tokenizer = new natural.WordTokenizer();
@@ -14,11 +15,11 @@ class ReadingHistoryService {
    */
   async analyzeUserReadingHistory(studentIdNumber) {
     try {
-      console.log(`[INFO] Analyzing reading history for student: ${studentIdNumber}`);
+      logger.info(`[INFO] Analyzing reading history for student: ${studentIdNumber}`);
 
       // Get user's complete borrowing history
       const [borrowingHistory] = await pool.execute(`
-        SELECT 
+        SELECT
           bt.id,
           bt.borrowed_date,
           bt.returned_date,
@@ -30,9 +31,9 @@ class ReadingHistoryService {
           b.publication_year,
           b.publisher,
           DATEDIFF(COALESCE(bt.returned_date, NOW()), bt.borrowed_date) as days_kept,
-          CASE 
-            WHEN bt.returned_date IS NOT NULL THEN 1 
-            ELSE 0 
+          CASE
+            WHEN bt.returned_date IS NOT NULL THEN 1
+            ELSE 0
           END as completed_reading
         FROM borrowing_transactions bt
         JOIN books b ON bt.book_id = b.id
@@ -60,11 +61,11 @@ class ReadingHistoryService {
         readingVelocity: this.calculateReadingVelocity(borrowingHistory)
       };
 
-      console.log(`[OK] Reading history analysis completed for ${studentIdNumber}`);
+      logger.info(`[OK] Reading history analysis completed for ${studentIdNumber}`);
       return analysis;
 
     } catch (error) {
-      console.error('[ERROR] Error analyzing reading history:', error);
+      logger.error('[ERROR] Error analyzing reading history:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -77,13 +78,13 @@ class ReadingHistoryService {
    */
   async generatePersonalizedRecommendations(studentIdNumber, limit = 5) {
     try {
-      console.log(`[INFO] Generating personalized recommendations for: ${studentIdNumber}`);
+      logger.info(`[INFO] Generating personalized recommendations for: ${studentIdNumber}`);
 
       const userPreferences = await this.analyzeUserReadingHistory(studentIdNumber);
-      
+
       // Get all available books
       const [availableBooks] = await pool.execute(`
-        SELECT 
+        SELECT
           b.id,
           b.title,
           b.author,
@@ -91,6 +92,7 @@ class ReadingHistoryService {
           b.description,
           b.publication_year,
           b.publisher,
+          b.pages,
           b.status,
           b.available_copies,
           b.book_copies,
@@ -120,11 +122,11 @@ class ReadingHistoryService {
           recommendationReason: this.generateRecommendationReason(book, userPreferences)
         }));
 
-      console.log(`[OK] Generated ${recommendations.length} personalized recommendations`);
+      logger.info(`[OK] Generated ${recommendations.length} personalized recommendations`);
       return recommendations;
 
     } catch (error) {
-      console.error('[ERROR] Error generating personalized recommendations:', error);
+      logger.error('[ERROR] Error generating personalized recommendations:', error);
       return [];
     }
   }
@@ -505,11 +507,11 @@ class ReadingHistoryService {
    */
   async getSystemReadingStatistics() {
     try {
-      console.log('[INFO] Generating system-wide reading statistics...');
+      logger.info('[INFO] Generating system-wide reading statistics...');
 
       // Get overall borrowing statistics
       const [overallStats] = await pool.execute(`
-        SELECT 
+        SELECT
           COUNT(*) as total_borrows,
           COUNT(DISTINCT student_id_number) as active_readers,
           COUNT(CASE WHEN returned_date IS NOT NULL THEN 1 END) as completed_reads,
@@ -519,7 +521,7 @@ class ReadingHistoryService {
 
       // Get popular categorys
       const [popularGenres] = await pool.execute(`
-        SELECT 
+        SELECT
           b.category,
           COUNT(*) as borrow_count,
           COUNT(DISTINCT bt.student_id_number) as unique_readers
@@ -533,7 +535,7 @@ class ReadingHistoryService {
 
       // Get popular authors
       const [popularAuthors] = await pool.execute(`
-        SELECT 
+        SELECT
           b.author,
           COUNT(*) as borrow_count,
           COUNT(DISTINCT bt.student_id_number) as unique_readers
@@ -546,7 +548,7 @@ class ReadingHistoryService {
 
       // Get reading trends by month
       const [monthlyTrends] = await pool.execute(`
-        SELECT 
+        SELECT
           DATE_FORMAT(borrowed_date, '%Y-%m') as month,
           COUNT(*) as borrows,
           COUNT(DISTINCT student_id_number) as unique_readers
@@ -556,7 +558,7 @@ class ReadingHistoryService {
         ORDER BY month DESC
       `);
 
-      console.log('[OK] System reading statistics generated');
+      logger.info('[OK] System reading statistics generated');
       return {
         overall: overallStats[0],
         popularGenres,
@@ -565,7 +567,7 @@ class ReadingHistoryService {
       };
 
     } catch (error) {
-      console.error('[ERROR] Error generating system reading statistics:', error);
+      logger.error('[ERROR] Error generating system reading statistics:', error);
       return null;
     }
   }

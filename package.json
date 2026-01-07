@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Web and Mobile System with API Backend",
   "scripts": {
+    "start": "echo \"Please specify which component to start:\n  npm run dev:backend - Start backend server\n  npm run dev:web - Start web application\n  npm run dev:mobile - Start mobile app\"",
     "install-all": "npm install && cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install",
     "dev:backend": "cd backend && npm run dev",
     "dev:web": "cd web && npm start",

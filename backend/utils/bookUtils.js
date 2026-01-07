@@ -6,8 +6,8 @@ const crypto = require('crypto');
  */
 function generateBarcode() {
     const date = new Date();
-    const dateStr = date.getFullYear().toString() + 
-                   (date.getMonth() + 1).toString().padStart(2, '0') + 
+    const dateStr = date.getFullYear().toString() +
+                   (date.getMonth() + 1).toString().padStart(2, '0') +
                    date.getDate().toString().padStart(2, '0');
     const randomNum = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
     return `LIB-${dateStr}-${randomNum}`;
@@ -33,14 +33,14 @@ function generateISBN() {
     for (let i = 0; i < 9; i++) {
         isbn += Math.floor(Math.random() * 10);
     }
-    
+
     // Calculate check digit (simplified algorithm)
     let sum = 0;
     for (let i = 0; i < 9; i++) {
         sum += parseInt(isbn[i]) * (10 - i);
     }
     const checkDigit = (11 - (sum % 11)) % 11;
-    
+
     return `ISBN-${isbn}${checkDigit === 10 ? 'X' : checkDigit}`;
 }
 
@@ -49,22 +49,22 @@ function generateISBN() {
  */
 function validateBookData(bookData) {
     const errors = [];
-    
+
     if (!bookData.title || bookData.title.trim().length === 0) {
         errors.push('Title is required');
     }
-    
+
     if (!bookData.author || bookData.author.trim().length === 0) {
         errors.push('Author is required');
     }
-    
+
     if (bookData.publication_year) {
         const currentYear = new Date().getFullYear();
         if (bookData.publication_year < 1800 || bookData.publication_year > currentYear) {
             errors.push('Publication year must be between 1800 and current year');
         }
     }
-    
+
     return errors;
 }
 

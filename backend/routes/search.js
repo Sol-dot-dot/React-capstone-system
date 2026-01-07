@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/database');
 
+const { logger } = require('../config/logger');
 // GET /api/search - Global search across books, users, and activities
 router.get('/', auth, async (req, res) => {
     try {
@@ -28,7 +29,7 @@ router.get('/', auth, async (req, res) => {
         // Search Books
         if (!type || type === 'books') {
             const [books] = await pool.execute(`
-                SELECT 
+                SELECT
                     b.id,
                     b.title,
                     b.author,
@@ -40,13 +41,13 @@ router.get('/', auth, async (req, res) => {
                     b.created_at,
                     'book' as type
                 FROM books b
-                WHERE 
-                    b.title LIKE ? OR 
-                    b.author LIKE ? OR 
-                    b.number_code LIKE ? OR 
+                WHERE
+                    b.title LIKE ? OR
+                    b.author LIKE ? OR
+                    b.number_code LIKE ? OR
                     b.category LIKE ?
-                ORDER BY 
-                    CASE 
+                ORDER BY
+                    CASE
                         WHEN b.title LIKE ? THEN 1
                         WHEN b.author LIKE ? THEN 2
                         WHEN b.number_code LIKE ? THEN 3
@@ -70,7 +71,7 @@ router.get('/', auth, async (req, res) => {
         // Search Users
         if (!type || type === 'users') {
             const [users] = await pool.execute(`
-                SELECT 
+                SELECT
                     u.id,
                     u.id_number,
                     u.username,
@@ -79,16 +80,16 @@ router.get('/', auth, async (req, res) => {
                     u.is_verified,
                     u.created_at,
                     'user' as type,
-                    (SELECT COUNT(*) FROM borrowing_transactions 
-                     WHERE student_id_number = u.id_number 
+                    (SELECT COUNT(*) FROM borrowing_transactions
+                     WHERE student_id_number = u.id_number
                      AND status IN ('borrowed', 'overdue')) as currently_borrowed
                 FROM users u
-                WHERE 
-                    u.id_number LIKE ? OR 
-                    u.username LIKE ? OR 
+                WHERE
+                    u.id_number LIKE ? OR
+                    u.username LIKE ? OR
                     u.email LIKE ?
-                ORDER BY 
-                    CASE 
+                ORDER BY
+                    CASE
                         WHEN u.id_number LIKE ? THEN 1
                         WHEN u.username LIKE ? THEN 2
                         WHEN u.email LIKE ? THEN 3
@@ -112,7 +113,7 @@ router.get('/', auth, async (req, res) => {
         // Search Activities (Borrowing Transactions)
         if (!type || type === 'activities') {
             const [activities] = await pool.execute(`
-                SELECT 
+                SELECT
                     bt.id,
                     bt.student_id_number,
                     bt.borrowed_date,
@@ -128,12 +129,12 @@ router.get('/', auth, async (req, res) => {
                 FROM borrowing_transactions bt
                 JOIN books b ON bt.book_id = b.id
                 JOIN users u ON bt.student_id_number = u.id_number
-                WHERE 
-                    bt.student_id_number LIKE ? OR 
-                    b.title LIKE ? OR 
-                    b.author LIKE ? OR 
-                    b.number_code LIKE ? OR 
-                    u.username LIKE ? OR 
+                WHERE
+                    bt.student_id_number LIKE ? OR
+                    b.title LIKE ? OR
+                    b.author LIKE ? OR
+                    b.number_code LIKE ? OR
+                    u.username LIKE ? OR
                     u.email LIKE ?
                 ORDER BY bt.borrowed_date DESC
                 LIMIT ?
@@ -145,7 +146,7 @@ router.get('/', auth, async (req, res) => {
             results.activities = activities.map(activity => ({
                 ...activity,
                 statusText: getActivityStatusText(activity.status),
-                daysOverdue: activity.status === 'overdue' ? 
+                daysOverdue: activity.status === 'overdue' ?
                     Math.max(0, Math.floor((new Date() - new Date(activity.due_date)) / (1000 * 60 * 60 * 24))) : 0
             }));
         }
@@ -161,7 +162,7 @@ router.get('/', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Search error:', error);
+        logger.error('Search error:', error);
         res.status(500).json({
             success: false,
             message: 'Search failed'

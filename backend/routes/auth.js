@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const pool = require('../config/database');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { logger } = require('../config/logger');
 require('dotenv').config({ path: './config.env' });
 
 const router = express.Router();
@@ -61,7 +62,7 @@ router.post('/admin/login', [
             }
         });
     } catch (error) {
-        console.error('Admin login error:', error);
+        logger.error('Admin login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -73,9 +74,9 @@ router.post('/user/check-id', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -91,12 +92,12 @@ router.post('/user/check-id', [
             return res.status(400).json({ message: 'ID Number already registered' });
         }
 
-        res.json({ 
+        res.json({
             success: true,
             message: 'ID Number is available'
         });
     } catch (error) {
-        console.error('ID check error:', error);
+        logger.error('ID check error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -112,9 +113,9 @@ router.post('/user/check-email', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -174,7 +175,7 @@ router.post('/user/check-email', [
             userId: userId
         });
     } catch (error) {
-        console.error('Email check error:', error);
+        logger.error('Email check error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -188,9 +189,9 @@ router.post('/user/verify-code', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -229,7 +230,7 @@ router.post('/user/verify-code', [
             userId: user.id
         });
     } catch (error) {
-        console.error('Email verification error:', error);
+        logger.error('Email verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -242,9 +243,9 @@ router.post('/user/complete-registration', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -272,7 +273,7 @@ router.post('/user/complete-registration', [
             message: 'Registration completed successfully'
         });
     } catch (error) {
-        console.error('Registration completion error:', error);
+        logger.error('Registration completion error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -287,13 +288,13 @@ router.post('/user/register', [
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ], async (req, res) => {
     try {
-        console.log('Legacy registration request received:', req.body);
+        logger.info('Legacy registration request received:', req.body);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.log('Validation errors:', errors.array());
-            return res.status(400).json({ 
+            logger.info('Validation errors:', errors.array());
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -328,7 +329,7 @@ router.post('/user/register', [
             userId: result.insertId
         });
     } catch (error) {
-        console.error('User registration error:', error);
+        logger.error('User registration error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -375,7 +376,7 @@ router.post('/user/verify', [
 
         res.json({ message: 'Email verified successfully' });
     } catch (error) {
-        console.error('Email verification error:', error);
+        logger.error('Email verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -388,7 +389,7 @@ router.post('/user/login', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.log('[LOGIN DEBUG] Validation failed for login attempt:', {
+            logger.info('[LOGIN DEBUG] Validation failed for login attempt:', {
                 errors: errors.array(),
                 userAgent: req.get('User-Agent')
             });
@@ -399,7 +400,7 @@ router.post('/user/login', [
         const userAgent = req.get('User-Agent');
         const isMobileApp = userAgent && userAgent.includes('okhttp');
 
-        console.log('[LOGIN DEBUG] Login attempt:', {
+        logger.info('[LOGIN DEBUG] Login attempt:', {
             idNumber,
             userAgent,
             isMobileApp,
@@ -413,32 +414,32 @@ router.post('/user/login', [
         );
 
         if (users.length === 0) {
-            console.log('[LOGIN DEBUG] User not found:', { idNumber, isMobileApp });
+            logger.info('[LOGIN DEBUG] User not found:', { idNumber, isMobileApp });
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const user = users[0];
 
         if (!user.is_verified) {
-            console.log('[LOGIN DEBUG] User not verified:', { idNumber, userId: user.id, isMobileApp });
+            logger.info('[LOGIN DEBUG] User not verified:', { idNumber, userId: user.id, isMobileApp });
             return res.status(401).json({ message: 'Please verify your email first' });
         }
 
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
         if (!isValidPassword) {
-            console.log('[LOGIN DEBUG] Invalid password:', { idNumber, userId: user.id, isMobileApp });
+            logger.info('[LOGIN DEBUG] Invalid password:', { idNumber, userId: user.id, isMobileApp });
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        console.log('[LOGIN DEBUG] Login successful:', { idNumber, userId: user.id, isMobileApp });
+        logger.info('[LOGIN DEBUG] Login successful:', { idNumber, userId: user.id, isMobileApp });
 
         // Log user login (async, don't wait for completion)
         pool.execute(
             'INSERT INTO login_logs (user_id, user_type, ip_address, user_agent) VALUES (?, ?, ?, ?)',
             [user.id, 'student', req.ip, req.get('User-Agent')]
         ).catch(error => {
-            console.error('Login log error (non-critical):', error);
+            logger.error('Login log error (non-critical):', error);
         });
 
         const token = jwt.sign(
@@ -458,7 +459,7 @@ router.post('/user/login', [
             }
         });
     } catch (error) {
-        console.error('User login error:', error);
+        logger.error('User login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -471,9 +472,9 @@ router.post('/user/request-password-reset', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -511,7 +512,7 @@ router.post('/user/request-password-reset', [
             message: 'Password reset code sent to your email'
         });
     } catch (error) {
-        console.error('Password reset request error:', error);
+        logger.error('Password reset request error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -524,9 +525,9 @@ router.post('/user/verify-reset-code', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -558,7 +559,7 @@ router.post('/user/verify-reset-code', [
             message: 'Reset code verified successfully'
         });
     } catch (error) {
-        console.error('Reset code verification error:', error);
+        logger.error('Reset code verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -572,9 +573,9 @@ router.post('/user/reset-password', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
-                errors: errors.array() 
+                errors: errors.array()
             });
         }
 
@@ -614,7 +615,7 @@ router.post('/user/reset-password', [
             message: 'Password reset successfully'
         });
     } catch (error) {
-        console.error('Password reset error:', error);
+        logger.error('Password reset error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -656,7 +657,7 @@ router.get('/debug/user/:idNumber', async (req, res) => {
                 : 'User exists but is NOT verified - needs email verification'
         });
     } catch (error) {
-        console.error('Debug user check error:', error);
+        logger.error('Debug user check error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

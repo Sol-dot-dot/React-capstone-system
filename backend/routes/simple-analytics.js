@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/database');
 
+const { logger } = require('../config/logger');
 // Get Simple Dashboard Statistics
 router.get('/dashboard-stats', auth, async (req, res) => {
   try {
@@ -55,7 +56,7 @@ router.get('/dashboard-stats', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Dashboard stats error:', error);
+    logger.error('Dashboard stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch dashboard statistics',
@@ -85,7 +86,7 @@ router.get('/books-by-category', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Books by category error:', error);
+    logger.error('Books by category error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch books by category',
@@ -127,7 +128,7 @@ router.get('/book-status-distribution', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Book status distribution error:', error);
+    logger.error('Book status distribution error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch book status distribution',
@@ -159,7 +160,7 @@ router.get('/monthly-borrowing', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Monthly borrowing error:', error);
+    logger.error('Monthly borrowing error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch monthly borrowing data',

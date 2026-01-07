@@ -383,9 +383,10 @@ const ModernBookManagement = ({ user }) => {
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Author</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Barcode</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Number Code</th>
+                      <th className="text-center py-3 px-4 font-semibold text-slate-900">Copies</th>
+                      <th className="text-center py-3 px-4 font-semibold text-slate-900">Available</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Status</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Genre</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-900">Added By</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-900">Actions</th>
                     </tr>
                   </thead>
@@ -417,12 +418,28 @@ const ModernBookManagement = ({ user }) => {
                             {book.number_code || 'N/A'}
                           </Badge>
                         </td>
+                        <td className="py-4 px-4 text-center">
+                          <span className="font-semibold text-slate-700">
+                            {book.book_copies || 0}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <Badge
+                            className={
+                              book.available_copies > 0
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }
+                          >
+                            {book.available_copies || 0}
+                          </Badge>
+                        </td>
                         <td className="py-4 px-4">
-                          <Badge 
+                          <Badge
                             variant={book.status === 'available' ? 'default' : 'secondary'}
                             className={
-                              book.status === 'available' 
-                                ? 'bg-green-100 text-green-700' 
+                              book.status === 'available'
+                                ? 'bg-green-100 text-green-700'
                                 : book.status === 'borrowed'
                                 ? 'bg-orange-100 text-orange-700'
                                 : 'bg-red-100 text-red-700'
@@ -439,12 +456,6 @@ const ModernBookManagement = ({ user }) => {
                             <Tag className="h-3 w-3 mr-1" />
                             {book.category}
                           </Badge>
-                        </td>
-                        <td className="py-4 px-4 text-slate-600">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            {book.added_by || 'admin'}
-                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex gap-2">
@@ -528,13 +539,25 @@ const ModernBookManagement = ({ user }) => {
                           <p className="text-slate-500">Number Code</p>
                           <p className="font-mono">{book.number_code || 'N/A'}</p>
                         </div>
+                        <div>
+                          <p className="text-slate-500">Total Copies</p>
+                          <p className="font-semibold">{book.book_copies || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500">Available</p>
+                          <Badge
+                            className={
+                              book.available_copies > 0
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }
+                          >
+                            {book.available_copies || 0}
+                          </Badge>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <User className="h-4 w-4" />
-                          {book.added_by || 'admin'}
-                        </div>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"

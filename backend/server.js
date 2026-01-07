@@ -2,11 +2,27 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config({ path: './config.env' });
 
+// Global error handlers to prevent crashes
+process.on('uncaughtException', (error) => {
+    console.error('[FATAL] Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
+    // Don't exit - let the app continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Promise Rejection:', reason);
+    console.error('Promise:', promise);
+    // Don't exit - let the app continue
+});
+
 // Import the fine calculation service
 const fineCalculationService = require('./services/fineCalculationService');
 
 // Import the notification scheduler service
 const notificationScheduler = require('./services/notificationScheduler');
+
+// Import penalty utils for cleanup
+const { cleanupDuplicateSettings } = require('./utils/penaltyUtils');
 
 // Import logger for production-ready logging
 const { logger, requestLogger, errorLogger } = require('./config/logger');
@@ -33,7 +49,6 @@ app.use('/api/student-records', require('./routes/studentRecords'));
 app.use('/api/semesters', require('./routes/semesters'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/', require('./routes/dashboard'));
-// app.use('/api/monitoring', require('./routes/monitoring'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -105,13 +120,23 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
     logger.info('Server started successfully', {
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
         healthCheck: `http://localhost:${PORT}/api/health`,
         networkAccess: `http://0.0.0.0:${PORT}/api/health`
     });
+
+    // Cleanup duplicate system settings on startup
+    try {
+        const cleanupResult = await cleanupDuplicateSettings();
+        if (cleanupResult.cleaned > 0) {
+            logger.info(`Startup cleanup: Removed ${cleanupResult.cleaned} duplicate system settings`);
+        }
+    } catch (error) {
+        logger.error('Startup cleanup failed:', error);
+    }
 
     // Start the fine calculation service
     fineCalculationService.start();
