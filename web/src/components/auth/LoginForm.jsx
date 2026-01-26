@@ -26,7 +26,7 @@ const Login = ({ onLogin }) => {
 
     try {
       const response = await axios.post('/api/auth/admin/login', formData);
-      
+
       if (response.data.token) {
         onLogin(response.data.token, response.data.user);
       }
@@ -80,9 +80,9 @@ const Login = ({ onLogin }) => {
       <div className="max-w-md w-full space-y-6 sm:space-y-8">
         {/* Logo */}
         <div className="text-center mb-6 sm:mb-8">
-          <img 
-            src="/smc-logo.png" 
-            alt="SMC Logo" 
+          <img
+            src="/smc-logo.png"
+            alt="SMC Logo"
             className="h-20 sm:h-24 w-auto mx-auto mb-4 sm:mb-6"
             style={{
               height: 'clamp(80px, 12vw, 150px)',
@@ -95,7 +95,7 @@ const Login = ({ onLogin }) => {
             }}
           />
         </div>
-        
+
         <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-3 pb-6 sm:pb-8">
             <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-slate-800">
@@ -106,7 +106,7 @@ const Login = ({ onLogin }) => {
             </CardDescription>
             <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-600 mx-auto rounded-full"></div>
           </CardHeader>
-          
+
           <CardContent className="px-6 sm:px-8 pb-6 sm:pb-8">
             {error && (
               <div className="mb-6 p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">

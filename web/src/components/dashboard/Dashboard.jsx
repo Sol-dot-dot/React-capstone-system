@@ -6,8 +6,6 @@ import {
   UserCheck,
   LogIn,
   BookOpen,
-  TrendingUp,
-  CheckCircle,
   AlertCircle,
   BookMarked,
   DollarSign,
@@ -35,7 +33,7 @@ const ModernDashboard = ({ user }) => {
       };
 
       const response = await axios.get('/api/dashboard/stats', config);
-      
+
       if (response.data.success) {
         setDashboardData(response.data.data);
       }
@@ -107,7 +105,7 @@ const ModernDashboard = ({ user }) => {
               St. Michael's College Library System - Comprehensive Overview
             </p>
           </div>
-          <Button 
+          <Button
             onClick={fetchDashboardStats}
             variant="outline"
             size="sm"
@@ -384,57 +382,6 @@ const ModernDashboard = ({ user }) => {
               </Card>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
-                        <TrendingUp className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Today's Borrowings</p>
-                        <p className="text-xs text-slate-500">Books borrowed today</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.borrowing.todayBorrowings}
-                      </div>
-                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
-                        Today
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-purple-500 group-hover:scale-110 transition-transform duration-300">
-                        <CheckCircle className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Today's Returns</p>
-                        <p className="text-xs text-slate-500">Books returned today</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        {dashboardData.borrowing.todayReturns}
-                      </div>
-                      <Badge variant="secondary" className="mt-1 bg-purple-100 text-purple-700">
-                        Today
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </div>
         </motion.div>
 
@@ -446,7 +393,7 @@ const ModernDashboard = ({ user }) => {
           className="mb-8"
         >
           <h2 className="text-2xl font-semibold text-slate-800 mb-4">Penalty Management</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.div variants={itemVariants}>
               <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-6">
@@ -499,57 +446,6 @@ const ModernDashboard = ({ user }) => {
               </Card>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-green-500 group-hover:scale-110 transition-transform duration-300">
-                        <DollarSign className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Total Amount</p>
-                        <p className="text-xs text-slate-500">All penalty amounts</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        ₱{dashboardData.penalties.totalAmount}
-                      </div>
-                      <Badge variant="secondary" className="mt-1 bg-green-100 text-green-700">
-                        Collected
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-orange-500 group-hover:scale-110 transition-transform duration-300">
-                        <DollarSign className="h-6 w-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-600">Unpaid Amount</p>
-                        <p className="text-xs text-slate-500">Outstanding payments</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-slate-900">
-                        ₱{dashboardData.penalties.unpaidAmount}
-                      </div>
-                      <Badge variant="secondary" className={`mt-1 ${dashboardData.penalties.unpaidAmount > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                        {dashboardData.penalties.unpaidAmount > 0 ? 'Outstanding' : 'Cleared'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </div>
         </motion.div>
 

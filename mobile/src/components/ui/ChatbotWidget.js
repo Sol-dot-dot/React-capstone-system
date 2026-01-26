@@ -16,6 +16,25 @@ import axios from 'axios';
 import { ModernTheme, ModernStyles } from '../../styles/ModernTheme';
 import { buildApiUrl, getEndpoint } from '../../config/api';
 
+// Quick action categories for better UX
+const QUICK_CATEGORIES = [
+  { id: 'personalized', label: 'For You', icon: 'star', color: '#FF6B6B' },
+  { id: 'programming', label: 'Programming', icon: 'code', color: '#4ECDC4' },
+  { id: 'web', label: 'Web Dev', icon: 'globe', color: '#45B7D1' },
+  { id: 'mobile', label: 'Mobile Dev', icon: 'smartphone', color: '#96CEB4' },
+  { id: 'database', label: 'Database', icon: 'database', color: '#FFEAA7' },
+  { id: 'ai', label: 'AI & ML', icon: 'cpu', color: '#DDA0DD' },
+  { id: 'security', label: 'Security', icon: 'shield', color: '#98D8C8' },
+];
+
+// Suggested questions for conversation starters
+const SUGGESTED_QUESTIONS = [
+  "What programming books do you have?",
+  "Recommend books for beginners",
+  "Show me web development books",
+  "What's popular in the library?",
+];
+
 // Fallback icon component in case vector icons don't load
 const FallbackIcon = ({ name, size, color }) => {
   const iconMap = {
@@ -48,10 +67,11 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?",
+      text: "Hello! I'm your library assistant. I can help you find books by category, get personalized recommendations, or search for specific topics. Try the quick buttons below or ask me anything!",
       isBot: true,
       timestamp: new Date(),
       isTyping: false,
+      showQuickActions: true,
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -59,6 +79,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [userKnowledge, setUserKnowledge] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollViewRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const typingAnim = useRef(new Animated.Value(0)).current;
@@ -108,19 +129,110 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
 
   const generateDynamicWelcome = (userKnowledge) => {
     if (!userKnowledge) {
-      return "Hello! I'm your library assistant and I'd love to help you discover some great books. What kind of stories or topics interest you?";
+      return "Hello! I'm your library assistant. I can help you find books by category, get personalized recommendations, or search for specific topics. Try the quick buttons below or ask me anything!";
     }
 
     const { summary } = userKnowledge;
-    
+
     // Simple, natural welcome based on their reading level
     if (summary.readingLevel === 'New Reader') {
-      return `Welcome to your reading journey, ${summary.name}! I'm here to help you find books you'll love. What sounds interesting to you?`;
+      return `Welcome to your reading journey, ${summary.name}! I'm here to help you find books you'll love. Try the "For You" button for personalized picks, or browse by category!`;
     } else if (summary.readingLevel === 'Expert') {
-      return `Hi ${summary.name}! I see you've read ${summary.totalBooks} books - that's impressive! What's your next reading adventure?`;
+      return `Hi ${summary.name}! I see you've read ${summary.totalBooks} books - that's impressive! Tap "For You" for personalized recommendations based on your reading history!`;
     } else {
-      return `Hello ${summary.name}! I'd love to help you discover your next favorite book. What kind of stories are you in the mood for?`;
+      return `Hello ${summary.name}! I'd love to help you discover your next favorite book. Use the quick buttons below or ask me anything!`;
     }
+  };
+
+  // Handle quick category selection
+  const handleQuickCategory = async (category) => {
+    if (isLoading) return;
+
+    setShowSuggestions(false);
+
+    // If personalized, use the dedicated endpoint
+    if (category.id === 'personalized') {
+      const userMessage = {
+        id: Date.now(),
+        text: "Show me personalized recommendations",
+        isBot: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+      await getPersonalizedRecommendations();
+      return;
+    }
+
+    // Map category to search query
+    const categoryQueries = {
+      programming: "programming language books like Python, Java, or JavaScript",
+      web: "web development books HTML CSS JavaScript React",
+      mobile: "mobile development Android iOS app development",
+      database: "database SQL MySQL MongoDB data management",
+      ai: "artificial intelligence machine learning deep learning",
+      security: "cybersecurity network security ethical hacking",
+    };
+
+    const query = categoryQueries[category.id] || category.label;
+
+    const userMessage = {
+      id: Date.now(),
+      text: `Show me ${category.label} books`,
+      isBot: false,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // Send the optimized query
+    setIsLoading(true);
+    setIsTyping(true);
+
+    try {
+      const response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'SEND_MESSAGE')), {
+        message: query,
+        conversationHistory: [],
+        studentIdNumber: userInfo?.id_number || userInfo?.idNumber,
+      });
+
+      if (response.data.success && response.data.data.books?.length > 0) {
+        const botMessage = {
+          id: Date.now() + 1,
+          text: `Here are some great ${category.label} books from our library:`,
+          isBot: true,
+          timestamp: new Date(),
+          books: response.data.data.books,
+          showBooksAsList: true,
+        };
+        setMessages(prev => [...prev, botMessage]);
+      } else {
+        const botMessage = {
+          id: Date.now() + 1,
+          text: `I couldn't find ${category.label} books right now. Try another category or ask me a specific question!`,
+          isBot: true,
+          timestamp: new Date(),
+          showQuickActions: true,
+        };
+        setMessages(prev => [...prev, botMessage]);
+      }
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        text: "Sorry, I had trouble searching. Please try again or use a different category.",
+        isBot: true,
+        timestamp: new Date(),
+        showQuickActions: true,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
+  };
+
+  // Handle suggested question tap
+  const handleSuggestedQuestion = (question) => {
+    setInputText(question);
+    setShowSuggestions(false);
   };
 
   useEffect(() => {
@@ -145,9 +257,12 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    const messageText = inputText.trim();
+    setShowSuggestions(false);
+
     const userMessage = {
       id: Date.now(),
-      text: inputText.trim(),
+      text: messageText,
       isBot: false,
       timestamp: new Date(),
       isTyping: false,
@@ -159,6 +274,17 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
     setIsTyping(true);
 
     try {
+      // Check if user wants personalized recommendations
+      const personalizedKeywords = ['for me', 'personalized', 'my recommendations', 'suggest for me', 'based on my'];
+      const wantsPersonalized = personalizedKeywords.some(keyword =>
+        messageText.toLowerCase().includes(keyword)
+      );
+
+      if (wantsPersonalized && (userInfo?.id_number || userInfo?.idNumber)) {
+        await getPersonalizedRecommendations();
+        return;
+      }
+
       // Prepare conversation history (last 6 messages for context)
       const conversationHistory = messages.slice(-6).map(msg => ({
         text: msg.text,
@@ -167,10 +293,10 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       }));
 
       const requestData = {
-        message: inputText.trim(),
+        message: messageText,
         conversationHistory: conversationHistory,
       };
-      
+
       // Add student ID for personalized recommendations if available
       if (userInfo && (userInfo.id_number || userInfo.idNumber)) {
         requestData.studentIdNumber = userInfo.id_number || userInfo.idNumber;
@@ -181,19 +307,33 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         response = await axios.post(buildApiUrl(getEndpoint('CHATBOT', 'SEND_MESSAGE')), requestData);
       } catch (mainError) {
         // Try simple endpoint as fallback
-        response = await axios.post(buildApiUrl('/api/chatbot/simple'), { message: inputText.trim() });
+        response = await axios.post(buildApiUrl('/api/chatbot/simple'), { message: messageText });
       }
 
       if (response.data.success) {
+        const hasBooks = response.data.data.books && response.data.data.books.length > 0;
+        const responseText = response.data.data.response;
+
+        // Check if the response seems irrelevant (backend returned unrelated books)
+        const isNoMatch = responseText.includes("couldn't find") || responseText.includes("Can you specify");
+
+        let finalText = responseText;
+        let showQuickActions = false;
+
+        if (isNoMatch || !hasBooks) {
+          finalText = responseText + "\n\nTip: Try using the category buttons above for better results, or tap 'For You' for personalized recommendations!";
+          showQuickActions = true;
+        }
+
         const botMessage = {
           id: Date.now() + 1,
-          text: response.data.data.response,
+          text: finalText,
           isBot: true,
           timestamp: new Date(),
           books: response.data.data.books || [],
-          showBooksAsList: response.data.data.books && response.data.data.books.length > 0,
+          showBooksAsList: hasBooks,
           isTyping: false,
-          // Enhanced recommendation data
+          showQuickActions: showQuickActions,
           advancedRecommendations: response.data.data.advancedRecommendations || false,
           metadata: response.data.data.metadata || null,
           recommendationEngine: response.data.data.metadata?.recommendationEngine || 'basic',
@@ -205,23 +345,24 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         throw new Error(response.data.message || 'Failed to get response');
       }
     } catch (error) {
-      let errorText = "I couldn't find a match in the library records, but I can still help you. Could you tell me more about what you're looking for?";
-      
+      let errorText = "I couldn't find a match in the library records. Try using the category buttons for better results!";
+
       // Provide more specific error messages based on the error type
       if (error.response?.status === 400) {
-        errorText = "There was an issue with your request. Please try asking in a different way or check your message length.";
+        errorText = "There was an issue with your request. Try using the category buttons or ask in a different way.";
       } else if (error.response?.status === 503) {
         errorText = "The AI service is currently being set up. Please try again in a few moments.";
       } else if (error.response?.status >= 500) {
         errorText = "The server is experiencing issues. Please try again later.";
       }
-      
+
       const errorMessage = {
         id: Date.now() + 1,
         text: errorText,
         isBot: true,
         timestamp: new Date(),
         isTyping: false,
+        showQuickActions: true,
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -331,6 +472,48 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
   );
 
 
+  // Render quick category buttons
+  const renderQuickCategories = () => (
+    <View style={styles.quickCategoriesContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickCategoriesScroll}
+      >
+        {QUICK_CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category.id}
+            style={[styles.quickCategoryButton, { backgroundColor: category.color }]}
+            onPress={() => handleQuickCategory(category)}
+            disabled={isLoading}
+          >
+            <Text style={styles.quickCategoryText}>{category.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  // Render suggested questions
+  const renderSuggestions = () => {
+    if (!showSuggestions || messages.length > 2) return null;
+
+    return (
+      <View style={styles.suggestionsContainer}>
+        <Text style={styles.suggestionsTitle}>Try asking:</Text>
+        {SUGGESTED_QUESTIONS.map((question, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.suggestionButton}
+            onPress={() => handleSuggestedQuestion(question)}
+          >
+            <Text style={styles.suggestionText}>{question}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
   const renderMessage = (message) => (
     <View key={message.id} style={[
       styles.messageContainer,
@@ -341,7 +524,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
           <Icon name="user" size={20} color="#ffffff" />
         </View>
       )}
-      
+
       <View style={[
         styles.messageBubble,
         message.isBot ? styles.botBubble : styles.userBubble
@@ -352,7 +535,14 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         ]}>
           {message.text}
         </Text>
-        
+
+        {/* Show quick action buttons when suggested */}
+        {message.isBot && message.showQuickActions && (
+          <View style={styles.inlineQuickActions}>
+            {renderQuickCategories()}
+          </View>
+        )}
+
         {/* Show books only if they're provided as separate data (for fallback cases) */}
         {message.books && message.books.length > 0 && message.showBooksAsList && (
           <View style={styles.recommendationsContainer}>
@@ -362,22 +552,36 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
             {message.books.map((book, index) => (
               <View key={index} style={styles.textRecommendation}>
                 <Text style={styles.recommendationNumber}>{index + 1}.</Text>
-                <Text style={styles.recommendationText}>
-                  <Text style={styles.bookTitleText}>"{book.title}"</Text> by {book.author}
-                  {book.category && ` (${book.category})`}
-                  {book.description && ` - ${book.description}`}
-                  {book.reason && `\nTip: ${book.reason}`}
-                </Text>
+                <View style={styles.bookDetails}>
+                  <Text style={styles.bookTitleText}>"{book.title}"</Text>
+                  <Text style={styles.bookAuthorText}>by {book.author}</Text>
+                  {book.category && (
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{book.category}</Text>
+                    </View>
+                  )}
+                  {book.status && (
+                    <Text style={[
+                      styles.bookStatusText,
+                      { color: book.status === 'available' ? '#4CAF50' : '#FF9800' }
+                    ]}>
+                      {book.status === 'available' ? 'Available' : 'Borrowed'}
+                    </Text>
+                  )}
+                  {book.recommendationReason && (
+                    <Text style={styles.recommendationReason}>{book.recommendationReason}</Text>
+                  )}
+                </View>
               </View>
             ))}
           </View>
         )}
-        
+
         <Text style={styles.timestamp}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
-      
+
       {!message.isBot && (
         <View style={styles.userAvatar}>
           <Icon name="user" size={20} color="#ffffff" />
@@ -462,6 +666,11 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
         </View>
       )}
 
+      {/* Quick Categories Bar */}
+      <View style={styles.quickCategoriesBar}>
+        {renderQuickCategories()}
+      </View>
+
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
@@ -470,6 +679,7 @@ const ModernChatbotWidget = ({ isVisible, onClose, userInfo = null }) => {
       >
         {messages.map(renderMessage)}
         {isTyping && renderTypingIndicator()}
+        {renderSuggestions()}
       </ScrollView>
 
 
@@ -668,8 +878,102 @@ const styles = StyleSheet.create({
     color: ModernTheme.colors.text,
     lineHeight: 18,
   },
+  bookDetails: {
+    flex: 1,
+  },
   bookTitleText: {
     fontWeight: '600',
+    color: ModernTheme.colors.primary,
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  bookAuthorText: {
+    fontSize: 12,
+    color: ModernTheme.colors.textMuted,
+    marginBottom: 4,
+  },
+  categoryBadge: {
+    backgroundColor: ModernTheme.colors.primary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    color: ModernTheme.colors.primary,
+    fontWeight: '500',
+  },
+  bookStatusText: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  recommendationReason: {
+    fontSize: 11,
+    color: ModernTheme.colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  // Quick Categories Styles
+  quickCategoriesBar: {
+    backgroundColor: ModernTheme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: ModernTheme.colors.border,
+    paddingVertical: 8,
+  },
+  quickCategoriesContainer: {
+    paddingHorizontal: 4,
+  },
+  quickCategoriesScroll: {
+    paddingHorizontal: 8,
+  },
+  quickCategoryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  quickCategoryText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inlineQuickActions: {
+    marginTop: 12,
+    marginHorizontal: -8,
+  },
+  // Suggestions Styles
+  suggestionsContainer: {
+    backgroundColor: ModernTheme.colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    marginHorizontal: 8,
+  },
+  suggestionsTitle: {
+    fontSize: 12,
+    color: ModernTheme.colors.textMuted,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  suggestionButton: {
+    backgroundColor: ModernTheme.colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: ModernTheme.colors.border,
+  },
+  suggestionText: {
+    fontSize: 13,
     color: ModernTheme.colors.primary,
   },
   advancedRecommendationIndicator: {

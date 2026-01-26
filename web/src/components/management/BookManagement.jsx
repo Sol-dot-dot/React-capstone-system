@@ -33,6 +33,7 @@ const ModernBookManagement = ({ user }) => {
   const location = useLocation();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
   
   // Get search highlight from navigation state
@@ -68,26 +69,39 @@ const ModernBookManagement = ({ user }) => {
   });
 
   useEffect(() => {
-    fetchBooks();
+    fetchBooks(true); // Initial load
     fetchGenres();
-    
+
     // Set search term if coming from search
     if (searchQuery) {
       setSearchTerm(searchQuery);
     }
   }, []);
 
+  // Reset to page 1 when search/filter changes
   useEffect(() => {
-    if (pagination.page > 1) {
-      fetchBooks();
-    }
-  }, [pagination.page]);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm, statusFilter, categoryFilter]);
 
-  const fetchBooks = async () => {
+  // Fetch books when search/filter/page changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchBooks();
+    }, 300); // Debounce search by 300ms
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, statusFilter, categoryFilter, pagination.page]);
+
+  const fetchBooks = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // Only show full loading skeleton on initial load
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setIsSearching(true);
+      }
       setError(null);
-      
+
       const token = localStorage.getItem('token');
       if (!token) {
         setError('No authentication token found. Please login again.');
@@ -98,7 +112,23 @@ const ModernBookManagement = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      const response = await axios.get(`/api/books?page=${pagination.page}&limit=${pagination.limit}`, config);
+      // Build query params including search and filters
+      const params = new URLSearchParams({
+        page: pagination.page,
+        limit: pagination.limit
+      });
+
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      if (statusFilter) {
+        params.append('status', statusFilter);
+      }
+      if (categoryFilter) {
+        params.append('category', categoryFilter);
+      }
+
+      const response = await axios.get(`/api/books?${params.toString()}`, config);
       
       if (response.data.success) {
         const booksData = response.data.data.books || [];
@@ -119,6 +149,7 @@ const ModernBookManagement = ({ user }) => {
       setError('Failed to fetch books. Please check your connection and try again.');
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
@@ -223,15 +254,8 @@ const ModernBookManagement = ({ user }) => {
     }
   }, [message]);
 
-  const filteredBooks = books.filter(book => {
-    const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         book.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         book.isbn.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || book.status === statusFilter;
-    const matchesGenre = !categoryFilter || book.category === categoryFilter;
-    
-    return matchesSearch && matchesStatus && matchesGenre;
-  });
+  // Books are already filtered by the server, so use them directly
+  const filteredBooks = books;
 
 
   const containerVariants = {
@@ -315,7 +339,11 @@ const ModernBookManagement = ({ user }) => {
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    {isSearching ? (
+                      <RefreshCw className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    )}
                     <Input
                       placeholder="Search books..."
                       value={searchTerm}
@@ -606,10 +634,7 @@ const ModernBookManagement = ({ user }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setPagination(prev => ({ ...prev, page: prev.page - 1 }));
-                        fetchBooks();
-                      }}
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                       disabled={pagination.page === 1}
                     >
                       Previous
@@ -620,10 +645,7 @@ const ModernBookManagement = ({ user }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setPagination(prev => ({ ...prev, page: prev.page + 1 }));
-                        fetchBooks();
-                      }}
+                      onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                       disabled={pagination.page === pagination.totalPages}
                     >
                       Next

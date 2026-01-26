@@ -214,7 +214,8 @@ async function processBorrowing(studentIdNumber, bookCodes, adminId, dueDate = n
         await createOrUpdateSemesterTracking(
             studentIdNumber,
             currentDate.toISOString().split('T')[0],
-            semesterEndDate.toISOString().split('T')[0]
+            semesterEndDate.toISOString().split('T')[0],
+            connection  // Pass transaction connection to ensure atomicity
         );
 
         for (const bookCode of bookCodes) {

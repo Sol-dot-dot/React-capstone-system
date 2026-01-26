@@ -270,7 +270,7 @@ const RegisterScreen = ({ onRegister, onNavigate, onBack }) => {
                   <Icon name="person" size={20} color="#9ca3af" style={styles.inputIcon} />
                   <TextInput
                     style={[styles.input, errors.idNumber && styles.inputError]}
-                    placeholder="C22-004"
+                    placeholder="XXX-XXXX"
                     placeholderTextColor="#9ca3af"
                     value={formData.idNumber}
                     onChangeText={(value) => handleInputChange('idNumber', value.toUpperCase())}

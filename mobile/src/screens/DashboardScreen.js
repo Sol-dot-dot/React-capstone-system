@@ -8,6 +8,7 @@ import {
   ScrollView,
   RefreshControl,
   AppState,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Animatable from 'react-native-animatable';
@@ -126,9 +127,11 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour >= 5 && hour < 12) return 'Good Morning';
+    if (hour >= 12 && hour < 13) return 'Good Noon';
+    if (hour >= 13 && hour < 17) return 'Good Afternoon';
+    if (hour >= 17 && hour < 21) return 'Good Evening';
+    return 'Good Night';
   };
 
   const getOverdueBooks = () => {
@@ -249,10 +252,28 @@ const DashboardScreen = ({ userData, onNavigate, onLogout }) => {
         }
       >
         <ResponsiveContainer padding="large">
-        {/* Header */}
+        {/* App Header with Logo */}
+        <Animatable.View
+          animation="fadeInDown"
+          duration={500}
+          style={styles.appHeader}
+        >
+          <Image
+            source={require('../assets/smc-logo.png')}
+            style={styles.appLogo}
+            resizeMode="contain"
+          />
+          <View style={styles.appTitleContainer}>
+            <Text style={styles.appTitle}>SMC Library App</Text>
+            <Text style={styles.appSubtitle}>St. Michael's College</Text>
+          </View>
+        </Animatable.View>
+
+        {/* Greeting Header */}
         <Animatable.View
           animation="fadeInDown"
           duration={600}
+          delay={100}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -459,6 +480,30 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: ModernTheme.colors.backgroundGradient[0],
+  },
+  appHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: ModernTheme.spacing.lg,
+  },
+  appLogo: {
+    width: 65,
+    height: 65,
+    borderRadius: 32,
+  },
+  appTitleContainer: {
+    marginLeft: ModernTheme.spacing.md,
+  },
+  appTitle: {
+    ...ModernTheme.typography.h2,
+    color: ModernTheme.colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 22,
+  },
+  appSubtitle: {
+    ...ModernTheme.typography.body,
+    color: ModernTheme.colors.textSecondary,
+    fontSize: 14,
   },
   scrollContent: {
     paddingTop: getResponsiveSpacing(60),

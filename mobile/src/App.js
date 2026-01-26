@@ -27,6 +27,7 @@ import DashboardScreen from './screens/DashboardScreen';
 import BorrowedBooksScreen from './screens/BorrowedBooksScreen';
 import PenaltyScreen from './screens/PenaltyScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import BorrowingHistoryScreen from './screens/BorrowingHistoryScreen';
 
 const App = () => {
   const [currentScreen, setCurrentScreen] = useState('welcome'); // welcome, login, register, email, verify, password, forgotPassword, verifyResetCode, resetPassword, profile, changePassword, borrowedBooks, penalties
@@ -552,26 +553,52 @@ const App = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Clear auth token
-    AsyncStorage.removeItem('authToken');
-    delete axios.defaults.headers.common['Authorization'];
+  const handleLogout = (skipConfirmation = false) => {
+    const performLogout = () => {
+      // Clear auth token
+      AsyncStorage.removeItem('authToken');
+      delete axios.defaults.headers.common['Authorization'];
 
-    setCurrentScreen('welcome');
-    setUserData(null);
-    setIdNumber('');
-    setEmail('');
-    setResetEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setVerificationCode('');
-    setResetCode('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setUserId(null);
-    setCurrentPassword('');
-    setProfileEmail('');
-    setActiveTab('dashboard');
+      setCurrentScreen('welcome');
+      setUserData(null);
+      setIdNumber('');
+      setEmail('');
+      setResetEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setVerificationCode('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setUserId(null);
+      setCurrentPassword('');
+      setProfileEmail('');
+      setActiveTab('dashboard');
+    };
+
+    // Skip confirmation if already confirmed by calling component
+    if (skipConfirmation) {
+      performLogout();
+      return;
+    }
+
+    // Show confirmation dialog
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: performLogout,
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleTabPress = (tabId) => {
@@ -1145,7 +1172,7 @@ const App = () => {
    };
 
   // Show enhanced screens when user is logged in
-  if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile'].includes(currentScreen)) {
+  if (userData && ['dashboard', 'borrowedBooks', 'penalties', 'profile', 'notificationSettings', 'borrowingHistory'].includes(currentScreen)) {
     return (
       <SafeAreaView style={ModernStyles.safeArea}>
               {currentScreen === 'dashboard' && (
@@ -1156,26 +1183,38 @@ const App = () => {
                 />
               )}
         {currentScreen === 'borrowedBooks' && (
-          <BorrowedBooksScreen 
-            userData={userData} 
-            onBack={() => setCurrentScreen('dashboard')} 
+          <BorrowedBooksScreen
+            userData={userData}
+            onBack={() => setCurrentScreen('dashboard')}
           />
         )}
         {currentScreen === 'penalties' && (
-          <PenaltyScreen 
-            userData={userData} 
-            onBack={() => setCurrentScreen('dashboard')} 
+          <PenaltyScreen
+            userData={userData}
+            onBack={() => setCurrentScreen('dashboard')}
           />
         )}
         {currentScreen === 'profile' && (
-          <ProfileScreen 
-            userData={userData} 
+          <ProfileScreen
+            userData={userData}
             onBack={() => setCurrentScreen('dashboard')}
             onNavigate={handleNavigate}
             onLogout={handleLogout}
           />
         )}
-        
+        {currentScreen === 'notificationSettings' && (
+          <NotificationSettingsScreen
+            userData={userData}
+            onBack={() => setCurrentScreen('profile')}
+          />
+        )}
+        {currentScreen === 'borrowingHistory' && (
+          <BorrowingHistoryScreen
+            userData={userData}
+            onBack={() => setCurrentScreen('profile')}
+          />
+        )}
+
         {/* Bottom Navigation */}
         <BottomNavigation
           activeTab={activeTab}

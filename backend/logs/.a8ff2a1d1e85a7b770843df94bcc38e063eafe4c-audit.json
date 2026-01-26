@@ -6,19 +6,29 @@
     "auditLog": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\.a8ff2a1d1e85a7b770843df94bcc38e063eafe4c-audit.json",
     "files": [
         {
-            "date": 1767579959605,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-05.log",
-            "hash": "82cf6ca906d9b45667a91d429d10489eebe2c3f2e2443f4ed66f354aa54c51f7"
+            "date": 1768014695275,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-10.log",
+            "hash": "85ee186c58dcda1ae3885fdfed7ef11bc8b4f0fbe11946bac1a0aa160dbd4dcf"
         },
         {
-            "date": 1767661593292,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-06.log",
-            "hash": "3774fabab666c21d1916ba93daf573244a7b3d49290f348b93dc8e38507d137d"
+            "date": 1768547536554,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-16.log",
+            "hash": "12547053616db4bfa02e9a250a3c27f1aa0904a249678cf35660fdc6d3337814"
         },
         {
-            "date": 1767748949492,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-07.log",
-            "hash": "dbaf59dc5af65a2d779857e225f10daad37edcc81853d7fce8f14f6fe221b648"
+            "date": 1768615536041,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-17.log",
+            "hash": "46c255862a0bb13ef0697a11e20ee4dce60265b7a0bea4e67670a5b02e418c49"
+        },
+        {
+            "date": 1768786338794,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-19.log",
+            "hash": "429338576c94e92ef1b3cb89aff28e8dbf96a0b292b2713f4a42935ddf6eec0c"
+        },
+        {
+            "date": 1769218891321,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\application-2026-01-24.log",
+            "hash": "24abc22240e5bb04cdcc87c70239374bd81e1296e7a06fc08e39513ccb27e1c2"
         }
     ],
     "hashType": "sha256"

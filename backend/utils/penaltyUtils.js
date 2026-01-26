@@ -474,28 +474,29 @@ async function getSemesterTracking(studentIdNumber) {
 }
 
 // Create or update semester tracking
-async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate, semesterEndDate) {
+async function createOrUpdateSemesterTracking(studentIdNumber, semesterStartDate, semesterEndDate, connection = null) {
     try {
+        const dbConnection = connection || db;
         const settings = await getSystemSettings();
         const maxBooksAllowed = parseInt(settings.max_books_per_student || 5);
 
         // Check if active semester exists
-        const [existingSemester] = await db.execute(
-            'SELECT id FROM semester_tracking WHERE student_id_number = ? AND status = "active"',
+        const [existingSemester] = await dbConnection.execute(
+            'SELECT id FROM semester_tracking WHERE student_id_number = ? AND status = \'active\'',
             [studentIdNumber]
         );
 
         if (existingSemester.length > 0) {
             // Update existing semester
-            await db.execute(
+            await dbConnection.execute(
                 `UPDATE semester_tracking
                  SET semester_start_date = ?, semester_end_date = ?, max_books_allowed = ?
-                 WHERE student_id_number = ? AND status = "active"`,
+                 WHERE student_id_number = ? AND status = 'active'`,
                 [semesterStartDate, semesterEndDate, maxBooksAllowed, studentIdNumber]
             );
         } else {
             // Create new semester
-            await db.execute(
+            await dbConnection.execute(
                 `INSERT INTO semester_tracking
                  (student_id_number, semester_start_date, semester_end_date, max_books_allowed)
                  VALUES (?, ?, ?, ?)`,
@@ -516,15 +517,20 @@ async function updateSemesterBooksCount(studentIdNumber, incrementBy = 1, connec
         const dbConnection = connection || db;
 
         // Increment the semester count by the specified amount (only when book is borrowed)
-        await dbConnection.execute(
+        const [result] = await dbConnection.execute(
             `UPDATE semester_tracking
              SET books_borrowed_count = books_borrowed_count + ?,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE student_id_number = ? AND status = "active"`,
+             WHERE student_id_number = ? AND status = 'active'`,
             [incrementBy, studentIdNumber]
         );
 
-        logger.info(`[OK] Updated semester books count for ${studentIdNumber}: +${incrementBy}`);
+        if (result.affectedRows === 0) {
+            logger.warn(`[WARNING] No active semester_tracking found for ${studentIdNumber} - count not updated`);
+        } else {
+            logger.info(`[OK] Updated semester books count for ${studentIdNumber}: +${incrementBy} (${result.affectedRows} rows)`);
+        }
+
         return true;
     } catch (error) {
         logger.error('Error updating semester books count:', error);

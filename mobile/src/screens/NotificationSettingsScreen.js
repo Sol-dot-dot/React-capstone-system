@@ -8,11 +8,13 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { ModernTheme } from '../styles/ModernTheme';
+import { ModernCard, ModernButton } from '../components/ui/ModernComponents';
 import NotificationService from '../services/NotificationService';
 import { buildApiUrl } from '../config/api';
-
-const DAYS_BEFORE_OPTIONS = [1, 2, 3, 5, 7];
 
 const NotificationSettingsScreen = ({ userData, onBack }) => {
   const [settings, setSettings] = useState({
@@ -73,7 +75,6 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
   const testPushNotification = async () => {
     setTesting(true);
     try {
-      // Send a real push notification using notifee
       const result = await NotificationService.sendTestNotification();
 
       if (result.success) {
@@ -81,7 +82,6 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
           'Push Notification Sent!',
           result.message + '\n\nCheck your notification tray to see the notification.'
         );
-        // Update permission status
         setPermissionGranted(true);
       } else {
         if (result.permissionDenied) {
@@ -110,7 +110,6 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
   const testEmailNotification = async () => {
     setTesting(true);
     try {
-      // Get user email
       const userEmail = userData?.email;
       const firstName = userData?.firstName || userData?.first_name;
       const idNumber = userData?.idNumber || userData?.id_number;
@@ -121,7 +120,6 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
         return;
       }
 
-      // Send test email directly to the user
       const response = await fetch(buildApiUrl('/api/notifications/test-email'), {
         method: 'POST',
         headers: {
@@ -196,487 +194,341 @@ const NotificationSettingsScreen = ({ userData, onBack }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading settings...</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.backgroundGradient} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={ModernTheme.colors.primary} />
+          <Text style={styles.loadingText}>Loading settings...</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Background Gradient */}
+      <View style={styles.backgroundGradient} />
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Notification Settings</Text>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <Icon name="arrow-back" size={24} color={ModernTheme.colors.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Notification Settings</Text>
+            <Text style={styles.headerSubtitle}>Manage your notifications</Text>
+          </View>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
 
-      <View style={styles.content}>
-        {/* Permission Status */}
-        <View style={[styles.permissionSection, permissionGranted ? styles.permissionGranted : styles.permissionDenied]}>
-          <View style={styles.permissionHeader}>
-            <Text style={styles.permissionIcon}>{permissionGranted ? 'ON' : 'OFF'}</Text>
-            <View style={styles.permissionInfo}>
-              <Text style={styles.permissionTitle}>
-                {permissionGranted ? 'Notifications Enabled' : 'Notifications Disabled'}
-              </Text>
-              <Text style={styles.permissionDescription}>
-                {permissionGranted
-                  ? 'You will receive push notifications on this device'
-                  : 'Enable notifications to receive due date reminders'}
-              </Text>
-            </View>
-          </View>
-          {!permissionGranted && (
-            <TouchableOpacity style={styles.enableButton} onPress={requestPermission}>
-              <Text style={styles.enableButtonText}>Enable Notifications</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Main Settings */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* General Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>General Settings</Text>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Enable Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Turn on/off all library notifications
-              </Text>
+          <ModernCard style={styles.settingsCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={styles.settingIconContainer}>
+                  <Icon name="notifications-outline" size={20} color={ModernTheme.colors.primary} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Enable Notifications</Text>
+                  <Text style={styles.settingDescription}>
+                    Turn on/off all library notifications
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.enabled}
+                onValueChange={(value) => updateSetting('enabled', value)}
+                trackColor={{ false: '#E0E0E0', true: ModernTheme.colors.primary + '50' }}
+                thumbColor={settings.enabled ? ModernTheme.colors.primary : '#f4f3f4'}
+              />
             </View>
-            <Switch
-              value={settings.enabled}
-              onValueChange={(value) => updateSetting('enabled', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.enabled ? '#007bff' : '#f4f3f4'}
-            />
-          </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Push Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive notifications on your device
-              </Text>
-            </View>
-            <Switch
-              value={settings.pushNotifications && settings.enabled}
-              onValueChange={(value) => updateSetting('pushNotifications', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.pushNotifications && settings.enabled ? '#007bff' : '#f4f3f4'}
-              disabled={!settings.enabled}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Email Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive email reminders for due dates
-              </Text>
-            </View>
-            <Switch
-              value={settings.emailNotifications && settings.enabled}
-              onValueChange={(value) => updateSetting('emailNotifications', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.emailNotifications && settings.enabled ? '#007bff' : '#f4f3f4'}
-              disabled={!settings.enabled}
-            />
-          </View>
-        </View>
-
-        {/* Reminder Days Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Reminder Days</Text>
-          <Text style={styles.sectionDescription}>
-            How many days before due date should we remind you?
-          </Text>
-
-          <View style={styles.daysContainer}>
-            {DAYS_BEFORE_OPTIONS.map((days) => (
-              <TouchableOpacity
-                key={days}
-                style={[
-                  styles.dayOption,
-                  settings.daysBefore === days && styles.dayOptionSelected,
-                  !settings.enabled && styles.dayOptionDisabled
-                ]}
-                onPress={() => settings.enabled && updateSetting('daysBefore', days)}
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={styles.settingIconContainer}>
+                  <Icon name="phone-portrait-outline" size={20} color={ModernTheme.colors.primary} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Push Notifications</Text>
+                  <Text style={styles.settingDescription}>
+                    Receive notifications on your device
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.pushNotifications && settings.enabled}
+                onValueChange={(value) => updateSetting('pushNotifications', value)}
+                trackColor={{ false: '#E0E0E0', true: ModernTheme.colors.primary + '50' }}
+                thumbColor={settings.pushNotifications && settings.enabled ? ModernTheme.colors.primary : '#f4f3f4'}
                 disabled={!settings.enabled}
-              >
-                <Text style={[
-                  styles.dayOptionText,
-                  settings.daysBefore === days && styles.dayOptionTextSelected
-                ]}>
-                  {days} {days === 1 ? 'day' : 'days'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              />
+            </View>
+
+            <View style={[styles.settingRow, styles.settingRowLast]}>
+              <View style={styles.settingInfo}>
+                <View style={styles.settingIconContainer}>
+                  <Icon name="mail-outline" size={20} color={ModernTheme.colors.primary} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Email Notifications</Text>
+                  <Text style={styles.settingDescription}>
+                    Receive email reminders for due dates
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.emailNotifications && settings.enabled}
+                onValueChange={(value) => updateSetting('emailNotifications', value)}
+                trackColor={{ false: '#E0E0E0', true: ModernTheme.colors.primary + '50' }}
+                thumbColor={settings.emailNotifications && settings.enabled ? ModernTheme.colors.primary : '#f4f3f4'}
+                disabled={!settings.enabled}
+              />
+            </View>
+          </ModernCard>
         </View>
 
-        {/* Reminder Timing */}
+        {/* Notification Types */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notification Types</Text>
-          <Text style={styles.sectionDescription}>
-            Choose which notifications you want to receive
-          </Text>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>1 Day Before Due</Text>
-              <Text style={styles.settingDescription}>
-                Get reminded 1 day before your book is due
-              </Text>
+          <ModernCard style={styles.settingsCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={styles.settingIconContainer}>
+                  <Icon name="today-outline" size={20} color={ModernTheme.colors.primary} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Due Today</Text>
+                  <Text style={styles.settingDescription}>
+                    Get reminded when your book is due today
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.reminderTiming.dueToday && settings.enabled}
+                onValueChange={(value) => updateReminderTiming('dueToday', value)}
+                trackColor={{ false: '#E0E0E0', true: ModernTheme.colors.primary + '50' }}
+                thumbColor={settings.reminderTiming.dueToday && settings.enabled ? ModernTheme.colors.primary : '#f4f3f4'}
+                disabled={!settings.enabled}
+              />
             </View>
-            <Switch
-              value={settings.reminderTiming.oneDayBefore && settings.enabled}
-              onValueChange={(value) => updateReminderTiming('oneDayBefore', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.reminderTiming.oneDayBefore && settings.enabled ? '#007bff' : '#f4f3f4'}
-              disabled={!settings.enabled}
-            />
-          </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Due Today</Text>
-              <Text style={styles.settingDescription}>
-                Get reminded when your book is due today
-              </Text>
+            <View style={[styles.settingRow, styles.settingRowLast]}>
+              <View style={styles.settingInfo}>
+                <View style={styles.settingIconContainer}>
+                  <Icon name="alert-circle-outline" size={20} color={ModernTheme.colors.error} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Overdue Books</Text>
+                  <Text style={styles.settingDescription}>
+                    Get reminded when your books are overdue
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={settings.reminderTiming.overdue && settings.enabled}
+                onValueChange={(value) => updateReminderTiming('overdue', value)}
+                trackColor={{ false: '#E0E0E0', true: ModernTheme.colors.primary + '50' }}
+                thumbColor={settings.reminderTiming.overdue && settings.enabled ? ModernTheme.colors.primary : '#f4f3f4'}
+                disabled={!settings.enabled}
+              />
             </View>
-            <Switch
-              value={settings.reminderTiming.dueToday && settings.enabled}
-              onValueChange={(value) => updateReminderTiming('dueToday', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.reminderTiming.dueToday && settings.enabled ? '#007bff' : '#f4f3f4'}
-              disabled={!settings.enabled}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Overdue Books</Text>
-              <Text style={styles.settingDescription}>
-                Get reminded when your books are overdue
-              </Text>
-            </View>
-            <Switch
-              value={settings.reminderTiming.overdue && settings.enabled}
-              onValueChange={(value) => updateReminderTiming('overdue', value)}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={settings.reminderTiming.overdue && settings.enabled ? '#007bff' : '#f4f3f4'}
-              disabled={!settings.enabled}
-            />
-          </View>
+          </ModernCard>
         </View>
 
-        {/* Test Notification Section */}
-        <View style={styles.testSection}>
-          <Text style={styles.testTitle}>Test Notifications</Text>
-          <Text style={styles.testDescription}>
-            Test if push and email notifications are working properly.
-          </Text>
-
-          <View style={styles.testButtonsContainer}>
-            <TouchableOpacity
-              style={[styles.testButton, testing && styles.testButtonDisabled]}
-              onPress={testPushNotification}
-              disabled={testing}
-            >
-              {testing ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.testButtonText}>Test Push</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.testButton, styles.testButtonEmail, testing && styles.testButtonDisabled]}
-              onPress={testEmailNotification}
-              disabled={testing}
-            >
-              {testing ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.testButtonText}>Test Email</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Information Section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>About Notifications</Text>
-          <Text style={styles.infoText}>
-            • Push notifications appear in your device's notification tray
-          </Text>
-          <Text style={styles.infoText}>
-            • Email notifications are sent to your registered email
-          </Text>
-          <Text style={styles.infoText}>
-            • Notifications help you avoid overdue fines
-          </Text>
-          <Text style={styles.infoText}>
-            • Make sure to allow notifications in device settings
-          </Text>
+        {/* Test Notifications */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Test Notifications</Text>
+          <ModernCard style={styles.testCard}>
+            <Text style={styles.testDescription}>
+              Test if push and email notifications are working properly.
+            </Text>
+            <View style={styles.testButtonsContainer}>
+              <ModernButton
+                title={testing ? '' : 'Test Push'}
+                onPress={testPushNotification}
+                variant="primary"
+                size="medium"
+                disabled={testing}
+                style={styles.testButton}
+                icon={testing ? <ActivityIndicator color="white" size="small" /> : <Icon name="notifications" size={18} color="white" />}
+              />
+              <ModernButton
+                title={testing ? '' : 'Test Email'}
+                onPress={testEmailNotification}
+                variant="outline"
+                size="medium"
+                disabled={testing}
+                style={styles.testButton}
+                icon={testing ? <ActivityIndicator color={ModernTheme.colors.primary} size="small" /> : <Icon name="mail" size={18} color={ModernTheme.colors.primary} />}
+              />
+            </View>
+          </ModernCard>
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={saveSettings}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Settings</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        <View style={styles.saveSection}>
+          <ModernButton
+            title={saving ? 'Saving...' : 'Save Settings'}
+            onPress={saveSettings}
+            variant="primary"
+            size="large"
+            disabled={saving}
+            icon={saving ? <ActivityIndicator color="white" size="small" /> : null}
+            style={styles.saveButton}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: ModernTheme.colors.background,
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: ModernTheme.colors.backgroundGradient[0],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
+    ...ModernTheme.typography.body,
+    color: ModernTheme.colors.textSecondary,
+    marginTop: ModernTheme.spacing.md,
   },
   header: {
+    paddingHorizontal: ModernTheme.spacing.lg,
+    paddingTop: 60,
+    paddingBottom: ModernTheme.spacing.lg,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    justifyContent: 'space-between',
   },
   backButton: {
-    marginRight: 15,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007bff',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  content: {
-    padding: 20,
-  },
-  permissionSection: {
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 20,
-  },
-  permissionGranted: {
-    backgroundColor: '#e8f5e9',
-    borderWidth: 1,
-    borderColor: '#4caf50',
-  },
-  permissionDenied: {
-    backgroundColor: '#fff3e0',
-    borderWidth: 1,
-    borderColor: '#ff9800',
-  },
-  permissionHeader: {
-    flexDirection: 'row',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: ModernTheme.colors.surface,
     alignItems: 'center',
+    justifyContent: 'center',
+    ...ModernTheme.shadows.small,
   },
-  permissionIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  permissionInfo: {
+  headerText: {
     flex: 1,
-  },
-  permissionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
-  },
-  permissionDescription: {
-    fontSize: 13,
-    color: '#666',
-  },
-  enableButton: {
-    backgroundColor: '#ff9800',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 12,
   },
-  enableButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+  headerTitle: {
+    ...ModernTheme.typography.h2,
+    color: ModernTheme.colors.textPrimary,
+  },
+  headerSubtitle: {
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
+    marginTop: ModernTheme.spacing.xs,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  scrollContent: {
+    paddingHorizontal: ModernTheme.spacing.lg,
+    paddingBottom: 120,
   },
   section: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginBottom: ModernTheme.spacing.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    ...ModernTheme.typography.h3,
+    color: ModernTheme.colors.textPrimary,
+    marginBottom: ModernTheme.spacing.md,
   },
-  sectionDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
+  // Settings Card
+  settingsCard: {
+    padding: 0,
+    overflow: 'hidden',
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 15,
+    padding: ModernTheme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: ModernTheme.colors.border,
+  },
+  settingRowLast: {
+    borderBottomWidth: 0,
   },
   settingInfo: {
     flex: 1,
-    marginRight: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: ModernTheme.spacing.md,
+  },
+  settingIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: ModernTheme.colors.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: ModernTheme.spacing.md,
+  },
+  settingTextContainer: {
+    flex: 1,
   },
   settingLabel: {
-    fontSize: 16,
+    ...ModernTheme.typography.bodyMedium,
+    color: ModernTheme.colors.textPrimary,
     fontWeight: '500',
-    color: '#333',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   settingDescription: {
-    fontSize: 14,
-    color: '#666',
+    ...ModernTheme.typography.caption,
+    color: ModernTheme.colors.textSecondary,
   },
-  infoSection: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 10,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1976d2',
-    marginBottom: 5,
-  },
-  testSection: {
-    backgroundColor: '#fff3e0',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-  },
-  testTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#e65100',
-    marginBottom: 10,
+  // Test Card
+  testCard: {
+    padding: ModernTheme.spacing.lg,
   },
   testDescription: {
-    fontSize: 14,
-    color: '#e65100',
-    marginBottom: 15,
+    ...ModernTheme.typography.body,
+    color: ModernTheme.colors.textSecondary,
+    marginBottom: ModernTheme.spacing.lg,
   },
   testButtonsContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: ModernTheme.spacing.md,
   },
   testButton: {
     flex: 1,
-    backgroundColor: '#ff9800',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
   },
-  testButtonEmail: {
-    backgroundColor: '#2196f3',
-  },
-  testButtonDisabled: {
-    opacity: 0.6,
-  },
-  testButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+  // Save Section
+  saveSection: {
+    marginBottom: ModernTheme.spacing.xl,
   },
   saveButton: {
-    backgroundColor: '#007bff',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  daysContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 10,
-  },
-  dayOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
-  },
-  dayOptionSelected: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#007bff',
-  },
-  dayOptionDisabled: {
-    opacity: 0.5,
-  },
-  dayOptionText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  dayOptionTextSelected: {
-    color: '#007bff',
-    fontWeight: '600',
+    width: '100%',
   },
 });
 

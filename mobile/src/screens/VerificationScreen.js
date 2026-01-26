@@ -126,7 +126,7 @@ const VerificationScreen = ({ onNavigate, onBack, userData }) => {
               <Text style={styles.inputLabel}>Verification Code</Text>
               <TextInput
                 style={[ModernStyles.input, styles.input, styles.codeInput]}
-                placeholder="123456"
+                placeholder="XXX-XXX"
                 placeholderTextColor={ModernTheme.colors.textMuted}
                 value={verificationCode}
                 onChangeText={setVerificationCode}
