@@ -316,9 +316,9 @@ const ModernBookManagement = ({ user }) => {
                 Manage your library's book collection and inventory
               </p>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowAddForm(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add New Book

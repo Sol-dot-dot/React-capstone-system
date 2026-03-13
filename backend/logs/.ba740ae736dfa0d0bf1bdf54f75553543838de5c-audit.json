@@ -6,54 +6,9 @@
     "auditLog": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\.ba740ae736dfa0d0bf1bdf54f75553543838de5c-audit.json",
     "files": [
         {
-            "date": 1767579959639,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-05.log",
-            "hash": "c59b3eda0b62da982eb737b4682d8461817babef271e189dfe11b5b1e334e70b"
-        },
-        {
-            "date": 1767661593303,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-06.log",
-            "hash": "fbd0038a5a92a93b0996c767c8866a810ff765adf21e748b5a3fc5e1cb1f8cfc"
-        },
-        {
-            "date": 1767748949501,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-07.log",
-            "hash": "6bcee4bd9e90947c183560048d9bbb249a0d9fd9137c28d729f0ed3e089b7bc8"
-        },
-        {
-            "date": 1767835876882,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-08.log",
-            "hash": "828e7fbf087a50bbc807a2c8cead4dd0d26a6c1b0166eb31c5b57be1621f050b"
-        },
-        {
-            "date": 1767941038593,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-09.log",
-            "hash": "fc1c9b6e9abd4590780d3cd79ebce6351631ce74b140c6b5eae734f49c2ee0f5"
-        },
-        {
-            "date": 1768014695290,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-10.log",
-            "hash": "1f1c41cbef4060405f56cb1ec84ab3d35a90a42c5c955fb8bc0e941673990577"
-        },
-        {
-            "date": 1768547536564,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-16.log",
-            "hash": "a5e01c900be55111459bc8cf799dcc15ba0be34059d04137f4edd97269dfab37"
-        },
-        {
-            "date": 1768615536049,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-17.log",
-            "hash": "c9508a4d0c5d48c494e1ff00ced8820d7e5f7211afed482673aa8f2fb3362dba"
-        },
-        {
-            "date": 1768786338804,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-19.log",
-            "hash": "99706835c61745f757ab2c5bf2de71e746c0414645da06910efd5cdc831298ed"
-        },
-        {
-            "date": 1769218891340,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-01-24.log",
-            "hash": "30fe6d5a252a69fa5c7a9ae8ccf1ef19f6046df023662aa61eb0831a41e7be7d"
+            "date": 1773369945910,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\exceptions-2026-03-13.log",
+            "hash": "58293d07ebe94d1f05215169250d575e7fe99ff6accfd9ee095bbef9022cc6cc"
         }
     ],
     "hashType": "sha256"

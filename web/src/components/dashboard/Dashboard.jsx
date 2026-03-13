@@ -9,12 +9,10 @@ import {
   AlertCircle,
   BookMarked,
   DollarSign,
-  BookX,
-  RefreshCw
+  BookX
 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
 
 const ModernDashboard = ({ user }) => {
   const [dashboardData, setDashboardData] = useState({
@@ -95,25 +93,14 @@ const ModernDashboard = ({ user }) => {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="mb-8"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
-              SMC Library Management Dashboard
-            </h1>
-            <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
-              St. Michael's College Library System - Comprehensive Overview
-            </p>
-          </div>
-          <Button
-            onClick={fetchDashboardStats}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 w-full sm:w-auto"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
+            SMC Library Management Dashboard
+          </h1>
+          <p className="text-slate-600 text-sm sm:text-base lg:text-lg">
+            St. Michael's College Library System - Comprehensive Overview
+          </p>
         </motion.div>
 
         {/* User Management Stats */}

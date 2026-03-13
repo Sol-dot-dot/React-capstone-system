@@ -6,19 +6,9 @@
     "auditLog": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\.b2e237c80c543f03f30e687512c1b614be1275c8-audit.json",
     "files": [
         {
-            "date": 1768615536048,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\performance-2026-01-17.log",
-            "hash": "bc5a88f9e40c4df11c3fbd48e6495e5053f1967e209cfa3127e6245c5cf6ee99"
-        },
-        {
-            "date": 1768786338801,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\performance-2026-01-19.log",
-            "hash": "e19b3f66b400e07d8e291769c03713e83e44dcb529db6643dfe036adac3f0666"
-        },
-        {
-            "date": 1769218891337,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\performance-2026-01-24.log",
-            "hash": "db0604f664c2c1eddce8f667f9c50f342566f1231cff7db6620ff07840ce3f57"
+            "date": 1773369945906,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\performance-2026-03-13.log",
+            "hash": "ac31020f4e9e9b93528267ed4f396a8c375239e2fbbd89262c033dc4679f6743"
         }
     ],
     "hashType": "sha256"

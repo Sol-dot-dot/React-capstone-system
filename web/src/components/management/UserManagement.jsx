@@ -42,6 +42,7 @@ const ModernUserManagement = ({ user }) => {
   const highlightUserId = location.state?.highlightUser;
   const searchQuery = location.state?.searchQuery;
   const [sortBy, setSortBy] = useState('created_at');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const [expandedUser, setExpandedUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ email: '', isVerified: false });
@@ -105,8 +106,8 @@ const ModernUserManagement = ({ user }) => {
         headers: { Authorization: `Bearer ${token}` }
       };
 
-      await axios.put(`/api/admin/users/${idNumber}/verify`, 
-        { is_verified: isVerified }, 
+      await axios.put(`/api/admin/users/${idNumber}/verify`,
+        { isVerified },
         config
       );
       
@@ -208,10 +209,18 @@ const ModernUserManagement = ({ user }) => {
 
   // Filter and sort users
   const filteredAndSortedUsers = users
-    .filter(user =>
-      user.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter(user => {
+      // Search filter
+      const matchesSearch = user.id_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Status filter
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'active' && user.is_verified) ||
+        (statusFilter === 'inactive' && !user.is_verified);
+
+      return matchesSearch && matchesStatus;
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case 'id_number':
@@ -231,10 +240,10 @@ const ModernUserManagement = ({ user }) => {
   const startIndex = (currentPage - 1) * usersPerPage;
   const paginatedUsers = filteredAndSortedUsers.slice(startIndex, startIndex + usersPerPage);
 
-  // Reset to page 1 when search or sort changes
+  // Reset to page 1 when search, sort, or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, sortBy]);
+  }, [searchTerm, sortBy, statusFilter]);
 
   // Clear message after 3 seconds
   useEffect(() => {
@@ -334,7 +343,40 @@ const ModernUserManagement = ({ user }) => {
                     />
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  {/* Status Filter Buttons */}
+                  <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                        statusFilter === 'all'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('active')}
+                      className={`px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200 ${
+                        statusFilter === 'active'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('inactive')}
+                      className={`px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200 ${
+                        statusFilter === 'inactive'
+                          ? 'bg-gray-600 text-white'
+                          : 'bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Inactive
+                    </button>
+                  </div>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -343,7 +385,7 @@ const ModernUserManagement = ({ user }) => {
                     <option value="created_at">Sort by Registration Date</option>
                     <option value="id_number">Sort by ID Number</option>
                     <option value="email">Sort by Email</option>
-                    <option value="is_verified">Sort by Verification Status</option>
+                    <option value="is_verified">Sort by Status</option>
                   </select>
                 </div>
               </div>
@@ -413,22 +455,6 @@ const ModernUserManagement = ({ user }) => {
                           </h3>
                           <p className="text-sm text-slate-600 truncate">{user.email}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <Badge 
-                              variant={user.is_verified ? "default" : "secondary"}
-                              className={user.is_verified ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}
-                            >
-                              {user.is_verified ? (
-                                <>
-                                  <Check className="h-3 w-3 mr-1" />
-                                  Verified
-                                </>
-                              ) : (
-                                <>
-                                  <X className="h-3 w-3 mr-1" />
-                                  Unverified
-                                </>
-                              )}
-                            </Badge>
                             {user.semester_progress && (
                               <Badge variant="outline" className="text-xs">
                                 {user.semester_progress} books
@@ -437,7 +463,29 @@ const ModernUserManagement = ({ user }) => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {/* Active/Inactive Toggle */}
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-medium ${user.is_verified ? 'text-green-600' : 'text-gray-400'}`}>
+                            {user.is_verified ? 'Active' : 'Inactive'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateUserVerification(user.id_number, !user.is_verified);
+                            }}
+                            disabled={actionLoading}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                              user.is_verified ? 'bg-green-500' : 'bg-gray-300'
+                            } ${actionLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                user.is_verified ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
                         <Button
                           variant="outline"
                           size="sm"
@@ -476,7 +524,7 @@ const ModernUserManagement = ({ user }) => {
                               <div className="text-sm text-slate-600">
                                 <p>Books Borrowed: {user.books_currently_borrowed || 0}</p>
                                 <p>Total Borrowed: {user.total_borrowed || 0}</p>
-                                <p>Status: {user.is_verified ? 'Active' : 'Pending'}</p>
+                                <p>Status: <span className={user.is_verified ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{user.is_verified ? 'Active' : 'Inactive'}</span></p>
                               </div>
                             </div>
                             <div className="space-y-2">

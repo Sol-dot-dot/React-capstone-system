@@ -134,7 +134,7 @@ router.post('/academic-years', auth, async (req, res) => {
             });
         }
 
-        const { year_name, start_date, end_date, is_current } = req.body;
+        const { year_name, start_date, end_date, is_current, autoPopulateYearHistory } = req.body;
 
         if (!year_name || !start_date || !end_date) {
             return res.status(400).json({
@@ -153,10 +153,64 @@ router.post('/academic-years', auth, async (req, res) => {
             VALUES (?, ?, ?, ?)
         `, [year_name, start_date, end_date, is_current || false]);
 
+        const newAcademicYearId = result.insertId;
+        let studentsEnrolled = 0;
+
+        // Auto-populate student_year_history for all active students if requested
+        if (autoPopulateYearHistory !== false) {
+            // Get the previous academic year to determine year level progression
+            const [previousYear] = await db.query(`
+                SELECT id FROM academic_years
+                WHERE start_date < ?
+                ORDER BY start_date DESC
+                LIMIT 1
+            `, [start_date]);
+
+            if (previousYear.length > 0) {
+                // For students with history in previous year, increment their year level
+                const [enrollResult] = await db.query(`
+                    INSERT INTO student_year_history (user_id, academic_year_id, year_level, status)
+                    SELECT
+                        syh.user_id,
+                        ? as academic_year_id,
+                        syh.year_level + 1 as year_level,
+                        'enrolled' as status
+                    FROM student_year_history syh
+                    WHERE syh.academic_year_id = ?
+                    AND syh.status = 'enrolled'
+                    ON DUPLICATE KEY UPDATE year_level = VALUES(year_level)
+                `, [newAcademicYearId, previousYear[0].id]);
+                studentsEnrolled = enrollResult.affectedRows;
+            } else {
+                // No previous year, enroll all active students as 1st year
+                const [enrollResult] = await db.query(`
+                    INSERT INTO student_year_history (user_id, academic_year_id, year_level, status)
+                    SELECT
+                        u.id as user_id,
+                        ? as academic_year_id,
+                        1 as year_level,
+                        'enrolled' as status
+                    FROM users u
+                    WHERE u.role = 'student' AND u.is_verified = 1
+                    ON DUPLICATE KEY UPDATE year_level = VALUES(year_level)
+                `, [newAcademicYearId]);
+                studentsEnrolled = enrollResult.affectedRows;
+            }
+        }
+
+        logger.info(`[Academic Year Created] ${year_name}, auto-enrolled ${studentsEnrolled} students`);
+
         res.json({
             success: true,
             message: 'Academic year created successfully',
-            data: { id: result.insertId, year_name, start_date, end_date, is_current }
+            data: {
+                id: newAcademicYearId,
+                year_name,
+                start_date,
+                end_date,
+                is_current,
+                studentsEnrolled
+            }
         });
     } catch (error) {
         logger.error('Error creating academic year:', error);
@@ -608,6 +662,88 @@ router.post('/run-migration', auth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to run migration',
+            error: error.message
+        });
+    }
+});
+
+// POST /api/semesters/enroll-students - Bulk enroll students for an academic year with specified year level
+router.post('/enroll-students', auth, async (req, res) => {
+    try {
+        if (req.user.type !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin access required'
+            });
+        }
+
+        const { academicYearId, studentIds, yearLevel } = req.body;
+
+        if (!academicYearId || !studentIds || !Array.isArray(studentIds) || !yearLevel) {
+            return res.status(400).json({
+                success: false,
+                message: 'academicYearId, studentIds (array), and yearLevel are required'
+            });
+        }
+
+        // Verify academic year exists
+        const [academicYear] = await db.query(
+            'SELECT id, year_name FROM academic_years WHERE id = ?',
+            [academicYearId]
+        );
+
+        if (academicYear.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Academic year not found'
+            });
+        }
+
+        let enrolled = 0;
+        let errors = [];
+
+        for (const studentId of studentIds) {
+            try {
+                // Get student by id_number
+                const [students] = await db.query(
+                    'SELECT id FROM users WHERE id_number = ? AND role = ?',
+                    [studentId, 'student']
+                );
+
+                if (students.length === 0) {
+                    errors.push({ studentId, error: 'Student not found' });
+                    continue;
+                }
+
+                await db.query(`
+                    INSERT INTO student_year_history (user_id, academic_year_id, year_level, status)
+                    VALUES (?, ?, ?, 'enrolled')
+                    ON DUPLICATE KEY UPDATE year_level = ?, status = 'enrolled'
+                `, [students[0].id, academicYearId, yearLevel, yearLevel]);
+
+                enrolled++;
+            } catch (err) {
+                errors.push({ studentId, error: err.message });
+            }
+        }
+
+        logger.info(`[Bulk Enroll] Enrolled ${enrolled} students for ${academicYear[0].year_name} as year ${yearLevel}`);
+
+        res.json({
+            success: true,
+            message: `Enrolled ${enrolled} student(s) for ${academicYear[0].year_name}`,
+            data: {
+                enrolled,
+                yearLevel,
+                academicYear: academicYear[0].year_name,
+                errors: errors.length > 0 ? errors : undefined
+            }
+        });
+    } catch (error) {
+        logger.error('Error enrolling students:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to enroll students',
             error: error.message
         });
     }

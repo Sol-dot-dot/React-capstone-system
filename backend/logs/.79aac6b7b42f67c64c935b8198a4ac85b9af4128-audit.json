@@ -54,6 +54,26 @@
             "date": 1769218891334,
             "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\audit-2026-01-24.log",
             "hash": "60c20d932ee6b5184abde3bb82d94338a4fe2748aa92faf0e9632dfa73b3e4bd"
+        },
+        {
+            "date": 1769411590166,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\audit-2026-01-26.log",
+            "hash": "61aec6e2b57f6734a930f907b9223d9e8ab60843d5cb50aa11696dd8863499a4"
+        },
+        {
+            "date": 1769582056305,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\audit-2026-01-28.log",
+            "hash": "fb65670e82976ffe1b1f951e9c72166160ffb79b114c38371f6078239da418aa"
+        },
+        {
+            "date": 1770690856079,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\audit-2026-02-10.log",
+            "hash": "afa4efa9a0540b51ec55c7d2adf86eb58adee2576f3989c837878051b451f225"
+        },
+        {
+            "date": 1773369945903,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\audit-2026-03-13.log",
+            "hash": "9000e0bbd23b47c72b905787e90a955a127cee06521f33ab7c192b45608029a2"
         }
     ],
     "hashType": "sha256"

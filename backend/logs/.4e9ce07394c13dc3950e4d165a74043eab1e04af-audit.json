@@ -6,54 +6,9 @@
     "auditLog": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\.4e9ce07394c13dc3950e4d165a74043eab1e04af-audit.json",
     "files": [
         {
-            "date": 1767579959643,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-05.log",
-            "hash": "b0ca27860387dd35e3259af93e9ce8ba797c009cc7978313f5443d1825c3ee5f"
-        },
-        {
-            "date": 1767661593305,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-06.log",
-            "hash": "7588863bc08f7f30948dd0793c9bd6bfb34b1c76933c5fee8c258ed63d46ab58"
-        },
-        {
-            "date": 1767748949503,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-07.log",
-            "hash": "e99744092d144ab68c6e1fe23759190f9dc8e475d483d559ecb0e574a9a28888"
-        },
-        {
-            "date": 1767835876884,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-08.log",
-            "hash": "4de64a7d5e65040acb720a205321be076062623a3707d071d697126165bccfe8"
-        },
-        {
-            "date": 1767941038596,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-09.log",
-            "hash": "96961a7ff06bbc1aad28465b07a082b1b74064cbd478b97e56be07f365828576"
-        },
-        {
-            "date": 1768014695293,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-10.log",
-            "hash": "3bfd092cdc8d68ea4bb21605aceb5220c9361ed72cc132b3e891869d284f8ba1"
-        },
-        {
-            "date": 1768547536565,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-16.log",
-            "hash": "79953436c9e7b5f8e8fe0bf6cb4c3acb673b0e9a993e2bcbae9d9d1e6cfe4a17"
-        },
-        {
-            "date": 1768615536051,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-17.log",
-            "hash": "020c8a6a33e512f54fa52c77fb94421be022abb44c50a3d44a3225e3330b2186"
-        },
-        {
-            "date": 1768786338806,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-19.log",
-            "hash": "28b959818f7733360e4ded0a1816a84e72a0d1c4637984c0689913eb1731cc62"
-        },
-        {
-            "date": 1769218891343,
-            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-01-24.log",
-            "hash": "aecdd28e17e0099743768226f7d434f9ac102caab206335d1f55aa521416aefe"
+            "date": 1773369945916,
+            "name": "C:\\Projects\\capstone_2\\React-capstone-system\\backend\\logs\\rejections-2026-03-13.log",
+            "hash": "001f7637febff57462818b9d267c24424b3da4d6434c539238f7c8cc1ff19e76"
         }
     ],
     "hashType": "sha256"

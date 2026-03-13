@@ -167,38 +167,6 @@ router.get('/:identifier', auth, async (req, res) => {
             ORDER BY bt.borrowed_date
         `, [student.id_number]);
 
-        // Determine the student's starting academic year based on their account creation date
-        const createdAt = new Date(student.created_at);
-        const createdMonth = createdAt.getMonth() + 1; // 1-12
-        const createdYear = createdAt.getFullYear();
-
-        // Academic year starts in June. If created before June, they started the previous academic year
-        let startingAcademicYear;
-        if (createdMonth >= 6) {
-            startingAcademicYear = createdYear;
-        } else {
-            startingAcademicYear = createdYear - 1;
-        }
-
-        // Determine current academic year
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        let currentAcademicYear;
-        if (currentMonth >= 6) {
-            currentAcademicYear = currentYear;
-        } else {
-            currentAcademicYear = currentYear - 1;
-        }
-
-        // Determine current semester (1 = 1st sem Jun-Oct, 2 = 2nd sem Nov-Mar)
-        let currentSemester;
-        if (currentMonth >= 6 && currentMonth <= 10) {
-            currentSemester = 1;
-        } else {
-            currentSemester = 2;
-        }
-
         // Group borrowings by academic year (June to May)
         // Academic year 2024-2025 = June 2024 to May 2025
         const borrowingsByYear = {};
@@ -257,74 +225,39 @@ router.get('/:identifier', auth, async (req, res) => {
             });
         }
 
-        // Build complete 4-year structure from student's starting year
-        const yearLevelNames = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-        const yearsData = [];
+        // Build simple records - only years with actual borrowing data
+        const yearsData = Object.keys(borrowingsByYear)
+            .sort()  // Sort by academic year name
+            .map(academicYearName => {
+                const yearData = borrowingsByYear[academicYearName];
 
-        for (let yearIndex = 0; yearIndex < 4; yearIndex++) {
-            const yearStartYear = startingAcademicYear + yearIndex;
-            const academicYearName = `${yearStartYear}-${yearStartYear + 1}`;
-            const yearLevel = yearIndex + 1;
+                // Build semester data
+                const sem1 = yearData.semesters[1]?.borrowings || [];
+                const sem2 = yearData.semesters[2]?.borrowings || [];
 
-            // Check if this year has any borrowing data
-            const yearData = borrowingsByYear[academicYearName];
+                const sem1Fines = sem1.reduce((sum, b) => sum + b.fine, 0);
+                const sem1Paid = sem1.reduce((sum, b) => sum + b.paidAmount, 0);
+                const sem2Fines = sem2.reduce((sum, b) => sum + b.fine, 0);
+                const sem2Paid = sem2.reduce((sum, b) => sum + b.paidAmount, 0);
 
-            // Determine if this is the current academic year
-            const isCurrent = yearStartYear === currentAcademicYear;
-
-            // Build semesters for this year (always show both semesters)
-            const semestersData = [];
-            for (let semNum = 1; semNum <= 2; semNum++) {
-                const semesterName = semNum === 1 ? '1st Semester' : '2nd Semester';
-
-                // Determine semester period
-                let periodStart, periodEnd;
-                if (semNum === 1) {
-                    periodStart = `Jun ${yearStartYear}`;
-                    periodEnd = `Oct ${yearStartYear}`;
-                } else {
-                    periodStart = `Nov ${yearStartYear}`;
-                    periodEnd = `Mar ${yearStartYear + 1}`;
-                }
-
-                // Check if this semester is current
-                const isCurrentSemester = isCurrent && semNum === currentSemester;
-
-                // Get borrowings for this semester if they exist
-                const semesterBorrowings = yearData?.semesters?.[semNum]?.borrowings || [];
-                const borrowings = semesterBorrowings.slice(-maxBooksPerSemester);
-
-                const onTimeReturns = borrowings.filter(b => b.returnDate && b.daysLate === 0).length;
-                const lateReturns = borrowings.filter(b => b.daysLate > 0).length;
-                const finesIncurred = borrowings.reduce((sum, b) => sum + b.fine, 0);
-                const finesPaid = borrowings.reduce((sum, b) => sum + b.paidAmount, 0);
-
-                semestersData.push({
-                    semesterId: `${academicYearName}-${semNum}`,
-                    semesterNumber: semNum,
-                    semesterName,
-                    period: `${periodStart} - ${periodEnd}`,
-                    booksBorrowed: borrowings.length,
-                    booksRequired: maxBooksPerSemester,
-                    onTimeReturns,
-                    lateReturns,
-                    finesIncurred,
-                    finesPaid,
-                    isCleared: finesIncurred === finesPaid && borrowings.every(b => b.returnDate),
-                    isCurrent: isCurrentSemester,
-                    borrowings
-                });
-            }
-
-            yearsData.push({
-                academicYear: academicYearName,
-                academicYearId: yearStartYear,
-                yearLevel,
-                yearLevelName: yearLevelNames[yearIndex],
-                isCurrent,
-                semesters: semestersData
-            });
-        }
+                return {
+                    academicYear: academicYearName,
+                    firstSemester: {
+                        booksBorrowed: sem1.length,
+                        booksRequired: maxBooksPerSemester,
+                        fines: sem1Fines,
+                        finesPaid: sem1Paid,
+                        borrowings: sem1
+                    },
+                    secondSemester: {
+                        booksBorrowed: sem2.length,
+                        booksRequired: maxBooksPerSemester,
+                        fines: sem2Fines,
+                        finesPaid: sem2Paid,
+                        borrowings: sem2
+                    }
+                };
+            })
 
         // Get overall clearance status
         const canClear = summary.currently_borrowed === 0 && summary.outstanding_balance === 0;
@@ -599,6 +532,160 @@ router.get('/:userId/clearance-status', auth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get clearance status',
+            error: error.message
+        });
+    }
+});
+
+// PUT /api/student-records/:studentId/year-level
+// Update or set a student's year level for a specific academic year (admin only)
+router.put('/:studentId/year-level', auth, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { academicYearId, yearLevel } = req.body;
+
+        // Validate required fields
+        if (!academicYearId || !yearLevel) {
+            return res.status(400).json({
+                success: false,
+                message: 'Academic year ID and year level are required'
+            });
+        }
+
+        // Validate year level is a positive integer
+        if (!Number.isInteger(yearLevel) || yearLevel < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Year level must be a positive integer'
+            });
+        }
+
+        // Get student by id_number (studentId parameter is the id_number)
+        const [students] = await db.query(
+            'SELECT id, id_number FROM users WHERE id_number = ? AND role = ?',
+            [studentId, 'student']
+        );
+
+        if (students.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        const student = students[0];
+
+        // Verify academic year exists
+        const [academicYears] = await db.query(
+            'SELECT id, year_name FROM academic_years WHERE id = ?',
+            [academicYearId]
+        );
+
+        if (academicYears.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Academic year not found'
+            });
+        }
+
+        // Insert or update the student_year_history record
+        await db.query(`
+            INSERT INTO student_year_history (user_id, academic_year_id, year_level, status)
+            VALUES (?, ?, ?, 'enrolled')
+            ON DUPLICATE KEY UPDATE year_level = ?, status = 'enrolled'
+        `, [student.id, academicYearId, yearLevel, yearLevel]);
+
+        // Log the action
+        await db.query(`
+            INSERT INTO audit_logs (user_id, action, table_name, record_id, new_values, ip_address)
+            VALUES (?, 'UPDATE_YEAR_LEVEL', 'student_year_history', ?, ?, ?)
+        `, [
+            req.user.userId,
+            student.id,
+            JSON.stringify({ academicYearId, yearLevel, academicYear: academicYears[0].year_name }),
+            req.ip || 'unknown'
+        ]);
+
+        logger.info(`[Year Level Update] Student ${studentId} year level set to ${yearLevel} for academic year ${academicYears[0].year_name} by user ${req.user.userId}`);
+
+        res.json({
+            success: true,
+            message: `Year level updated to ${yearLevel} for ${academicYears[0].year_name}`,
+            data: {
+                studentId: student.id_number,
+                academicYear: academicYears[0].year_name,
+                yearLevel
+            }
+        });
+    } catch (error) {
+        logger.error('Update year level error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update year level',
+            error: error.message
+        });
+    }
+});
+
+// GET /api/student-records/:studentId/year-history
+// Get student's year level history across all academic years
+router.get('/:studentId/year-history', auth, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // Get student by id_number
+        const [students] = await db.query(
+            'SELECT id, id_number, first_name, last_name FROM users WHERE id_number = ? AND role = ?',
+            [studentId, 'student']
+        );
+
+        if (students.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        const student = students[0];
+
+        // Get year history
+        const [yearHistory] = await db.query(`
+            SELECT
+                syh.academic_year_id,
+                syh.year_level,
+                syh.status,
+                ay.year_name,
+                ay.is_current
+            FROM student_year_history syh
+            JOIN academic_years ay ON syh.academic_year_id = ay.id
+            WHERE syh.user_id = ?
+            ORDER BY ay.start_date DESC
+        `, [student.id]);
+
+        // Get all academic years for reference
+        const [allAcademicYears] = await db.query(`
+            SELECT id, year_name, is_current
+            FROM academic_years
+            ORDER BY start_date DESC
+        `);
+
+        res.json({
+            success: true,
+            data: {
+                student: {
+                    id: student.id,
+                    idNumber: student.id_number,
+                    name: `${student.first_name} ${student.last_name}`
+                },
+                yearHistory,
+                allAcademicYears
+            }
+        });
+    } catch (error) {
+        logger.error('Get year history error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get year history',
             error: error.message
         });
     }
